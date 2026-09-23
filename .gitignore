@@ -14,11 +14,15 @@ ENV/
 .mypy_cache/
 .ruff_cache/
 .ipynb_checkpoints/
+/build/
+/dist/
+*.egg-info/
 
 # Environment and secrets
 .env
 .env.*
 *.env
+!.env.example
 
 # OS files
 .DS_Store
@@ -28,3 +32,4 @@ visuals_guide.md
 explanation.md
 /charts
 /data
+/reports
