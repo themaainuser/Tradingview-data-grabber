@@ -38,6 +38,27 @@ class CliTests(unittest.TestCase):
             " ".join(subcommands.choices["bars"].format_help().split()),
         )
 
+    def test_research_parser_accepts_model_specific_endpoints_and_keys(self):
+        args = build_parser().parse_args(
+            [
+                "research",
+                "bars.csv",
+                "--model",
+                "local-model",
+                "--model",
+                "hosted-model",
+                "--model-endpoint",
+                "local-model=http://localhost:11434/v1",
+                "--model-endpoint",
+                "hosted-model=https://api.example.test/v1",
+                "--model-api-key-env",
+                "hosted-model=HOSTED_API_KEY",
+            ]
+        )
+        self.assertEqual(args.model, ["local-model", "hosted-model"])
+        self.assertEqual(len(args.model_endpoint), 2)
+        self.assertEqual(args.model_api_key_env, ["hosted-model=HOSTED_API_KEY"])
+
     def test_validate_and_analyze_commands_emit_machine_readable_reports(self):
         with tempfile.TemporaryDirectory() as directory:
             path = pathlib.Path(directory) / "bars.csv"
@@ -70,6 +91,21 @@ class CliTests(unittest.TestCase):
             self.assertIn("indicators", json.loads(output.getvalue()))
             self.assertTrue(report_path.exists())
             self.assertTrue(enriched_path.exists())
+
+    def test_research_command_writes_dashboard_and_permutation_report(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "bars.csv"
+            outdir = pathlib.Path(directory) / "research"
+            self._csv(path)
+            self.assertEqual(main(["research", str(path), "-o", str(outdir)]), 0)
+            report = json.loads((outdir / "research.json").read_text())
+            self.assertEqual(len(report["results"]), 16)
+            self.assertEqual(report["results"][0]["metrics"]["in_sample"]["bars"], 17)
+            self.assertEqual(report["results"][0]["metrics"]["forward"]["bars"], 8)
+            dashboard = (outdir / "dashboard.html").read_text()
+            self.assertIn("Quant Research Lab", dashboard)
+            self.assertIn("sharpe-filter", dashboard)
+            self.assertIn("research.json", dashboard)
 
     def test_legacy_auth_adapter_does_not_print_the_token(self):
         output = io.StringIO()

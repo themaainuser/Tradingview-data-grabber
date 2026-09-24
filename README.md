@@ -24,6 +24,9 @@ command while preserving the old script names as compatibility entry points.
 - **Analysis** — CSV schema checks, invalid-row filtering, duplicate collapse,
   gap detection, SMA/EMA, RSI, MACD, ATR, Bollinger bands, VWAP, support, and
   resistance summaries.
+- **Quant research** — repeatable SMA-crossover and RSI mean-reversion
+  permutations, next-bar signals, transaction-cost-aware returns, risk metrics,
+  and later-period forward folds across multiple captures.
 - **Charts** — candlesticks, volume profile with a 70% value area, liquidity
   and volatility heatmaps, return/ATR, technical panels, correlations, and an
   offline HTML gallery. Multi-symbol runs use separate directories rather than
@@ -112,6 +115,67 @@ refresh images after a new analysis run. A multi-symbol output contains one
 subdirectory per source CSV and, when timestamps overlap, a correlation chart
 at the output root.
 
+### Quant research dashboard
+
+Run a repeatable grid of long-only strategy permutations over one or more
+captures and open the resulting interactive dashboard:
+
+```bash
+tvdata research data/BINANCE_BTCUSDT/5.csv data/BINANCE_ETHUSDT/5.csv \
+  --fee-bps 5 --periods-per-year 252 -o research
+```
+
+The self-contained `dashboard.html` filters by market, strategy family,
+minimum forward Sharpe, trade count, and parameter search; it compares each
+candidate's equity curve with buy-and-hold. `research.json` contains the
+underlying metrics and bounded curve data. The built-in grid includes SMA
+crossovers and RSI mean-reversion entry/exit levels. Positions take effect on
+the bar after a signal; fees are charged on position changes. The final 40% of
+longer captures is reported in four chronological forward folds, with the
+initial 60% reported separately. For short series the report uses one 30%
+holdout after the initial 70%. Rules are fixed (not re-fit between folds), and
+sweeping many permutations still creates multiple-testing bias. Spread,
+slippage, funding, borrow, and execution constraints are not modeled. This is
+a research tool, not trading advice.
+
+Annualized risk metrics depend on bar frequency and market session. Set
+`--periods-per-year` to a value appropriate for the capture; `252` is only a
+reasonable default for daily bars. The configured transaction cost is in basis
+points per position change (both entry and exit).
+
+#### Optional multi-model research notes
+
+The deterministic backtest works without AI or model packages. To add a
+qualitative research note from one or more models, pass each model ID with
+`--model` and point the command at an OpenAI-compatible Chat Completions API:
+
+```bash
+# Local Ollama OpenAI-compatible endpoint is the default; no API key is needed.
+tvdata research data/BINANCE_BTCUSDT/5.csv \
+  --model qwen3:8b --model llama3.3:70b
+
+# Hosted endpoint; keep the key in the environment, never in a command argument.
+export OPENAI_API_KEY='...'
+tvdata research data/BINANCE_BTCUSDT/5.csv \
+  --base-url https://api.openai.com/v1 \
+  --api-key-env OPENAI_API_KEY --model gpt-4.1-mini
+
+# Compare local and hosted models in one run, each using its own endpoint.
+tvdata research data/BINANCE_BTCUSDT/5.csv \
+  --model qwen3:8b --model gpt-4.1-mini \
+  --model-endpoint qwen3:8b=http://localhost:11434/v1 \
+  --model-endpoint gpt-4.1-mini=https://api.openai.com/v1 \
+  --model-api-key-env gpt-4.1-mini=OPENAI_API_KEY
+```
+
+`TVDATA_AI_BASE_URL` and `TVDATA_AI_API_KEY` can configure the endpoint and
+key-variable name without CLI flags. Any OpenAI-compatible gateway can route
+model IDs to hosted frontier models or local open-weight runtimes. Only the
+aggregate metrics for up to 12 candidates are sent; raw bars are not sent.
+Returned notes are labeled as model output in the dashboard and do not change
+the quantitative ranking. A model API call shares those summary metrics with
+the configured endpoint.
+
 ## Python API
 
 The modules can be used independently in another application:
@@ -144,6 +208,7 @@ tradingview_data/
 ├── storage.py    # CSV persistence, deduplication, and metadata
 ├── analytics.py  # validation, indicators, quality, and reports
 ├── charts.py     # static charts and HTML gallery
+├── research.py   # strategy permutations, evaluation, model notes, dashboard
 ├── auth.py       # token retrieval without persistence
 └── cli.py        # unified command and compatibility adapters
 ```
