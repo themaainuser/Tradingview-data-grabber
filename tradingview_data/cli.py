@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 from typing import Callable, Sequence
 
@@ -19,6 +20,7 @@ from .auth import get_auth_token
 from .bars import BarStreamConfig, BarStreamer, parse_symbols
 from .charts import generate_charts
 from .quotes import QUOTE_FIELDS, QuoteStreamConfig, QuoteStreamer, format_quote
+from .research import DEFAULT_BASE_URL, build_research, request_model_notes, write_research_dashboard
 
 
 def _fields(value: str) -> tuple[str, ...]:
@@ -26,6 +28,16 @@ def _fields(value: str) -> tuple[str, ...]:
     if not fields:
         raise argparse.ArgumentTypeError("provide at least one quote field")
     return fields
+
+
+def _model_mapping(values: list[str] | None, option: str) -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    for value in values or []:
+        model, separator, setting = value.partition("=")
+        if not separator or not model.strip() or not setting.strip():
+            raise ValueError(f"{option} values must use MODEL=VALUE")
+        mapping[model.strip()] = setting.strip()
+    return mapping
 
 
 def _write_lines(path: str | None) -> tuple[Callable[[str], None], Callable[[], None]]:
@@ -129,6 +141,40 @@ def _run_chart(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_research(args: argparse.Namespace) -> int:
+    datasets = []
+    for file in args.files:
+        source = Path(file)
+        datasets.append((source.stem, source, load_ohlcv(source)))
+    report = build_research(
+        datasets,
+        fee_bps=args.fee_bps,
+        periods_per_year=args.periods_per_year,
+    )
+    model_endpoints = _model_mapping(args.model_endpoint, "--model-endpoint")
+    model_api_key_envs = _model_mapping(args.model_api_key_env, "--model-api-key-env")
+    selected_models = set(args.model or [])
+    unused_settings = (set(model_endpoints) | set(model_api_key_envs)) - selected_models
+    if unused_settings:
+        raise ValueError(
+            f"model endpoint/key settings reference unselected model(s): {', '.join(sorted(unused_settings))}"
+        )
+    if args.model:
+        report["model_notes"] = request_model_notes(
+            report,
+            args.model,
+            base_url=args.base_url or os.environ.get("TVDATA_AI_BASE_URL", DEFAULT_BASE_URL),
+            api_key_env=args.api_key_env,
+            model_endpoints=model_endpoints,
+            model_api_key_envs=model_api_key_envs,
+            timeout=args.model_timeout,
+        )
+    dashboard = write_research_dashboard(report, args.outdir)
+    print(f"saved {dashboard}")
+    print(f"saved {Path(args.outdir) / 'research.json'}")
+    return 0
+
+
 def _run_auth(_: argparse.Namespace) -> int:
     get_auth_token()
     print("Authenticated token retrieved successfully. It was not written to disk.")
@@ -186,6 +232,45 @@ def build_parser() -> argparse.ArgumentParser:
     chart.add_argument("-o", "--outdir", default="charts")
     chart.add_argument("--no-indicators", action="store_true", help="skip the technical-indicators chart")
     chart.set_defaults(handler=_run_chart)
+
+    research = commands.add_parser("research", help="backtest strategy permutations and build a quant dashboard")
+    research.add_argument("files", nargs="+", help="one or more OHLCV CSV files")
+    research.add_argument("-o", "--outdir", default="research", help="dashboard and JSON output directory")
+    research.add_argument("--fee-bps", type=float, default=5, help="cost in basis points per position change")
+    research.add_argument(
+        "--periods-per-year",
+        type=float,
+        default=252,
+        help="annualization factor for Sharpe, volatility, and CAGR; choose for your bar interval",
+    )
+    research.add_argument(
+        "--model",
+        action="append",
+        help="optional OpenAI-compatible model ID; repeat to compare several models",
+    )
+    research.add_argument(
+        "--base-url",
+        help="model API base URL (or set TVDATA_AI_BASE_URL); defaults to local Ollama at localhost:11434",
+    )
+    research.add_argument(
+        "--api-key-env",
+        default="TVDATA_AI_API_KEY",
+        help="environment variable name containing the endpoint API key (default: TVDATA_AI_API_KEY)",
+    )
+    research.add_argument(
+        "--model-endpoint",
+        action="append",
+        metavar="MODEL=URL",
+        help="override the API URL for one model; repeat to mix hosted and local endpoints",
+    )
+    research.add_argument(
+        "--model-api-key-env",
+        action="append",
+        metavar="MODEL=ENV_VAR",
+        help="select an API-key environment variable for one model; repeat as needed",
+    )
+    research.add_argument("--model-timeout", type=float, default=90, help="per-model request timeout in seconds")
+    research.set_defaults(handler=_run_research)
 
     auth = commands.add_parser("auth", help="verify account credentials without writing a token")
     auth.set_defaults(handler=_run_auth)
