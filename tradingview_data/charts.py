@@ -347,40 +347,467 @@ def build_dashboard(outdir: str | Path, images: Iterable[tuple[Path, str]]) -> P
     payload: list[dict[str, str]] = []
     for path, label in images:
         relative = path.relative_to(output).as_posix()
-        payload.append({"path": relative, "label": html.escape(label, quote=True)})
+        payload.append({"path": relative, "label": label})
+        safe_path = html.escape(relative, quote=True)
+        safe_label = html.escape(label, quote=True)
         cards.append(
-            "<article class='card'><button class='preview' data-src='{}' data-label='{}'>"
-            "<img src='{}' alt='{}'><span>{}</span></button>"
-            "<button class='pin' data-src='{}' data-label='{}'>Pin</button></article>".format(
-                html.escape(relative, quote=True),
-                html.escape(label, quote=True),
-                html.escape(relative, quote=True),
-                html.escape(label, quote=True),
-                html.escape(label),
-                html.escape(relative, quote=True),
-                html.escape(label, quote=True),
+            "<article class='chart-card' data-search='{label_lower}'>"
+            "<button class='preview' type='button' data-src='{path}' data-label='{label}' aria-label='Open {label} full size'>"
+            "<img src='{path}' alt='{label}' loading='lazy' decoding='async'><span class='chart-title'>{label_text}</span></button>"
+            "<button class='pin' type='button' data-src='{path}' data-label='{label}' aria-pressed='false'>Pin chart</button></article>".format(
+                path=safe_path,
+                label=safe_label,
+                label_lower=html.escape(label.lower(), quote=True),
+                label_text=html.escape(label),
             )
         )
-    data_json = json.dumps(payload).replace("</", "<\\/")
-    document = f"""<!doctype html>
-<html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'>
-<title>TradingView Data Gallery</title><style>
-:root {{ color-scheme: dark; --card: #1d2731; --ink: #e8edf2; --accent: #26a69a; }}
-* {{ box-sizing: border-box; }} body {{ margin: 0; background: #101820; color: var(--ink); font: 15px system-ui, sans-serif; }}
-header {{ padding: 28px max(24px, calc((100vw - 1200px) / 2)); background: linear-gradient(125deg, #0b3341, #17293c); }}
-h1 {{ margin: 0 0 6px; }} p {{ color: #bbcad5; }} main {{ max-width: 1200px; padding: 24px; margin: auto; }}
-.toolbar {{ display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 20px; }} button {{ color: var(--ink); background: #263746; border: 1px solid #496171; border-radius: 7px; padding: 8px 12px; cursor: pointer; }} button:hover {{ border-color: var(--accent); }}
-.pins, .grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }} .card {{ background: var(--card); border-radius: 10px; padding: 10px; box-shadow: 0 6px 20px #0004; }}
-.preview {{ padding: 0; width: 100%; background: none; border: 0; text-align: left; }} .preview img {{ width: 100%; display: block; border-radius: 6px; background: #0b1118; }} .preview span {{ display: block; padding: 9px 2px 3px; font-weight: 600; }} .pin {{ margin-top: 6px; }}
-dialog {{ width: min(96vw, 1400px); background: #101820; border: 1px solid #496171; border-radius: 10px; color: var(--ink); }} dialog img {{ width: 100%; max-height: 82vh; object-fit: contain; }} dialog button {{ float: right; }}
-</style></head><body><header><h1>Market Data Gallery</h1><p>Offline charts with technical indicators, volume profile, and correlation.</p></header>
-<main><section><h2>Pinned charts</h2><div class='toolbar'><button id='refresh'>Refresh images</button><button id='clear'>Clear pins</button></div><div id='pins' class='pins'></div></section>
-<section><h2>Chart library</h2><div class='grid'>{''.join(cards)}</div></section></main><dialog id='modal'><button id='close'>Close</button><h2 id='modal-label'></h2><img id='modal-image' alt='Expanded chart'></dialog>
-<script>const images={data_json}; const storageKey='tvdata:pins'; const pins=document.querySelector('#pins');
-function selected() {{ try {{ return JSON.parse(localStorage.getItem(storageKey)) || []; }} catch {{ return []; }} }}
-function render() {{ const chosen=selected(); pins.innerHTML=chosen.length ? chosen.map(src => {{ const item=images.find(i=>i.path===src); return item ? `<article class="card"><button class="preview" data-src="${{item.path}}" data-label="${{item.label}}"><img src="${{item.path}}" alt="${{item.label}}"><span>${{item.label}}</span></button><button class="unpin" data-src="${{item.path}}">Unpin</button></article>` : ''; }}).join('') : '<p>No pinned charts yet.</p>'; bind(); }}
-function bind() {{ document.querySelectorAll('.preview').forEach(button=>button.onclick=()=>{{ document.querySelector('#modal-image').src=button.dataset.src; document.querySelector('#modal-label').textContent=button.dataset.label; document.querySelector('#modal').showModal(); }}); document.querySelectorAll('.pin').forEach(button=>button.onclick=()=>{{ const values=selected(); if(!values.includes(button.dataset.src)) localStorage.setItem(storageKey, JSON.stringify([...values, button.dataset.src].slice(-4))); render(); }}); document.querySelectorAll('.unpin').forEach(button=>button.onclick=()=>{{ localStorage.setItem(storageKey, JSON.stringify(selected().filter(src=>src!==button.dataset.src))); render(); }}); }}
-document.querySelector('#close').onclick=()=>document.querySelector('#modal').close(); document.querySelector('#clear').onclick=()=>{{ localStorage.removeItem(storageKey); render(); }}; document.querySelector('#refresh').onclick=()=>document.querySelectorAll('img').forEach(image=>{{ const src=image.getAttribute('src').split('?')[0]; image.src=src+'?v='+Date.now(); }}); bind(); render();</script></body></html>"""
+    data_json = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    data_json = data_json.replace("</", "<\\/").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
+    document = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Market Data Gallery</title><style>
+:root {
+  color-scheme: dark;
+  --page: #09131f;
+  --surface: #101e2d;
+  --surface-raised: #16283b;
+  --surface-hover: #1b3148;
+  --ink: #f0f6fb;
+  --muted: #aabed0;
+  --line: #31485e;
+  --accent: #48c7b7;
+  --accent-strong: #87f0df;
+  --accent-soft: rgb(72 199 183 / 15%);
+  --danger: #ffadad;
+  --radius-panel: 20px;
+  --radius-control: 10px;
+  --shadow-panel: 0 20px 48px rgb(0 0 0 / 22%), 0 2px 8px rgb(0 0 0 / 16%);
+  --motion-fast: 160ms;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  background:
+    radial-gradient(circle at 5% -10%, rgb(72 199 183 / 18%), transparent 32rem),
+    radial-gradient(circle at 94% 2%, rgb(76 139 255 / 16%), transparent 26rem),
+    var(--page);
+  color: var(--ink);
+  font: 15px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+button, input { font: inherit; }
+
+.shell { width: min(1360px, calc(100% - 48px)); margin: auto; }
+
+.hero {
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+  background: linear-gradient(135deg, #0c1d2d 0%, #102d44 100%);
+}
+
+.hero-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 38px 0 34px;
+}
+
+.brand { display: flex; align-items: center; gap: 15px; }
+
+.brand-mark {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 15px;
+  background: linear-gradient(145deg, rgb(126 240 223 / 28%), rgb(72 139 255 / 20%));
+  color: var(--accent-strong);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 13%);
+  font-size: 23px;
+  font-weight: 800;
+}
+
+.eyebrow {
+  margin: 0 0 2px;
+  color: var(--accent-strong);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+h1, h2 { text-wrap: balance; }
+
+h1 { margin: 0; font-size: clamp(1.65rem, 2.4vw, 2.25rem); letter-spacing: -.04em; }
+
+.subtitle { max-width: 680px; margin: 9px 0 0; color: var(--muted); text-wrap: pretty; }
+
+.offline-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 7px 11px;
+  border: 1px solid rgb(135 240 223 / 30%);
+  border-radius: 999px;
+  background: rgb(72 199 183 / 12%);
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.offline-badge::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 4px rgb(135 240 223 / 10%);
+  content: "";
+}
+
+main { padding: 28px 0 64px; }
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.summary-card, .section-panel {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: linear-gradient(145deg, rgb(22 40 59 / 96%), rgb(14 29 44 / 96%));
+  box-shadow: var(--shadow-panel);
+}
+
+.summary-card { min-height: 108px; padding: 17px 19px; }
+.summary-label { color: var(--muted); font-size: 12px; font-weight: 700; }
+.summary-value { margin-top: 7px; color: var(--ink); font-size: 28px; font-weight: 780; letter-spacing: -.045em; font-variant-numeric: tabular-nums; }
+.summary-detail { color: var(--muted); font-size: 11px; text-wrap: pretty; }
+
+.section-panel { padding: 20px; }
+.section-panel + .section-panel { margin-top: 20px; }
+
+.section-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+h2 { margin: 0; color: var(--ink); font-size: 17px; letter-spacing: -.02em; }
+.section-copy { margin: 4px 0 0; color: var(--muted); font-size: 12px; text-wrap: pretty; }
+
+.count {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 11px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.toolbar { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; margin-bottom: 17px; }
+.search-field { display: grid; flex: 1 1 250px; gap: 5px; }
+.search-field label { color: var(--muted); font-size: 11px; font-weight: 700; }
+
+.search-field input {
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  outline: none;
+  background: #0c1927;
+  color: var(--ink);
+  box-shadow: inset 0 1px 1px rgb(0 0 0 / 20%);
+  transition-property: border-color, box-shadow, background-color;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: ease-out;
+}
+
+.search-field input:hover { border-color: #53718e; }
+.search-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgb(72 199 183 / 17%); }
+
+button {
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface-raised);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 720;
+  transition-property: color, background-color, border-color, box-shadow, transform;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: ease-out;
+}
+
+button:hover { border-color: #63839e; background: var(--surface-hover); }
+button:active { transform: scale(.96); }
+button:focus-visible, .preview:focus-visible, .search-field input:focus-visible { outline: 3px solid rgb(135 240 223 / 35%); outline-offset: 2px; }
+button:disabled { cursor: not-allowed; opacity: .48; }
+
+.clear { color: var(--danger); }
+.clear:hover { border-color: rgb(255 173 173 / 55%); background: rgb(255 173 173 / 10%); }
+
+.pins, .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+
+.chart-card {
+  display: grid;
+  gap: 9px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(160deg, rgb(25 45 65 / 92%), rgb(15 29 43 / 92%));
+  box-shadow: 0 12px 28px rgb(0 0 0 / 16%);
+  transition-property: border-color, box-shadow, background-color;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: ease-out;
+}
+
+.chart-card:hover { border-color: #50718d; box-shadow: 0 16px 32px rgb(0 0 0 / 24%); }
+
+.preview {
+  display: block;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+}
+
+.preview:hover { background: transparent; }
+.preview:active { transform: scale(.96); }
+.preview img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1.42;
+  border-radius: 10px;
+  outline: 1px solid rgb(255 255 255 / 12%);
+  background: #08131e;
+  object-fit: cover;
+}
+
+.chart-title { display: block; padding: 10px 3px 2px; color: var(--ink); font-size: 13px; font-weight: 720; text-wrap: pretty; }
+.pin[aria-pressed="true"] { border-color: rgb(135 240 223 / 42%); background: var(--accent-soft); color: var(--accent-strong); }
+
+.empty-state {
+  margin: 0;
+  padding: 28px 16px;
+  border: 1px dashed #46627b;
+  border-radius: 12px;
+  color: var(--muted);
+  text-align: center;
+  text-wrap: pretty;
+}
+
+.status { min-height: 1.3em; margin: 11px 0 0; color: var(--muted); font-size: 12px; }
+
+dialog {
+  width: min(96vw, 1400px);
+  max-height: 94vh;
+  padding: 0;
+  border: 1px solid #486580;
+  border-radius: var(--radius-panel);
+  background: #0e1d2c;
+  color: var(--ink);
+  box-shadow: 0 28px 70px rgb(0 0 0 / 48%);
+}
+
+dialog::backdrop { background: rgb(2 9 16 / 76%); }
+.modal-inner { padding: 17px; }
+.modal-header { display: flex; align-items: start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.modal-header h2 { font-size: 15px; }
+.modal-header button { flex: 0 0 auto; }
+dialog img { display: block; width: 100%; max-height: 78vh; border-radius: 12px; outline: 1px solid rgb(255 255 255 / 12%); background: #08131e; object-fit: contain; }
+
+@media (max-width: 760px) {
+  .shell { width: min(100% - 28px, 1360px); }
+  .hero-inner { align-items: flex-start; flex-direction: column; padding: 28px 0 25px; }
+  .summary-grid { grid-template-columns: 1fr; gap: 10px; }
+  .summary-card { min-height: 96px; }
+  .section-panel { padding: 16px; }
+}
+
+@media (max-width: 480px) {
+  .toolbar > button { width: 100%; }
+  .section-heading { align-items: start; }
+  .pins, .grid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+  button:active, .preview:active { transform: none; }
+}
+</style></head><body>
+<header class="hero"><div class="shell hero-inner"><div class="brand"><div class="brand-mark" aria-hidden="true">↗</div><div><p class="eyebrow">Offline market workspace</p><h1>Market Data Gallery</h1><p class="subtitle">Inspect generated charts, keep your most useful views close, and open any chart at full resolution.</p></div></div><span class="offline-badge">Local &amp; offline</span></div></header>
+<main class="shell"><section class="summary-grid" aria-label="Gallery summary"><article class="summary-card"><div class="summary-label">Charts available</div><div class="summary-value" id="chart-count">—</div><div class="summary-detail">generated views in this report</div></article><article class="summary-card"><div class="summary-label">Pinned charts</div><div class="summary-value" id="pin-count">0</div><div class="summary-detail">stored only in this browser</div></article><article class="summary-card"><div class="summary-label">Workspace mode</div><div class="summary-value">Offline</div><div class="summary-detail">no network service is required</div></article></section>
+<section class="section-panel" aria-labelledby="pinned-title"><div class="section-heading"><div><h2 id="pinned-title">Pinned charts</h2><p class="section-copy">Keep up to four frequently used views here.</p></div><span class="count" id="pinned-count-label">0 pinned</span></div><div class="toolbar"><button id="refresh" type="button">Refresh images</button><button id="clear" class="clear" type="button">Clear pins</button></div><div id="pins" class="pins" aria-live="polite"></div><p id="status" class="status" aria-live="polite"></p></section>
+<section class="section-panel" aria-labelledby="library-title"><div class="section-heading"><div><h2 id="library-title">Chart library</h2><p class="section-copy">Select a chart to inspect it at full size, or pin it for later.</p></div><span class="count" id="library-count">—</span></div><div class="toolbar"><div class="search-field"><label for="chart-search">Search charts</label><input id="chart-search" type="search" placeholder="e.g. volatility, volume, correlation"></div></div><div id="gallery" class="grid">__CARDS__</div><p id="gallery-empty" class="empty-state" hidden>No charts match that search.</p></section></main>
+<dialog id="modal" aria-labelledby="modal-label"><div class="modal-inner"><div class="modal-header"><h2 id="modal-label">Chart preview</h2><button id="close" type="button">Close preview</button></div><img id="modal-image" alt="Expanded chart"></div></dialog>
+<script>
+const images = __IMAGE_DATA__;
+const storageKey = "tvdata:pins";
+const maxPins = 4;
+const byId = (id) => document.getElementById(id);
+const pins = byId("pins");
+const gallery = byId("gallery");
+const status = byId("status");
+const modal = byId("modal");
+
+const selected = () => {
+  try {
+    const value = JSON.parse(localStorage.getItem(storageKey));
+    return Array.isArray(value) ? value.filter((path) => images.some((image) => image.path === path)) : [];
+  } catch {
+    return [];
+  }
+};
+
+const save = (paths) => {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(paths));
+    return true;
+  } catch {
+    status.textContent = "Pins could not be saved in this browser.";
+    return false;
+  }
+};
+
+const findImage = (path) => images.find((image) => image.path === path);
+
+const openPreview = (item) => {
+  if (!item) return;
+  byId("modal-image").src = item.path;
+  byId("modal-image").alt = item.label;
+  byId("modal-label").textContent = item.label;
+  if (!modal.open) modal.showModal();
+};
+
+const previewButton = (item) => {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "preview";
+  button.dataset.src = item.path;
+  button.setAttribute("aria-label", `Open ${item.label} full size`);
+  const image = document.createElement("img");
+  image.src = item.path;
+  image.alt = item.label;
+  image.loading = "lazy";
+  image.decoding = "async";
+  const title = document.createElement("span");
+  title.className = "chart-title";
+  title.textContent = item.label;
+  button.append(image, title);
+  return button;
+};
+
+const pinButton = (item, isPinned) => {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "pin";
+  button.dataset.src = item.path;
+  button.dataset.label = item.label;
+  button.setAttribute("aria-pressed", String(isPinned));
+  button.textContent = isPinned ? "Pinned" : "Pin chart";
+  return button;
+};
+
+const updatePinControls = (paths) => {
+  document.querySelectorAll(".pin").forEach((button) => {
+    const isPinned = paths.includes(button.dataset.src);
+    button.setAttribute("aria-pressed", String(isPinned));
+    button.textContent = isPinned ? "Pinned" : "Pin chart";
+  });
+};
+
+const renderPins = (message = "") => {
+  const paths = selected();
+  const chosen = paths.map(findImage).filter(Boolean);
+  pins.replaceChildren();
+  if (!chosen.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = "No pinned charts yet. Pin up to four views from the chart library.";
+    pins.append(empty);
+  } else {
+    chosen.forEach((item) => {
+      const card = document.createElement("article");
+      card.className = "chart-card";
+      card.append(previewButton(item), pinButton(item, true));
+      pins.append(card);
+    });
+  }
+  byId("chart-count").textContent = images.length;
+  byId("pin-count").textContent = chosen.length;
+  byId("pinned-count-label").textContent = `${chosen.length} pinned`;
+  byId("clear").disabled = !chosen.length;
+  updatePinControls(paths);
+  if (message) status.textContent = message;
+};
+
+const filterLibrary = () => {
+  const query = byId("chart-search").value.trim().toLowerCase();
+  let visible = 0;
+  gallery.querySelectorAll(".chart-card").forEach((card) => {
+    const matches = !query || card.dataset.search.includes(query);
+    card.hidden = !matches;
+    if (matches) visible += 1;
+  });
+  byId("library-count").textContent = `${visible} of ${images.length}`;
+  byId("gallery-empty").hidden = visible !== 0;
+};
+
+document.addEventListener("click", (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  const preview = target?.closest(".preview");
+  if (preview) {
+    openPreview(findImage(preview.dataset.src));
+    return;
+  }
+  const pin = target?.closest(".pin");
+  if (!pin) return;
+  const paths = selected();
+  const exists = paths.includes(pin.dataset.src);
+  const next = exists ? paths.filter((path) => path !== pin.dataset.src) : [...paths, pin.dataset.src].slice(-maxPins);
+  if (save(next)) renderPins(exists ? "Chart removed from pins." : "Chart pinned for quick access.");
+});
+
+byId("chart-search").addEventListener("input", filterLibrary);
+byId("clear").addEventListener("click", () => {
+  if (save([])) renderPins("Pinned charts cleared.");
+});
+byId("refresh").addEventListener("click", () => {
+  document.querySelectorAll("img[src]").forEach((image) => {
+    const source = image.getAttribute("src").split("?")[0];
+    image.src = `${source}?v=${Date.now()}`;
+  });
+  status.textContent = "Chart images refreshed.";
+});
+byId("close").addEventListener("click", () => modal.close());
+modal.addEventListener("click", (event) => {
+  if (event.target === modal) modal.close();
+});
+renderPins();
+filterLibrary();
+</script></body></html>"""
+    document = document.replace("__CARDS__", "\n".join(cards)).replace("__IMAGE_DATA__", data_json)
     path = output / "dashboard.html"
     path.write_text(document, encoding="utf-8")
     return path
