@@ -425,10 +425,650 @@ def write_research_dashboard(report: dict[str, Any], outdir: str | Path) -> Path
     temporary.replace(report_path)
     data = json.dumps(report, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
     data = data.replace("</", "<\\/").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
-    document = _dashboard_html(data)
+    document = _polish_dashboard_html(_dashboard_html(data))
     path = output / "dashboard.html"
     path.write_text(document, encoding="utf-8")
     return path
+
+
+_DASHBOARD_UI_STYLES = """<style id="dashboard-ui-polish">
+:root {
+  --page: #edf3fa;
+  --surface: #ffffff;
+  --surface-subtle: #f7f9fc;
+  --ink-strong: #11233f;
+  --ink: #263a56;
+  --muted: #61738d;
+  --line: #dce5f0;
+  --accent: #2864de;
+  --accent-strong: #194da9;
+  --accent-soft: #eaf1ff;
+  --positive: #087e66;
+  --negative: #bd4054;
+  --radius-panel: 18px;
+  --radius-control: 10px;
+  --shadow-panel: 0 18px 45px rgb(30 52 84 / 8%), 0 2px 7px rgb(30 52 84 / 4%);
+  --motion-fast: 160ms;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-width: 320px;
+  background:
+    radial-gradient(circle at 6% -12%, rgb(66 132 255 / 16%), transparent 30rem),
+    linear-gradient(180deg, #f7f9fc 0%, var(--page) 38rem);
+  color: var(--ink);
+}
+
+.shell {
+  max-width: 1480px;
+  padding: 28px 32px 64px;
+}
+
+.topbar {
+  align-items: center;
+  margin-bottom: 0;
+  padding: 26px 28px;
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 94% 3%, rgb(104 160 255 / 35%), transparent 18rem),
+    linear-gradient(135deg, #142a4b 0%, #1b4279 100%);
+  box-shadow: 0 20px 48px rgb(20 42 75 / 20%);
+}
+
+.brand {
+  gap: 15px;
+}
+
+.logo {
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 12%);
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 12%);
+}
+
+.eyebrow {
+  color: #b9d2ff;
+  font-weight: 750;
+}
+
+h1 {
+  margin-top: 2px;
+  color: #ffffff;
+  font-size: clamp(1.55rem, 2vw, 2rem);
+  text-wrap: balance;
+}
+
+.tag,
+.reset-filters {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+  transition-property: color, background-color, border-color, box-shadow, transform;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: ease-out;
+}
+
+.tag {
+  padding: 9px 13px;
+  border-color: rgb(255 255 255 / 24%);
+  background: rgb(255 255 255 / 11%);
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 10%);
+}
+
+.tag:hover {
+  background: rgb(255 255 255 / 19%);
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.tag:active,
+.reset-filters:active {
+  transform: scale(0.96);
+}
+
+.intro {
+  max-width: none;
+  margin: 0 0 20px;
+  padding: 15px 20px;
+  border: 1px solid var(--line);
+  border-top: 0;
+  border-radius: 0 0 var(--radius-panel) var(--radius-panel);
+  background: rgb(255 255 255 / 88%);
+  color: var(--muted);
+  box-shadow: 0 10px 22px rgb(28 49 82 / 5%);
+  text-wrap: pretty;
+}
+
+.stats {
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.card,
+.panel {
+  border-color: var(--line);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-panel);
+}
+
+.stat {
+  min-height: 130px;
+  padding: 19px 20px;
+  background: linear-gradient(145deg, #ffffff, #fbfcff);
+}
+
+.stat-label,
+.field label,
+.subhead {
+  color: var(--muted);
+}
+
+.stat-label {
+  font-weight: 700;
+}
+
+.stat-value {
+  color: var(--ink-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-sub {
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+.toolbar {
+  position: relative;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 18px 20px;
+  background: rgb(255 255 255 / 94%);
+}
+
+.field {
+  gap: 6px;
+}
+
+.field label {
+  font-weight: 700;
+}
+
+.field select,
+.field input,
+#model-filter {
+  min-height: 40px;
+  border-color: var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  box-shadow: inset 0 1px 1px rgb(17 35 63 / 2%);
+  transition-property: border-color, box-shadow, background-color;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: ease-out;
+}
+
+.field select:hover,
+.field input:hover,
+#model-filter:hover {
+  border-color: #b9cae1;
+}
+
+.field select:focus-visible,
+.field input:focus-visible,
+#model-filter:focus-visible,
+.tag:focus-visible,
+.reset-filters:focus-visible,
+.strategy-select:focus-visible,
+summary:focus-visible {
+  outline: 3px solid rgb(40 100 222 / 28%);
+  outline-offset: 2px;
+}
+
+.field select:focus,
+.field input:focus,
+#model-filter:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgb(40 100 222 / 12%);
+}
+
+.field input[type="range"] {
+  padding: 0;
+  accent-color: var(--accent);
+}
+
+.range-value,
+.positive,
+.negative,
+td {
+  font-variant-numeric: tabular-nums;
+}
+
+.range-value {
+  color: var(--accent-strong);
+}
+
+.positive {
+  color: var(--positive);
+}
+
+.negative {
+  color: var(--negative);
+}
+
+.reset-filters {
+  align-self: end;
+  padding: 9px 12px;
+  border-color: var(--line);
+  background: var(--surface-subtle);
+  color: var(--ink);
+}
+
+.reset-filters:hover {
+  border-color: #b9cae1;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.content {
+  grid-template-columns: minmax(0, 1.6fr) minmax(330px, 0.85fr);
+  gap: 18px;
+}
+
+.content > .panel > .panel-head {
+  flex-wrap: wrap;
+}
+
+.content > .panel > .panel-head > .pill {
+  margin-left: auto;
+}
+
+.panel-head {
+  padding: 20px 21px 14px;
+}
+
+.panel h2 {
+  color: var(--ink-strong);
+  font-size: 16px;
+  text-wrap: balance;
+}
+
+.subhead {
+  text-wrap: pretty;
+}
+
+.pill {
+  padding: 4px 8px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.results-summary {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border-top-color: var(--line);
+}
+
+table {
+  min-width: 650px;
+}
+
+th {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  background: #f8faff;
+  color: var(--muted);
+}
+
+td {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-top-color: #e9eef5;
+}
+
+tbody tr {
+  cursor: pointer;
+  transition-property: background-color, box-shadow;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: ease-out;
+}
+
+tbody tr:hover,
+tbody tr.selected {
+  background: #f1f5ff;
+}
+
+tbody tr.selected td:first-child {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.strategy-name {
+  font-weight: 750;
+  transform-origin: left center;
+  transition-property: color, transform;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: ease-out;
+}
+
+tbody tr.selected .strategy-name {
+  color: var(--accent-strong);
+}
+
+tbody tr:hover .strategy-meta,
+tbody tr.selected .strategy-meta {
+  color: #52647d;
+}
+
+.strategy-select {
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.strategy-select:active .strategy-name {
+  transform: scale(0.96);
+}
+
+.strategy-select .strategy-name,
+.strategy-select .strategy-meta {
+  display: block;
+}
+
+.chart-wrap {
+  padding: 0 20px 20px;
+}
+
+svg {
+  height: 252px;
+}
+
+.legend {
+  padding: 0 4px;
+}
+
+.dot {
+  box-shadow: 0 0 0 3px rgb(40 100 222 / 12%);
+}
+
+.dot.bench {
+  background: #54677f;
+  box-shadow: 0 0 0 3px rgb(104 121 145 / 11%);
+}
+
+.side {
+  gap: 18px;
+}
+
+.note-body {
+  padding: 0 21px;
+  color: var(--ink);
+  line-height: 1.62;
+  text-wrap: pretty;
+}
+
+.disclosures {
+  padding: 0 21px 20px;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+.disclosures details {
+  border-top-color: var(--line);
+}
+
+.disclosures summary {
+  min-height: 36px;
+  padding: 8px 0;
+  color: var(--ink);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.empty {
+  padding: 42px 20px;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+.download {
+  color: var(--accent);
+}
+
+.status-error {
+  color: var(--negative);
+}
+
+@media (max-width: 1040px) {
+  .content {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .shell {
+    padding: 18px 14px 42px;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    padding: 22px 20px;
+  }
+
+  .tag {
+    flex: 0 0 auto;
+    font-size: 11px;
+  }
+
+  .toolbar {
+    align-items: stretch;
+  }
+
+  .reset-filters {
+    align-self: stretch;
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .stats {
+    gap: 10px;
+  }
+
+  .stat {
+    min-height: 116px;
+    padding: 16px;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  th:nth-child(n + 4),
+  td:nth-child(n + 4) {
+    display: table-cell;
+  }
+}
+
+@media (max-width: 440px) {
+  .topbar {
+    flex-direction: column;
+  }
+
+  .tag {
+    width: 100%;
+  }
+
+  .stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .tag:active,
+  .reset-filters:active,
+  .strategy-select:active .strategy-name {
+    transform: none;
+  }
+}
+</style>"""
+
+
+_DASHBOARD_UI_BEHAVIOR = """<script id="dashboard-ui-behavior">
+(() => {
+  const byId = (id) => document.getElementById(id);
+  const toolbar = document.querySelector(".toolbar");
+  const resultsBody = byId("results-body");
+  const candidateCount = byId("candidate-count");
+  const comparisonPanel = document.querySelector(".content > .panel");
+  const chart = byId("equity-chart");
+  const chartTitle = byId("chart-title");
+  const chartSubtitle = byId("chart-subtitle");
+  const foldLabel = byId("fold-label");
+  const medianDrawdown = byId("median-drawdown");
+  const reportResults = typeof REPORT === "undefined" ? [] : REPORT.results || [];
+  if (!toolbar || !resultsBody || !candidateCount || !comparisonPanel) return;
+
+  chartSubtitle?.setAttribute("aria-live", "polite");
+
+  const reset = document.createElement("button");
+  reset.id = "reset-filters";
+  reset.type = "button";
+  reset.className = "reset-filters";
+  reset.textContent = "Reset filters";
+  toolbar.append(reset);
+
+  const summary = document.createElement("output");
+  summary.id = "results-summary";
+  summary.className = "results-summary";
+  summary.setAttribute("aria-live", "polite");
+  comparisonPanel.querySelector(".panel-head")?.append(summary);
+
+  const updateSummary = () => {
+    const count = Number(candidateCount.textContent) || 0;
+    summary.textContent = `${count} matching candidate${count === 1 ? "" : "s"}`;
+  };
+
+  const clearChart = () => {
+    if (!chart) return;
+    chart.replaceChildren();
+    chart.setAttribute("aria-label", "No strategy equity curve selected");
+    const empty = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    empty.textContent = "No candidate matches the current filters";
+    empty.setAttribute("x", "320");
+    empty.setAttribute("y", "130");
+    empty.setAttribute("fill", "#61738d");
+    empty.setAttribute("font-size", "13");
+    empty.setAttribute("text-anchor", "middle");
+    chart.append(empty);
+  };
+
+  const updateDashboardContext = () => {
+    const visibleIds = [...resultsBody.querySelectorAll("tr")].map((row) => row.dataset.id);
+    const visibleResults = visibleIds
+      .map((id) => reportResults.find((result) => result.id === id))
+      .filter(Boolean);
+    const selected = visibleResults.find((result) => result.id === resultsBody.querySelector("tr.selected")?.dataset.id);
+    const drawdowns = visibleResults
+      .map((result) => result.metrics?.forward?.max_drawdown_pct)
+      .filter(Number.isFinite)
+      .sort((left, right) => left - right);
+
+    if (medianDrawdown) {
+      const middle = Math.floor(drawdowns.length / 2);
+      const median = drawdowns.length % 2 ? drawdowns[middle] : (drawdowns[middle - 1] + drawdowns[middle]) / 2;
+      medianDrawdown.textContent = drawdowns.length ? `${median.toFixed(2)}%` : "—";
+    }
+
+    if (!selected) {
+      if (foldLabel) foldLabel.textContent = "No forward folds";
+      if (chartTitle) chartTitle.textContent = "Equity comparison";
+      if (chartSubtitle) chartSubtitle.textContent = "Adjust filters to select a candidate";
+      clearChart();
+      return;
+    }
+
+    const folds = Array.isArray(selected.forward_folds) ? selected.forward_folds.length : 0;
+    if (foldLabel) foldLabel.textContent = `${folds} forward fold${folds === 1 ? "" : "s"}`;
+    chart?.setAttribute("aria-label", "Selected strategy and buy-and-hold equity curves");
+    const benchmark = chart?.querySelector('polyline[stroke="#9ba9ba"]');
+    benchmark?.setAttribute("stroke", "#54677f");
+    benchmark?.setAttribute("stroke-dasharray", "5 4");
+  };
+
+  const decorateRows = () => {
+    resultsBody.querySelectorAll("tr").forEach((row) => {
+      row.querySelector(".strategy-select")?.setAttribute("aria-pressed", String(row.classList.contains("selected")));
+    });
+  };
+
+  reset.addEventListener("click", () => {
+    byId("symbol-filter").value = "";
+    byId("family-filter").value = "";
+    byId("sharpe-filter").value = "-2";
+    byId("trades-filter").value = "0";
+    byId("search-filter").value = "";
+    byId("sort-filter").value = "forward.sharpe";
+    byId("sort-filter").dispatchEvent(new Event("input", { bubbles: true }));
+    byId("symbol-filter").focus();
+  });
+
+  const observer = new MutationObserver(() => {
+    decorateRows();
+    updateSummary();
+    updateDashboardContext();
+  });
+  observer.observe(resultsBody, { attributes: true, attributeFilter: ["class"], childList: true, subtree: true });
+  new MutationObserver(updateSummary).observe(candidateCount, { childList: true, subtree: true, characterData: true });
+  decorateRows();
+  updateSummary();
+  updateDashboardContext();
+})();
+</script>"""
+
+
+def _polish_dashboard_html(document: str) -> str:
+    """Add an offline visual and interaction layer to the generated dashboard."""
+
+    return document.replace("</head>", _DASHBOARD_UI_STYLES + "</head>", 1).replace(
+        "</body>", _DASHBOARD_UI_BEHAVIOR + "</body>", 1
+    )
 
 
 def _dashboard_html(report_json: str) -> str:
@@ -450,7 +1090,7 @@ const byId=id=>document.getElementById(id);const results=REPORT.results||[];cons
 function makeCell(row,text,className=''){{const cell=document.createElement('td');cell.textContent=text;if(className)cell.className=className;row.append(cell);return cell}}
 function selectedResults(){{const symbol=byId('symbol-filter').value,family=byId('family-filter').value,minSharpe=Number(byId('sharpe-filter').value),minTrades=Number(byId('trades-filter').value||0),query=byId('search-filter').value.trim().toLowerCase(),sort=byId('sort-filter').value;return results.filter(r=>{{const sh=metric(r,'forward.sharpe');return(!symbol||r.symbol===symbol)&&(!family||r.family===family)&&(sh==null?minSharpe<=-2:sh>=minSharpe)&&(metric(r,'forward.trades')||0)>=minTrades&&(!query||(r.name+' '+JSON.stringify(r.parameters)+' '+r.symbol).toLowerCase().includes(query))}}).sort((a,b)=>{{const av=metric(a,sort),bv=metric(b,sort);if(av==null)return 1;if(bv==null)return-1;return bv-av}})}}
 function drawCurve(svgData,benchmark){{const svg=byId('equity-chart');while(svg.firstChild)svg.removeChild(svg.firstChild);const all=[...svgData,...benchmark].map(p=>Number(p[1])).filter(Number.isFinite);if(!all.length)return;const low=Math.min(...all),high=Math.max(...all),span=high-low||1,w=600,h=220,left=24,top=14;for(let i=0;i<4;i++){{const y=top+i*(h/3),line=document.createElementNS('http://www.w3.org/2000/svg','line');line.setAttribute('x1',left);line.setAttribute('x2',w);line.setAttribute('y1',y);line.setAttribute('y2',y);line.setAttribute('stroke','#e9eef5');svg.append(line)}}const poly=(series,color,width)=>{{const element=document.createElementNS('http://www.w3.org/2000/svg','polyline');const points=series.map((point,index)=>{{const x=left+(index/Math.max(1,series.length-1))*(w-left),y=top+h-((Number(point[1])-low)/span)*h;return x+','+y}}).join(' ');element.setAttribute('points',points);element.setAttribute('fill','none');element.setAttribute('stroke',color);element.setAttribute('stroke-width',width);element.setAttribute('stroke-linejoin','round');element.setAttribute('stroke-linecap','round');svg.append(element)}};poly(benchmark,'#9ba9ba','2');poly(svgData,'#2f68e8','2.7');const label=document.createElementNS('http://www.w3.org/2000/svg','text');label.textContent='Equity · normalized to 1.0';label.setAttribute('x','24');label.setAttribute('y','254');label.setAttribute('fill','#68788e');label.setAttribute('font-size','10');svg.append(label)}}
-function render(){{const filtered=selectedResults(),body=byId('results-body');body.replaceChildren();byId('empty-state').hidden=filtered.length!==0;byId('candidate-count').textContent=filtered.length;const sharpes=filtered.map(r=>metric(r,'forward.sharpe')).filter(Number.isFinite).sort((a,b)=>a-b),drawdowns=filtered.map(r=>metric(r,'forward.max_drawdown_pct')).filter(Number.isFinite).sort((a,b)=>a-b);byId('top-sharpe').textContent=sharpes.length?fmt(sharpes[sharpes.length-1]):'—';byId('median-drawdown').textContent=drawdowns.length?pct(drawdowns[Math.floor((drawdowns.length-1)/2)]):'—';for(const result of filtered){{const row=document.createElement('tr');row.dataset.id=result.id;const first=makeCell(row,'');const name=document.createElement('div');name.className='strategy-name';name.textContent=result.name;const sub=document.createElement('div');sub.className='strategy-meta';sub.textContent=result.symbol+' · '+result.family;first.append(name,sub);const sharpe=metric(result,'forward.sharpe'),cagr=metric(result,'forward.cagr_pct'),dd=metric(result,'forward.max_drawdown_pct'),trades=metric(result,'forward.trades'),win=metric(result,'forward.win_rate_pct');makeCell(row,fmt(sharpe),sharpe!=null&&sharpe>=0?'positive':sharpe!=null?'negative':'');makeCell(row,pct(cagr),cagr!=null&&cagr>=0?'positive':cagr!=null?'negative':'');makeCell(row,pct(dd),dd!=null&&dd<=-20?'negative':'');makeCell(row,String(trades??0));makeCell(row,pct(win));row.addEventListener('click',()=>selectResult(result));body.append(row)}}if(filtered.length)selectResult(filtered[0]);updateModels()}}
+function render(){{const filtered=selectedResults(),body=byId('results-body');body.replaceChildren();byId('empty-state').hidden=filtered.length!==0;byId('candidate-count').textContent=filtered.length;const sharpes=filtered.map(r=>metric(r,'forward.sharpe')).filter(Number.isFinite).sort((a,b)=>a-b),drawdowns=filtered.map(r=>metric(r,'forward.max_drawdown_pct')).filter(Number.isFinite).sort((a,b)=>a-b);byId('top-sharpe').textContent=sharpes.length?fmt(sharpes[sharpes.length-1]):'—';byId('median-drawdown').textContent=drawdowns.length?pct(drawdowns[Math.floor((drawdowns.length-1)/2)]):'—';for(const result of filtered){{const row=document.createElement('tr');row.dataset.id=result.id;const first=makeCell(row,'');const selection=document.createElement('button');selection.type='button';selection.className='strategy-select';const name=document.createElement('span');name.className='strategy-name';name.textContent=result.name;const sub=document.createElement('span');sub.className='strategy-meta';sub.textContent=result.symbol+' · '+result.family;selection.append(name,sub);first.append(selection);const sharpe=metric(result,'forward.sharpe'),cagr=metric(result,'forward.cagr_pct'),dd=metric(result,'forward.max_drawdown_pct'),trades=metric(result,'forward.trades'),win=metric(result,'forward.win_rate_pct');makeCell(row,fmt(sharpe),sharpe!=null&&sharpe>=0?'positive':sharpe!=null?'negative':'');makeCell(row,pct(cagr),cagr!=null&&cagr>=0?'positive':cagr!=null?'negative':'');makeCell(row,pct(dd),dd!=null&&dd<=-20?'negative':'');makeCell(row,String(trades??0));makeCell(row,pct(win));row.addEventListener('click',()=>selectResult(result));body.append(row)}}if(filtered.length)selectResult(filtered[0]);updateModels()}}
 function selectResult(result){{document.querySelectorAll('#results-body tr').forEach(row=>row.classList.toggle('selected',row.dataset.id===result.id));byId('chart-title').textContent=result.symbol+' · '+result.name;byId('chart-subtitle').textContent='Full-sample curve · forward Sharpe '+fmt(metric(result,'forward.sharpe'))+' · '+result.metrics.forward.bars+' evaluated bars';drawCurve(result.equity_curve,result.benchmark_curve)}}
 function updateModels(){{const select=byId('model-filter'),previous=select.value,notes=REPORT.model_notes||[];select.replaceChildren();if(!notes.length){{const option=document.createElement('option');option.value='';option.textContent='No models';select.append(option);select.disabled=true;byId('model-note').textContent='No model notes generated. Run research with one or more configured model IDs to add commentary.';return}}select.disabled=false;for(const note of notes){{const option=document.createElement('option');option.value=note.model;option.textContent=note.model;select.append(option)}}if(notes.some(n=>n.model===previous))select.value=previous;const note=notes.find(n=>n.model===select.value)||notes[0];byId('model-note').textContent=note.text;byId('model-note').classList.toggle('status-error',note.status==='error')}}
 byId('model-filter').addEventListener('change',updateModels);for(const id of ['symbol-filter','family-filter','sharpe-filter','trades-filter','search-filter','sort-filter'])byId(id).addEventListener('input',()=>{{byId('sharpe-value').textContent=Number(byId('sharpe-filter').value).toFixed(1);render()}});byId('disclosures').replaceChildren(...REPORT.disclosures.map(text=>{{const li=document.createElement('li');li.textContent=text;return li}}));render();

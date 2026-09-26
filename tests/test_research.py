@@ -88,6 +88,10 @@ class ResearchTests(unittest.TestCase):
         self.assertEqual(report["results"][0]["metrics"]["in_sample"]["bars"], 1)
         self.assertEqual(report["results"][0]["metrics"]["forward"]["bars"], 0)
         self.assertEqual(report["results"][0]["forward_folds"], [])
+        with tempfile.TemporaryDirectory() as directory:
+            html = write_research_dashboard(report, directory).read_text()
+        self.assertIn(".map((result) => result.metrics?.forward?.max_drawdown_pct)", html)
+        self.assertIn('chart?.setAttribute("aria-label", "Selected strategy and buy-and-hold equity curves")', html)
 
     def test_dashboard_escapes_untrusted_text_and_writes_json_data(self):
         data = make_data(80)
@@ -100,6 +104,11 @@ class ResearchTests(unittest.TestCase):
             self.assertIn("<\\/script>", html)
             self.assertNotIn("</script><b>unsafe", html)
             self.assertTrue((pathlib.Path(directory) / "research.json").exists())
+            self.assertIn('reset.id = "reset-filters"', html)
+            self.assertIn("prefers-reduced-motion", html)
+            self.assertIn('summary.setAttribute("aria-live", "polite")', html)
+            self.assertIn("strategy-select", html)
+            self.assertIn('aria-pressed', html)
 
     @patch("tradingview_data.research.requests.post")
     def test_model_notes_can_call_multiple_models_without_exposing_credentials(self, post):
