@@ -59,6 +59,21 @@ class AnalyticsTests(unittest.TestCase):
             self.assertEqual(data.attrs["dropped_rows"], 2)
             self.assertEqual(data.iloc[7]["close"], 109)
 
+    def test_loader_accepts_epoch_millisecond_timestamps(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "epoch-bars.csv"
+            with path.open("w", newline="") as handle:
+                writer = csv.writer(handle)
+                writer.writerow(["index", "time", "open", "high", "low", "close", "volume"])
+                writer.writerow(["[0]", 1786686300000, 1883.81, 1883.81, 1883.39, 1883.77, 155.2197])
+                writer.writerow(["[1]", 1786686360000, 1883.77, 1884.20, 1883.77, 1884.20, 24.193])
+
+            data = load_ohlcv(path)
+
+            self.assertEqual(len(data), 2)
+            self.assertEqual(data.index[0], datetime(2026, 8, 14, 11, 15, tzinfo=ZoneInfo("Asia/Kolkata")))
+            self.assertEqual(data.iloc[-1]["close"], 1884.20)
+
     def test_indicators_reports_and_exports_are_derived_without_mutating_input(self):
         with tempfile.TemporaryDirectory() as directory:
             path = pathlib.Path(directory) / "bars.csv"
