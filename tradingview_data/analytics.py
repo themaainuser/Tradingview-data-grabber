@@ -17,12 +17,17 @@ class OhlcvValidationError(ValueError):
 
 
 def parse_time(value: object) -> pd.Timestamp | pd.NaT:
-    """Parse legacy stream timestamps and common ISO/CSV variants."""
+    """Parse legacy stream timestamps, Unix epochs, and common ISO/CSV variants."""
 
     text = str(value).strip()
     if not text:
         return pd.NaT
     text = text.rsplit(" (", 1)[0] if text.endswith(")") and " (" in text else text
+    epoch_units = {10: "s", 13: "ms", 16: "us", 19: "ns"}
+    digits = text.lstrip("+-")
+    if digits.isdigit() and (unit := epoch_units.get(len(digits))):
+        parsed = pd.to_datetime(int(text), unit=unit, utc=True, errors="coerce")
+        return _normalize_timezone(parsed) if not pd.isna(parsed) else pd.NaT
     for fmt in (
         "%a %b %d %Y %H:%M:%S GMT%z",
         "%Y/%m/%d, %H:%M:%S",
