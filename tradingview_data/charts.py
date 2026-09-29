@@ -345,13 +345,13 @@ def build_dashboard(outdir: str | Path, images: Iterable[tuple[Path, str]]) -> P
     output = Path(outdir)
     cards: list[str] = []
     payload: list[dict[str, str]] = []
-    for path, label in images:
+    for index, (path, label) in enumerate(images):
         relative = path.relative_to(output).as_posix()
         payload.append({"path": relative, "label": label})
         safe_path = html.escape(relative, quote=True)
         safe_label = html.escape(label, quote=True)
         cards.append(
-            "<article class='chart-card' data-search='{label_lower}'>"
+            "<article class='chart-card' data-search='{label_lower}' style='--i:{stagger}'>"
             "<button class='preview' type='button' data-src='{path}' data-label='{label}' aria-label='Open {label} full size'>"
             "<img src='{path}' alt='{label}' loading='lazy' decoding='async'><span class='chart-title'>{label_text}</span></button>"
             "<button class='pin' type='button' data-src='{path}' data-label='{label}' aria-pressed='false'>Pin chart</button></article>".format(
@@ -359,6 +359,7 @@ def build_dashboard(outdir: str | Path, images: Iterable[tuple[Path, str]]) -> P
                 label=safe_label,
                 label_lower=html.escape(label.lower(), quote=True),
                 label_text=html.escape(label),
+                stagger=min(index, 10),
             )
         )
     data_json = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
@@ -383,6 +384,12 @@ def build_dashboard(outdir: str | Path, images: Iterable[tuple[Path, str]]) -> P
   --radius-control: 10px;
   --shadow-panel: 0 20px 48px rgb(0 0 0 / 22%), 0 2px 8px rgb(0 0 0 / 16%);
   --motion-fast: 160ms;
+  --motion-enter: 220ms;
+}
+
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 * { box-sizing: border-box; }
@@ -489,6 +496,8 @@ main { padding: 28px 0 64px; }
   border-radius: var(--radius-panel);
   background: linear-gradient(145deg, rgb(22 40 59 / 96%), rgb(14 29 44 / 96%));
   box-shadow: var(--shadow-panel);
+  animation: reveal-up var(--motion-enter) cubic-bezier(.16,.84,.44,1) both;
+  animation-delay: calc(var(--i, 0) * 26ms);
 }
 
 .summary-card { min-height: 108px; padding: 17px 19px; }
@@ -578,6 +587,8 @@ button:disabled { cursor: not-allowed; opacity: .48; }
   transition-property: border-color, box-shadow, background-color;
   transition-duration: var(--motion-fast);
   transition-timing-function: ease-out;
+  animation: reveal-up var(--motion-enter) cubic-bezier(.16,.84,.44,1) both;
+  animation-delay: calc(var(--i, 0) * 26ms);
 }
 
 .chart-card:hover { border-color: #50718d; box-shadow: 0 16px 32px rgb(0 0 0 / 24%); }
@@ -602,7 +613,11 @@ button:disabled { cursor: not-allowed; opacity: .48; }
   outline: 1px solid rgb(255 255 255 / 12%);
   background: #08131e;
   object-fit: cover;
+  opacity: 1;
+  transition: opacity var(--motion-enter) ease-out;
 }
+
+.preview img.is-loading, dialog img.is-loading { opacity: 0; }
 
 .chart-title { display: block; padding: 10px 3px 2px; color: var(--ink); font-size: 13px; font-weight: 720; text-wrap: pretty; }
 .pin[aria-pressed="true"] { border-color: rgb(135 240 223 / 42%); background: var(--accent-soft); color: var(--accent-strong); }
@@ -628,14 +643,22 @@ dialog {
   background: #0e1d2c;
   color: var(--ink);
   box-shadow: 0 28px 70px rgb(0 0 0 / 48%);
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  transition: opacity var(--motion-enter) cubic-bezier(.16,.84,.44,1), transform var(--motion-enter) cubic-bezier(.16,.84,.44,1);
 }
 
-dialog::backdrop { background: rgb(2 9 16 / 76%); }
+dialog.is-opening { opacity: 0; transform: scale(.96) translateY(6px); transition: none; }
+dialog.is-closing { opacity: 0; transform: scale(.97) translateY(4px); transition: opacity var(--motion-fast) ease-in, transform var(--motion-fast) ease-in; }
+
+dialog::backdrop { background: rgb(2 9 16 / 76%); transition: background-color var(--motion-enter) ease-out; }
+dialog.is-opening::backdrop { background: rgb(2 9 16 / 0%); transition: none; }
+dialog.is-closing::backdrop { background: rgb(2 9 16 / 0%); transition: background-color var(--motion-fast) ease-in; }
 .modal-inner { padding: 17px; }
 .modal-header { display: flex; align-items: start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
 .modal-header h2 { font-size: 15px; }
 .modal-header button { flex: 0 0 auto; }
-dialog img { display: block; width: 100%; max-height: 78vh; border-radius: 12px; outline: 1px solid rgb(255 255 255 / 12%); background: #08131e; object-fit: contain; }
+dialog img { display: block; width: 100%; max-height: 78vh; border-radius: 12px; outline: 1px solid rgb(255 255 255 / 12%); background: #08131e; object-fit: contain; opacity: 1; transition: opacity var(--motion-enter) ease-out; }
 
 @media (max-width: 760px) {
   .shell { width: min(100% - 28px, 1360px); }
@@ -653,13 +676,13 @@ dialog img { display: block; width: 100%; max-height: 78vh; border-radius: 12px;
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
-  button:active, .preview:active { transform: none; }
+  button:active, .preview:active, dialog.is-opening, dialog.is-closing { transform: none; }
 }
 </style></head><body>
 <header class="hero"><div class="shell hero-inner"><div class="brand"><div class="brand-mark" aria-hidden="true">↗</div><div><p class="eyebrow">Offline market workspace</p><h1>Market Data Gallery</h1><p class="subtitle">Inspect generated charts, keep your most useful views close, and open any chart at full resolution.</p></div></div><span class="offline-badge">Local &amp; offline</span></div></header>
-<main class="shell"><section class="summary-grid" aria-label="Gallery summary"><article class="summary-card"><div class="summary-label">Charts available</div><div class="summary-value" id="chart-count">—</div><div class="summary-detail">generated views in this report</div></article><article class="summary-card"><div class="summary-label">Pinned charts</div><div class="summary-value" id="pin-count">0</div><div class="summary-detail">stored only in this browser</div></article><article class="summary-card"><div class="summary-label">Workspace mode</div><div class="summary-value">Offline</div><div class="summary-detail">no network service is required</div></article></section>
-<section class="section-panel" aria-labelledby="pinned-title"><div class="section-heading"><div><h2 id="pinned-title">Pinned charts</h2><p class="section-copy">Keep up to four frequently used views here.</p></div><span class="count" id="pinned-count-label">0 pinned</span></div><div class="toolbar"><button id="refresh" type="button">Refresh images</button><button id="clear" class="clear" type="button">Clear pins</button></div><div id="pins" class="pins" aria-live="polite"></div><p id="status" class="status" aria-live="polite"></p></section>
-<section class="section-panel" aria-labelledby="library-title"><div class="section-heading"><div><h2 id="library-title">Chart library</h2><p class="section-copy">Select a chart to inspect it at full size, or pin it for later.</p></div><span class="count" id="library-count">—</span></div><div class="toolbar"><div class="search-field"><label for="chart-search">Search charts</label><input id="chart-search" type="search" placeholder="e.g. volatility, volume, correlation"></div></div><div id="gallery" class="grid">__CARDS__</div><p id="gallery-empty" class="empty-state" hidden>No charts match that search.</p></section></main>
+<main class="shell"><section class="summary-grid" aria-label="Gallery summary"><article class="summary-card" style="--i:0"><div class="summary-label">Charts available</div><div class="summary-value" id="chart-count">—</div><div class="summary-detail">generated views in this report</div></article><article class="summary-card" style="--i:1"><div class="summary-label">Pinned charts</div><div class="summary-value" id="pin-count">0</div><div class="summary-detail">stored only in this browser</div></article><article class="summary-card" style="--i:2"><div class="summary-label">Workspace mode</div><div class="summary-value">Offline</div><div class="summary-detail">no network service is required</div></article></section>
+<section class="section-panel" style="--i:3" aria-labelledby="pinned-title"><div class="section-heading"><div><h2 id="pinned-title">Pinned charts</h2><p class="section-copy">Keep up to four frequently used views here.</p></div><span class="count" id="pinned-count-label">0 pinned</span></div><div class="toolbar"><button id="refresh" type="button">Refresh images</button><button id="clear" class="clear" type="button">Clear pins</button></div><div id="pins" class="pins" aria-live="polite"></div><p id="status" class="status" aria-live="polite"></p></section>
+<section class="section-panel" style="--i:4" aria-labelledby="library-title"><div class="section-heading"><div><h2 id="library-title">Chart library</h2><p class="section-copy">Select a chart to inspect it at full size, or pin it for later.</p></div><span class="count" id="library-count">—</span></div><div class="toolbar"><div class="search-field"><label for="chart-search">Search charts</label><input id="chart-search" type="search" placeholder="e.g. volatility, volume, correlation"></div></div><div id="gallery" class="grid">__CARDS__</div><p id="gallery-empty" class="empty-state" hidden>No charts match that search.</p></section></main>
 <dialog id="modal" aria-labelledby="modal-label"><div class="modal-inner"><div class="modal-header"><h2 id="modal-label">Chart preview</h2><button id="close" type="button">Close preview</button></div><img id="modal-image" alt="Expanded chart"></div></dialog>
 <script>
 const images = __IMAGE_DATA__;
@@ -670,6 +693,14 @@ const pins = byId("pins");
 const gallery = byId("gallery");
 const status = byId("status");
 const modal = byId("modal");
+
+const prefersReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const revealImage = (image) => {
+  if (!image || (image.complete && image.naturalWidth)) return;
+  image.classList.add("is-loading");
+  image.addEventListener("load", () => image.classList.remove("is-loading"), { once: true });
+};
 
 const selected = () => {
   try {
@@ -694,10 +725,15 @@ const findImage = (path) => images.find((image) => image.path === path);
 
 const openPreview = (item) => {
   if (!item) return;
-  byId("modal-image").src = item.path;
-  byId("modal-image").alt = item.label;
+  const image = byId("modal-image");
+  image.src = item.path;
+  image.alt = item.label;
   byId("modal-label").textContent = item.label;
-  if (!modal.open) modal.showModal();
+  revealImage(image);
+  if (modal.open) return;
+  modal.classList.add("is-opening");
+  modal.showModal();
+  requestAnimationFrame(() => modal.classList.remove("is-opening"));
 };
 
 const previewButton = (item) => {
@@ -711,6 +747,7 @@ const previewButton = (item) => {
   image.alt = item.label;
   image.loading = "lazy";
   image.decoding = "async";
+  revealImage(image);
   const title = document.createElement("span");
   title.className = "chart-title";
   title.textContent = item.label;
@@ -747,9 +784,10 @@ const renderPins = (message = "") => {
     empty.textContent = "No pinned charts yet. Pin up to four views from the chart library.";
     pins.append(empty);
   } else {
-    chosen.forEach((item) => {
+    chosen.forEach((item, index) => {
       const card = document.createElement("article");
       card.className = "chart-card";
+      card.style.setProperty("--i", String(index));
       card.append(previewButton(item), pinButton(item, true));
       pins.append(card);
     });
@@ -800,10 +838,25 @@ byId("refresh").addEventListener("click", () => {
   });
   status.textContent = "Chart images refreshed.";
 });
-byId("close").addEventListener("click", () => modal.close());
+let closeTimer = null;
+const requestClose = () => {
+  if (!modal.open || closeTimer) return;
+  modal.classList.add("is-closing");
+  closeTimer = window.setTimeout(() => {
+    modal.classList.remove("is-closing");
+    closeTimer = null;
+    modal.close();
+  }, prefersReducedMotion() ? 0 : 160);
+};
+byId("close").addEventListener("click", requestClose);
 modal.addEventListener("click", (event) => {
-  if (event.target === modal) modal.close();
+  if (event.target === modal) requestClose();
 });
+modal.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  requestClose();
+});
+document.querySelectorAll(".preview img").forEach(revealImage);
 renderPins();
 filterLibrary();
 </script></body></html>"""

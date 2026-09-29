@@ -449,6 +449,12 @@ _DASHBOARD_UI_STYLES = """<style id="dashboard-ui-polish">
   --radius-control: 10px;
   --shadow-panel: 0 18px 45px rgb(30 52 84 / 8%), 0 2px 7px rgb(30 52 84 / 4%);
   --motion-fast: 160ms;
+  --motion-enter: 220ms;
+}
+
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 html {
@@ -565,7 +571,16 @@ h1 {
   border-color: var(--line);
   border-radius: var(--radius-panel);
   box-shadow: var(--shadow-panel);
+  animation: reveal-up var(--motion-enter) cubic-bezier(.16,.84,.44,1) both;
 }
+
+.stats .stat:nth-child(2) { animation-delay: 26ms; }
+.stats .stat:nth-child(3) { animation-delay: 52ms; }
+.stats .stat:nth-child(4) { animation-delay: 78ms; }
+.content > .panel:first-child { animation-delay: 26ms; }
+.side > .panel:nth-child(1) { animation-delay: 52ms; }
+.side > .panel:nth-child(2) { animation-delay: 78ms; }
+.side > .panel:nth-child(3) { animation-delay: 104ms; }
 
 .stat {
   min-height: 130px;
@@ -966,6 +981,29 @@ _DASHBOARD_UI_BEHAVIOR = """<script id="dashboard-ui-behavior">
   if (!toolbar || !resultsBody || !candidateCount || !comparisonPanel) return;
 
   chartSubtitle?.setAttribute("aria-live", "polite");
+
+  const prefersReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const nativeDrawCurve = window.drawCurve;
+  if (typeof nativeDrawCurve === "function") {
+    window.drawCurve = (...args) => {
+      nativeDrawCurve(...args);
+      if (prefersReducedMotion()) return;
+      chart?.querySelectorAll("polyline").forEach((line, index) => {
+        const length = line.getTotalLength();
+        const delay = index * 30;
+        line.style.transition = "none";
+        line.style.strokeDasharray = String(length);
+        line.style.strokeDashoffset = String(length);
+        line.style.opacity = "0";
+        void line.getBoundingClientRect();
+        line.style.transition = `stroke-dashoffset 230ms cubic-bezier(.16,.84,.44,1) ${delay}ms, opacity 190ms ease-out ${delay}ms`;
+        requestAnimationFrame(() => {
+          line.style.strokeDashoffset = "0";
+          line.style.opacity = "1";
+        });
+      });
+    };
+  }
 
   const reset = document.createElement("button");
   reset.id = "reset-filters";
