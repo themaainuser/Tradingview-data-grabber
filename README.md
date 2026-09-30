@@ -220,6 +220,18 @@ shape: `{"detail": "message"}` for 404 (unknown id), 422 (unreadable file,
 NaN and infinite values are returned as `null`. Interactive docs are served
 at `/docs`.
 
+## Web dashboard
+
+`frontend/` is a Svelte 5 dashboard for exploring captures (candlesticks, 127
+indicators, compound bar filters, forward-return studies) and screening research
+runs. It shows only data from `tvdata serve` or a CSV you import; with no captures
+it renders empty states. See [`frontend/README.md`](frontend/README.md).
+
+```bash
+cd frontend && pnpm install && pnpm build
+tvdata serve --data-dir data --static-dir frontend/build   # http://127.0.0.1:8000
+```
+
 ## Python API
 
 The modules can be used independently in another application:
