@@ -34,10 +34,13 @@ from starlette.types import Scope
 
 from . import __version__
 from .analytics import data_quality_report, load_ohlcv, market_report
-from .research import build_research
+from .charts import chart_payload, correlation_matrix
+from .research import build_research, unique_label
+from .sentiment import FearGreedService, SentimentUnavailable, build_response
 
 MAX_BAR_LIMIT = 5_000_000
 MAX_RESEARCH_DATASETS = 20
+MAX_CORRELATION_DATASETS = 20
 FRAME_CACHE_SIZE = 16
 PRICE_COLUMNS = ("open", "high", "low", "close", "volume")
 IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable"
@@ -376,17 +379,27 @@ def create_app(
     data_dir: Union[str, Path],
     static_dir: Union[str, Path, None] = None,
     cors_origins: Sequence[str] = (),
+    fear_greed: Optional[FearGreedService] = None,
 ) -> FastAPI:
     """Build the dashboard API for the captures stored in ``data_dir``.
 
-    ``static_dir`` optionally hosts a built frontend at ``/`` and
-    ``cors_origins`` enables CORS for the listed origins (off by default
-    because the dev server proxies ``/api``).
+    ``static_dir`` optionally hosts a built frontend at ``/``, ``cors_origins`` enables CORS for the
+    listed origins (off by default because the dev server proxies ``/api``), and ``fear_greed``
+    replaces the CoinMarketCap-backed Fear & Greed service (tests inject a fake; by default nothing
+    is fetched until the first request).
     """
 
     root = Path(data_dir).expanduser().resolve()
     repository = DatasetRepository(root)
-    app = FastAPI(title="TradingView Data Grabber dashboard API", version=__version__)
+    # Interactive docs live under /api so the bare /docs path can belong to the dashboard's own
+    # documentation page (the SPA fallback serves it).
+    app = FastAPI(
+        title="TradingView Data Grabber dashboard API",
+        version=__version__,
+        docs_url="/api/docs",
+        redoc_url="/api/redoc",
+        openapi_url="/api/openapi.json",
+    )
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request(_request: Any, exc: RequestValidationError) -> Response:
@@ -465,6 +478,78 @@ def create_app(
     def get_report(dataset_id: str) -> Response:
         _, loaded = open_dataset(dataset_id)
         return _json(market_report(loaded.data))
+
+    @app.get("/api/datasets/{dataset_id}/charts")
+    def get_charts(
+        dataset_id: str,
+        bins: Annotated[int, Query(ge=10, le=200, description="volume-profile price bins")] = 60,
+        value_area: Annotated[
+            float, Query(ge=0.5, le=0.95, allow_inf_nan=False, description="share of volume inside the value area")
+        ] = 0.7,
+        window: Annotated[int, Query(ge=5, le=500, description="rolling-volatility window in bars")] = 30,
+        return_bins: Annotated[int, Query(ge=10, le=101, description="return-histogram bins")] = 41,
+    ) -> Response:
+        """Server-computed chart data; a section that cannot be computed is null and explained in ``unavailable``."""
+
+        file, loaded = open_dataset(dataset_id)
+        symbol, timeframe = _identity(file)
+        payload = chart_payload(loaded.data, bins=bins, value_area=value_area, window=window, return_bins=return_bins)
+        return _json({"id": dataset_id, "symbol": symbol, "timeframe": timeframe, **payload})
+
+    @app.get("/api/charts/correlation")
+    def get_correlation(
+        ids: Annotated[
+            Optional[list[str]], Query(description="dataset ids; repeat the parameter for 2-20 unique datasets")
+        ] = None,
+    ) -> Response:
+        """Close-to-close return correlation over the timestamps the datasets share."""
+
+        selected = ids or []
+        if not 2 <= len(selected) <= MAX_CORRELATION_DATASETS:
+            raise HTTPException(
+                status_code=422,
+                detail=f"select between 2 and {MAX_CORRELATION_DATASETS} datasets; got {len(selected)}",
+            )
+        if len(set(selected)) != len(selected):
+            raise HTTPException(status_code=422, detail="dataset ids must be unique")
+        registry = repository.registry()
+        datasets: list[tuple[str, pd.DataFrame]] = []
+        labels: set[str] = set()
+        for dataset_id in selected:
+            file = registry.get(dataset_id)
+            if file is None:
+                raise HTTPException(status_code=422, detail=f"unknown dataset id: {dataset_id}")
+            try:
+                loaded = repository.load(file)
+            except DatasetError as exc:
+                raise HTTPException(status_code=422, detail=f"{file.relative}: {exc}") from exc
+            symbol, timeframe = _identity(file)
+            datasets.append((unique_label(f"{symbol}-{timeframe}" if timeframe else symbol, labels), loaded.data))
+        result = correlation_matrix(datasets)
+        if result is None:
+            raise HTTPException(
+                status_code=422,
+                detail="fewer than 3 overlapping returns; the selected datasets do not share timestamps",
+            )
+        return _json(result)
+
+    sentiment = fear_greed or FearGreedService()
+
+    @app.get("/api/sentiment/fear-greed")
+    def get_fear_greed(
+        days: Annotated[Optional[int], Query(ge=1, le=3650, description="only the last N days of history")] = None,
+    ) -> Response:
+        """CoinMarketCap's Crypto Fear & Greed Index, read by this server (no API key).
+
+        502 when CoinMarketCap cannot be read and no earlier reading is cached; when one is cached it
+        is served with ``stale: true`` instead. Nothing is ever substituted for a missing reading.
+        """
+
+        try:
+            snapshot = sentiment.get()
+        except SentimentUnavailable as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return _json(build_response(snapshot, days))
 
     @app.post("/api/research/run")
     def run_research(body: ResearchRequest) -> Response:

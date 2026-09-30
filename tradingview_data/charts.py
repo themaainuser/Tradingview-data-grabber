@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import html
 import json
+import math
+import re
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Any, Iterable, Sequence
 
 import matplotlib
 
@@ -24,6 +26,14 @@ plt.rcParams["figure.dpi"] = 110
 GREEN = "#26a69a"
 RED = "#ef5350"
 HEAT = "YlOrRd"
+
+MAX_SERIES_POINTS = 1500
+MIN_DISTRIBUTION_RETURNS = 30
+MIN_INTRADAY_BARS = 48
+SECONDS_PER_DAY = 86_400
+WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+HOURS = tuple(f"{hour:02d}" for hour in range(24))
+PROFILE_CHUNK_ELEMENTS = 2_000_000
 
 
 def load_csv(path: str | Path) -> pd.DataFrame:
@@ -64,6 +74,332 @@ def _date_formatter(data: pd.DataFrame) -> mdates.DateFormatter:
     return mdates.DateFormatter("%m-%d %H:%M", tz=data.index.tz)
 
 
+def _utc_index(data: pd.DataFrame) -> pd.DatetimeIndex:
+    """Return the bar index in UTC; a naive index is taken to be UTC already."""
+
+    index = data.index
+    return index.tz_localize("UTC") if index.tz is None else index.tz_convert("UTC")
+
+
+def _epoch_seconds(data: pd.DataFrame) -> np.ndarray:
+    """Return bar times as UTC Unix seconds."""
+
+    return _utc_index(data).as_unit("s").asi8
+
+
+def _returns_pct(data: pd.DataFrame) -> pd.Series:
+    """Simple close-to-close returns in percent, aligned to ``data`` (NaN where undefined)."""
+
+    close = data["close"].astype(float)
+    return ((close / close.shift() - 1) * 100).replace([np.inf, -np.inf], np.nan)
+
+
+def _optional(values: np.ndarray) -> list[float | None]:
+    """Convert floats to a list, mapping non-finite values to ``None``."""
+
+    return [value if math.isfinite(value) else None for value in values.tolist()]
+
+
+def _decimated_positions(size: int, minima_of: np.ndarray | None = None) -> np.ndarray:
+    """Pick at most ``MAX_SERIES_POINTS`` positions, always including the first and last.
+
+    Each bucket keeps its minimum of ``minima_of`` (so troughs survive) or, when
+    that is omitted, its last position.
+    """
+
+    if size <= MAX_SERIES_POINTS:
+        return np.arange(size)
+    bounds = np.linspace(0, size, MAX_SERIES_POINTS - 1).astype(np.int64)
+    starts, stops = bounds[:-1], bounds[1:]
+    if minima_of is None:
+        picks = stops - 1
+    else:
+        picks = np.array([start + np.argmin(minima_of[start:stop]) for start, stop in zip(starts, stops)])
+    return np.unique(np.concatenate(([0, size - 1], picks)))
+
+
+def bar_interval(data: pd.DataFrame) -> tuple[float | None, bool]:
+    """Return the median bar spacing in seconds (``None`` below two bars) and whether it is intraday."""
+
+    if len(data) < 2:
+        return None, False
+    interval = float(np.median(np.diff(_epoch_seconds(data))))
+    return interval, interval < SECONDS_PER_DAY
+
+
+def _normal_cdf(values: np.ndarray, mean: float, std: float) -> np.ndarray:
+    """Normal CDF; a zero ``std`` degenerates to a step at ``mean``."""
+
+    if std <= 0:
+        return (values >= mean).astype(float)
+    scale = std * math.sqrt(2)
+    return np.array([0.5 * (1 + math.erf((value - mean) / scale)) for value in values.tolist()])
+
+
+def return_distribution(data: pd.DataFrame, bins: int = 41) -> dict[str, Any] | None:
+    """Histogram of close-to-close returns (%) with a fitted-normal overlay and tail risk.
+
+    Bins span the 0.5th-99.5th percentile; rarer returns are only counted in
+    ``outliers``.  ``normal`` holds the expected count per bin under a normal fitted
+    to every return.  Returns ``None`` below ``MIN_DISTRIBUTION_RETURNS`` returns.
+    """
+
+    if bins < 1:
+        raise ValueError("bins must be at least 1")
+    returns = _returns_pct(data).dropna()
+    count = len(returns)
+    if count < MIN_DISTRIBUTION_RETURNS:
+        return None
+    values = returns.to_numpy()
+    low, high = (float(edge) for edge in np.percentile(values, [0.5, 99.5]))
+    if high <= low:
+        low, high = low - 0.5, high + 0.5
+    edges = np.linspace(low, high, bins + 1)
+    counts = np.histogram(values, bins=edges)[0]
+    mean = float(values.mean())
+    std = float(values.std(ddof=1))
+    value_at_risk = float(np.percentile(values, 5))
+    return {
+        "edges": edges.tolist(),
+        "counts": counts.tolist(),
+        "normal": (count * np.diff(_normal_cdf(edges, mean, std))).tolist(),
+        "outliers": {"below": int((values < edges[0]).sum()), "above": int((values > edges[-1]).sum())},
+        "stats": {
+            "count": count,
+            "mean_pct": mean,
+            "std_pct": std,
+            "skew": float(returns.skew()),
+            "excess_kurtosis": float(returns.kurt()),
+            "min_pct": float(values.min()),
+            "max_pct": float(values.max()),
+            "positive_pct": float((values > 0).mean() * 100),
+            "var_95_pct": value_at_risk,
+            "cvar_95_pct": float(values[values <= value_at_risk].mean()),
+        },
+    }
+
+
+def drawdown_series(data: pd.DataFrame) -> dict[str, Any] | None:
+    """Underwater curve (% below the running close peak) plus the deepest drawdown.
+
+    ``drawdown_pct`` is decimated to ``MAX_SERIES_POINTS`` keeping each bucket's
+    minimum.  Without any drawdown the peak and trough are the first bar and
+    ``recovered_time`` is ``None``.  Returns ``None`` below two bars.
+    """
+
+    if len(data) < 2:
+        return None
+    close = data["close"].to_numpy(dtype=float)
+    times = _epoch_seconds(data)
+    peaks = np.maximum.accumulate(close)
+    drawdown = (close / peaks - 1) * 100
+    trough = int(np.argmin(drawdown))
+    peak_price = peaks[trough]
+    peak = int(np.flatnonzero(close[: trough + 1] == peak_price)[-1])
+    recovered = None
+    if drawdown[trough] < 0:
+        later = np.flatnonzero(close[trough + 1 :] >= peak_price)
+        if later.size:
+            recovered = int(times[trough + 1 + later[0]])
+    underwater = np.concatenate(([0], (drawdown < 0).astype(np.int8), [0]))
+    changes = np.flatnonzero(np.diff(underwater))
+    runs = changes[1::2] - changes[::2]
+    kept = _decimated_positions(len(close), minima_of=drawdown)
+    return {
+        "time": times[kept].tolist(),
+        "drawdown_pct": drawdown[kept].tolist(),
+        "max_drawdown_pct": float(drawdown[trough]),
+        "peak_time": int(times[peak]),
+        "trough_time": int(times[trough]),
+        "recovered_time": recovered,
+        "current_drawdown_pct": float(drawdown[-1]),
+        "longest_underwater_bars": int(runs.max()) if runs.size else 0,
+    }
+
+
+def rolling_volatility(data: pd.DataFrame, window: int = 30) -> dict[str, Any] | None:
+    """Rolling sample standard deviation of per-bar returns (%), not annualised.
+
+    Warm-up values are ``None`` and the series keeps the last value of each
+    bucket once it exceeds ``MAX_SERIES_POINTS``.  Returns ``None`` unless there
+    are more than ``window`` returns.
+    """
+
+    if window < 2:
+        raise ValueError("window must be at least 2")
+    if len(data) - 1 <= window:
+        return None
+    values = _returns_pct(data).rolling(window).std(ddof=1).to_numpy()
+    kept = _decimated_positions(len(values))
+    return {
+        "window": window,
+        "time": _epoch_seconds(data)[kept].tolist(),
+        "value_pct": _optional(values[kept]),
+    }
+
+
+def _cell_grid(cells: np.ndarray, values: np.ndarray) -> list[list[float | None]]:
+    """Mean of ``values`` per weekday x hour cell; ``None`` where a cell has no finite value."""
+
+    valid = np.isfinite(values)
+    counts = np.bincount(cells[valid], minlength=168)
+    sums = np.bincount(cells[valid], weights=values[valid], minlength=168)
+    means = np.divide(sums, counts, out=np.full(168, np.nan), where=counts > 0)
+    return [_optional(row) for row in means.reshape(7, 24)]
+
+
+def activity_heatmap(data: pd.DataFrame) -> dict[str, Any] | None:
+    """Mean volume, bar range and return per UTC weekday (0=Monday) x UTC hour.
+
+    Only intraday data with at least ``MIN_INTRADAY_BARS`` bars qualifies; the index
+    is converted to UTC first so cells never follow the capture timezone.
+    """
+
+    _, intraday = bar_interval(data)
+    if not intraday or len(data) < MIN_INTRADAY_BARS:
+        return None
+    utc = _utc_index(data)
+    cells = utc.dayofweek.to_numpy() * 24 + utc.hour.to_numpy()
+    opens = data["open"].to_numpy(dtype=float)
+    spread = (data["high"] - data["low"]).to_numpy(dtype=float)
+    range_pct = np.divide(spread * 100, opens, out=np.full(len(opens), np.nan), where=opens != 0)
+    return {
+        "hours": list(range(24)),
+        "weekdays": list(range(7)),
+        "metrics": {
+            "volume": _cell_grid(cells, data["volume"].to_numpy(dtype=float)),
+            "range_pct": _cell_grid(cells, range_pct),
+            "return_pct": _cell_grid(cells, _returns_pct(data).to_numpy()),
+        },
+        "counts": np.bincount(cells, minlength=168).reshape(7, 24).tolist(),
+    }
+
+
+def _seasonal_stats(labels: Sequence[str], keys: np.ndarray, returns: np.ndarray) -> dict[str, Any]:
+    """Mean return, hit rate and count of ``returns`` grouped by ``keys`` (indexes into ``labels``)."""
+
+    size = len(labels)
+    counts = np.bincount(keys, minlength=size)
+    sums = np.bincount(keys, weights=returns, minlength=size)
+    wins = np.bincount(keys[returns > 0], minlength=size)
+    seen = counts > 0
+    return {
+        "labels": list(labels),
+        "mean_return_pct": _optional(np.divide(sums, counts, out=np.full(size, np.nan), where=seen)),
+        "hit_rate_pct": _optional(np.divide(wins * 100, counts, out=np.full(size, np.nan), where=seen)),
+        "count": counts.tolist(),
+    }
+
+
+def seasonality(data: pd.DataFrame) -> dict[str, Any]:
+    """Return statistics by UTC weekday and, for intraday data, by UTC hour.
+
+    Each return belongs to its own bar's timestamp.  A block is ``None`` when its
+    data requirement is unmet (30 returns; intraday with 48 returns for hours).
+    """
+
+    returns = _returns_pct(data)
+    valid = returns.notna().to_numpy()
+    values = returns.to_numpy()[valid]
+    utc = _utc_index(data)[valid]
+    _, intraday = bar_interval(data)
+    by_weekday = by_hour = None
+    if len(values) >= MIN_DISTRIBUTION_RETURNS:
+        by_weekday = _seasonal_stats(WEEKDAYS, utc.dayofweek.to_numpy(), values)
+    if intraday and len(values) >= MIN_INTRADAY_BARS:
+        by_hour = _seasonal_stats(HOURS, utc.hour.to_numpy(), values)
+    return {"by_weekday": by_weekday, "by_hour": by_hour}
+
+
+def correlation_matrix(datasets: Sequence[tuple[str, pd.DataFrame]]) -> dict[str, Any] | None:
+    """Correlate close-to-close returns over the timestamps every dataset shares.
+
+    Returns ``None`` below three overlapping returns.  ``start``/``end`` are the
+    first and last overlapping return times in UTC Unix seconds.
+    """
+
+    if not datasets:
+        return None
+    closes = [data["close"].rename(label) for label, data in datasets]
+    combined = pd.concat(closes, axis=1, join="inner").dropna()
+    returns = combined.pct_change().dropna()
+    if len(returns) < 3:
+        return None
+    times = returns.index.as_unit("s").asi8
+    return {
+        "labels": [label for label, _ in datasets],
+        "matrix": returns.corr().to_numpy().tolist(),
+        "observations": len(returns),
+        "start": int(times[0]),
+        "end": int(times[-1]),
+    }
+
+
+def _intraday_reason(interval: float | None, available: int, minimum: int, noun: str) -> str:
+    if interval is not None and interval >= SECONDS_PER_DAY:
+        return f"needs intraday bars; the median bar spacing is {interval:.0f} s"
+    return f"needs at least {minimum} {noun}; this dataset has {available}"
+
+
+def chart_payload(
+    data: pd.DataFrame,
+    *,
+    bins: int = 60,
+    value_area: float = 0.7,
+    window: int = 30,
+    return_bins: int = 41,
+) -> dict[str, Any]:
+    """Bundle every chart section the dashboard draws for one dataset.
+
+    Sections that cannot be computed are ``None`` and explained in
+    ``unavailable`` (seasonality blocks are keyed ``seasonality.by_weekday`` and
+    ``seasonality.by_hour``).
+    """
+
+    interval, intraday = bar_interval(data)
+    profile = volume_profile(data, bins, value_area)
+    volume = profile["profile"]
+    assert isinstance(volume, np.ndarray)
+    seasonal = seasonality(data)
+    sections: dict[str, Any] = {
+        "return_distribution": return_distribution(data, return_bins),
+        "drawdown": drawdown_series(data),
+        "rolling_volatility": rolling_volatility(data, window),
+        "activity": activity_heatmap(data),
+        "seasonality.by_weekday": seasonal["by_weekday"],
+        "seasonality.by_hour": seasonal["by_hour"],
+    }
+    bars = len(data)
+    returns = max(bars - 1, 0)
+    reasons = {
+        "return_distribution": f"needs at least {MIN_DISTRIBUTION_RETURNS} bar returns; this dataset has {returns}",
+        "drawdown": f"needs at least 2 bars; this dataset has {bars}",
+        "rolling_volatility": f"needs more than {window} bar returns; this dataset has {returns}",
+        "activity": _intraday_reason(interval, bars, MIN_INTRADAY_BARS, "bars"),
+        "seasonality.by_weekday": f"needs at least {MIN_DISTRIBUTION_RETURNS} bar returns; this dataset has {returns}",
+        "seasonality.by_hour": _intraday_reason(interval, returns, MIN_INTRADAY_BARS, "bar returns"),
+    }
+    return {
+        "bars": bars,
+        "interval_seconds": interval,
+        "intraday": intraday,
+        "volume_profile": {
+            "edges": profile["edges"].tolist(),
+            "volume": volume.tolist(),
+            "poc": profile["poc"],
+            "value_low": profile["value_low"],
+            "value_high": profile["value_high"],
+            "total_volume": float(volume.sum()),
+        },
+        "return_distribution": sections["return_distribution"],
+        "drawdown": sections["drawdown"],
+        "rolling_volatility": sections["rolling_volatility"],
+        "activity": sections["activity"],
+        "seasonality": {"by_weekday": seasonal["by_weekday"], "by_hour": seasonal["by_hour"]},
+        "unavailable": {name: reasons[name] for name, section in sections.items() if section is None},
+    }
+
+
 def chart_candles(data: pd.DataFrame, outdir: str | Path) -> Path:
     """Generate a candlestick and volume chart."""
 
@@ -98,6 +434,35 @@ def chart_candles(data: pd.DataFrame, outdir: str | Path) -> Path:
     return _save(fig, outdir, "1_candles_volume.png", "Candles + Volume")
 
 
+def _distribute_volume(data: pd.DataFrame, edges: np.ndarray) -> np.ndarray:
+    """Spread each bar's volume across the price bins its high-low range overlaps.
+
+    Flat bars (high <= low) drop their whole volume into the bin holding that
+    price.  Rows are processed in chunks to bound the broadcast temporaries.
+    """
+
+    bins = len(edges) - 1
+    highs = data["high"].to_numpy(dtype=float)
+    lows = data["low"].to_numpy(dtype=float)
+    volumes = data["volume"].to_numpy(dtype=float)
+    profile = np.zeros(bins)
+    flat = highs <= lows
+    if flat.any():
+        index = np.clip(np.searchsorted(edges, highs[flat], side="right") - 1, 0, bins - 1)
+        profile += np.bincount(index, weights=volumes[flat], minlength=bins)
+    spans = highs - lows
+    tall = np.flatnonzero(~flat)
+    step = max(1, PROFILE_CHUNK_ELEMENTS // bins)
+    for start in range(0, len(tall), step):
+        rows = tall[start : start + step]
+        overlaps = np.minimum(highs[rows, None], edges[1:]) - np.maximum(lows[rows, None], edges[:-1])
+        np.maximum(overlaps, 0, out=overlaps)
+        overlaps *= volumes[rows, None]
+        overlaps /= spans[rows, None]
+        profile += overlaps.sum(axis=0)
+    return profile
+
+
 def volume_profile(data: pd.DataFrame, bins: int = 60, value_area: float = 0.7) -> dict[str, np.ndarray | float]:
     """Distribute OHLCV volume across price bins and calculate POC/value area."""
 
@@ -106,20 +471,7 @@ def volume_profile(data: pd.DataFrame, bins: int = 60, value_area: float = 0.7) 
     low, high = _price_bounds(data)
     edges = np.linspace(low, high, bins + 1)
     mids = (edges[:-1] + edges[1:]) / 2
-    profile = np.zeros(bins)
-
-    for row in data[["high", "low", "volume"]].itertuples(index=False):
-        candle_high, candle_low, volume = map(float, row)
-        if candle_high <= candle_low:
-            index = np.clip(np.searchsorted(edges, candle_high, side="right") - 1, 0, bins - 1)
-            profile[index] += volume
-            continue
-        span = candle_high - candle_low
-        overlaps = np.maximum(
-            0,
-            np.minimum(candle_high, edges[1:]) - np.maximum(candle_low, edges[:-1]),
-        )
-        profile += volume * overlaps / span
+    profile = _distribute_volume(data, edges)
 
     poc_index = int(np.argmax(profile))
     selected: set[int] = {poc_index}
@@ -317,26 +669,105 @@ def chart_technical_indicators(data: pd.DataFrame, outdir: str | Path) -> Path:
 def chart_correlation(datasets: Sequence[tuple[str, pd.DataFrame]], outdir: str | Path) -> Path | None:
     """Generate a close-return correlation heatmap for overlapping symbols."""
 
-    closes: list[pd.Series] = []
-    labels: list[str] = []
-    for label, data in datasets:
-        closes.append(data["close"].rename(label))
-        labels.append(label)
-    combined = pd.concat(closes, axis=1, join="inner").dropna()
-    if len(combined) < 2:
+    result = correlation_matrix(datasets)
+    if result is None:
         return None
-    correlation = combined.pct_change().dropna().corr()
-    if correlation.empty:
-        return None
+    labels = result["labels"]
+    matrix = np.array(result["matrix"], dtype=float)
     fig, axis = plt.subplots(figsize=(max(7, len(labels) * 1.25), max(6, len(labels) * 1.1)))
-    image = axis.imshow(correlation, cmap="RdYlGn", vmin=-1, vmax=1)
-    axis.set_xticks(range(len(correlation.columns)), correlation.columns, rotation=35, ha="right")
-    axis.set_yticks(range(len(correlation.index)), correlation.index)
-    for row in range(len(correlation.index)):
-        for column in range(len(correlation.columns)):
-            axis.text(column, row, f"{correlation.iloc[row, column]:.2f}", ha="center", va="center", fontsize=9)
+    image = axis.imshow(matrix, cmap="RdYlGn", vmin=-1, vmax=1)
+    axis.set_xticks(range(len(labels)), labels, rotation=35, ha="right")
+    axis.set_yticks(range(len(labels)), labels)
+    for row in range(len(labels)):
+        for column in range(len(labels)):
+            axis.text(column, row, f"{matrix[row, column]:.2f}", ha="center", va="center", fontsize=9)
     fig.colorbar(image, ax=axis, label="return correlation")
     return _save(fig, outdir, "8_correlation_heatmap.png", "Cross-Symbol Return Correlation")
+
+
+def _local_times(epochs: Sequence[int], data: pd.DataFrame) -> pd.DatetimeIndex:
+    """Convert UTC epoch seconds to the capture timezone used by the other charts."""
+
+    times = pd.to_datetime(list(epochs), unit="s", utc=True)
+    return times.tz_localize(None) if data.index.tz is None else times.tz_convert(data.index.tz)
+
+
+def chart_return_distribution(data: pd.DataFrame, outdir: str | Path) -> Path | None:
+    """Generate the return histogram with a fitted normal curve and 95% VaR."""
+
+    distribution = return_distribution(data)
+    if distribution is None:
+        return None
+    edges = np.array(distribution["edges"])
+    stats = distribution["stats"]
+    outliers = distribution["outliers"]
+    fig, axis = plt.subplots(figsize=(13, 6))
+    axis.bar(edges[:-1], distribution["counts"], width=np.diff(edges), align="edge", color="#5c6bc0", alpha=0.8, label="observed")
+    axis.plot((edges[:-1] + edges[1:]) / 2, distribution["normal"], color="#ef6c00", linewidth=2, label="normal fit")
+    axis.axvline(0, color="#263238", linewidth=0.8)
+    axis.axvline(stats["var_95_pct"], color=RED, linestyle="--", linewidth=1.3, label=f"VaR 95%: {stats['var_95_pct']:.2f}%")
+    axis.set_xlabel("bar return %")
+    axis.set_ylabel("bars")
+    axis.grid(alpha=0.2)
+    axis.legend(loc="upper left")
+    summary = (
+        f"n = {stats['count']}\nmean {stats['mean_pct']:.3f}%   std {stats['std_pct']:.3f}%\n"
+        f"skew {stats['skew']:.2f}   excess kurtosis {stats['excess_kurtosis']:.2f}\n"
+        f"CVaR 95%: {stats['cvar_95_pct']:.2f}%\n"
+        f"outside view: {outliers['below']} below, {outliers['above']} above"
+    )
+    axis.text(0.99, 0.97, summary, transform=axis.transAxes, ha="right", va="top", fontsize=9, family="monospace")
+    return _save(fig, outdir, "9_return_distribution.png", "Return Distribution vs Normal")
+
+
+def chart_drawdown(data: pd.DataFrame, outdir: str | Path) -> Path | None:
+    """Generate the underwater plot with the deepest drawdown marked."""
+
+    series = drawdown_series(data)
+    if series is None:
+        return None
+    times = _local_times(series["time"], data)
+    deepest = series["max_drawdown_pct"]
+    fig, axis = plt.subplots(figsize=(13, 6))
+    axis.fill_between(times, series["drawdown_pct"], 0, color=RED, alpha=0.3)
+    axis.plot(times, series["drawdown_pct"], color=RED, linewidth=1)
+    if deepest < 0:
+        peak, trough = _local_times([series["peak_time"], series["trough_time"]], data)
+        axis.axvline(peak, color=GREEN, linestyle=":", label="peak")
+        axis.scatter([trough], [deepest], color="#b71c1c", zorder=3, label=f"max drawdown {deepest:.2f}%")
+        if series["recovered_time"] is not None:
+            axis.axvline(_local_times([series["recovered_time"]], data)[0], color="#1565c0", linestyle=":", label="recovered")
+        axis.legend(loc="lower left")
+    axis.set_ylim(min(deepest * 1.1, -1.0), max(0.2, -deepest * 0.05))
+    axis.xaxis.set_major_formatter(_date_formatter(data))
+    axis.set_ylabel("drawdown from peak close %")
+    axis.grid(alpha=0.2)
+    fig.autofmt_xdate()
+    return _save(fig, outdir, "10_drawdown.png", "Drawdown (Underwater)")
+
+
+def chart_seasonality(data: pd.DataFrame, outdir: str | Path) -> Path | None:
+    """Generate mean return and hit rate by UTC weekday and, when available, hour."""
+
+    blocks = seasonality(data)
+    panels = [(title, blocks[key]) for title, key in (("UTC weekday", "by_weekday"), ("UTC hour", "by_hour")) if blocks[key]]
+    if not panels:
+        return None
+    fig, axes = plt.subplots(len(panels), 1, figsize=(13, 4.5 * len(panels)), squeeze=False)
+    for axis, (title, block) in zip(axes[:, 0], panels):
+        mean = np.array(block["mean_return_pct"], dtype=float)
+        axis.bar(block["labels"], mean, color=np.where(np.nan_to_num(mean) >= 0, GREEN, RED))
+        axis.axhline(0, color="#263238", linewidth=0.8)
+        axis.set_xlabel(title)
+        axis.set_ylabel("mean return %")
+        axis.grid(alpha=0.2, axis="y")
+        hit_axis = axis.twinx()
+        hit_axis.plot(block["labels"], np.array(block["hit_rate_pct"], dtype=float), "o", color="#fb8c00", label="hit rate")
+        hit_axis.axhline(50, color="#fb8c00", linestyle=":", linewidth=0.8)
+        hit_axis.set_ylim(0, 100)
+        hit_axis.set_ylabel("hit rate %")
+        hit_axis.legend(loc="upper right")
+    return _save(fig, outdir, "11_seasonality.png", "Return Seasonality (UTC)")
 
 
 def build_dashboard(outdir: str | Path, images: Iterable[tuple[Path, str]]) -> Path:
@@ -817,8 +1248,14 @@ def build_html(outdir: str | Path) -> Path:
     """Compatibility helper that builds a dashboard from existing PNG files."""
 
     output = Path(outdir)
-    images = [(path, path.stem.replace("_", " ").title()) for path in sorted(output.rglob("*.png"))]
+    images = [(path, path.stem.replace("_", " ").title()) for path in sorted(output.rglob("*.png"), key=_natural_key)]
     return build_dashboard(output, images)
+
+
+def _natural_key(path: Path) -> list[str | int]:
+    """Sort ``2_x.png`` before ``10_x.png``."""
+
+    return [int(part) if part.isdigit() else part for part in re.split(r"(\d+)", path.as_posix())]
 
 
 def generate_charts(
@@ -862,6 +1299,12 @@ def generate_charts(
         ]
         if include_indicators:
             chart_paths.append(chart_technical_indicators(data, destination))
+        optional_paths = (
+            chart_return_distribution(data, destination),
+            chart_drawdown(data, destination),
+            chart_seasonality(data, destination),
+        )
+        chart_paths.extend(path for path in optional_paths if path is not None)
         generated.extend(chart_paths)
         dashboard_images.extend((path, f"{label} · {path.stem.replace('_', ' ').title()}") for path in chart_paths)
 

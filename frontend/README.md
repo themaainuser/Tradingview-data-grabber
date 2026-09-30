@@ -55,13 +55,13 @@ contrast (4.5:1 text, 3:1 graphics).
 
 Adaptations for a dense analytical tool, where the marketing spec is silent or insufficient:
 
-| Spec                                       | Here                                                                                       | Why                                                             |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
-| No second chromatic accent                 | Up = `semantic-success`, down = `gradient-coral`, series = gradient family + white + muted | Market direction needs two colors; both are documented tokens   |
-| Focus ring `rgba(0,153,255,.15) 0 0 0 1px` | Same halo plus a solid 1px `#0099ff` edge                                                  | A 15% 1px ring alone is not reliably visible to keyboard users  |
-| ~1199px content width                      | Full-width container up to 1600px                                                          | Charts and 10+ column tables need the room                      |
-| Buttons 10px 15px padding (34px tall)      | Same on desktop, 44px minimum on touch pointers                                            | Spec says 44px tap targets but its padding gives 34px           |
-| Marketing display sizes                    | `display-xl` only on the Datasets hero; tool pages use `display-md`                        | A 62-110px heading costs too much vertical space in a workbench |
+| Spec                                       | Here                                                                                                    | Why                                                             |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| No second chromatic accent                 | Up = `semantic-success`, down = `gradient-coral`, series = gradient family + white + muted              | Market direction needs two colors; both are documented tokens   |
+| Focus ring `rgba(0,153,255,.15) 0 0 0 1px` | Same halo plus a solid 1px `#0099ff` edge                                                               | A 15% 1px ring alone is not reliably visible to keyboard users  |
+| ~1199px content width                      | Full-width container up to 1600px                                                                       | Charts and 10+ column tables need the room                      |
+| Buttons 10px 15px padding (34px tall)      | Same on desktop, 44px minimum on touch pointers                                                         | Spec says 44px tap targets but its padding gives 34px           |
+| Marketing display sizes                    | `display-xl` on the Datasets hero, `display-lg` on the Docs and 404 heroes; tool pages use `display-md` | A 62-110px heading costs too much vertical space in a workbench |
 
 UI primitives are [shadcn-svelte](https://shadcn-svelte.com) (bits-ui), restyled onto the tokens in
 `src/lib/components/ui`. 21st.dev components are React/TSX and cannot be installed into a Svelte
@@ -77,21 +77,59 @@ src/lib/
   explorer/    field keys · BarSource (memoised indicator compute) · generated presets · catalog
   research/    column model for the results table · catalog
   analysis/    event-study.ts (conditional forward returns)
-  charts/      canvas controllers (candles, lines) + pure viewport / decimation / scale maths
+  charts/      canvas controllers (candles, lines) + pure viewport / decimation / scale maths · chart-math (scales, colour) · distribution (histogram helpers)
   data/        csv.ts (client-side OHLCV import, same rules as the backend loader)
+  docs/        api-reference.ts (endpoint reference data) · scrollspy.ts (active-section tracking)
+  sentiment/   bands (colours, wording) · gauge (geometry) · stats (range, zone and summary maths)
   design/      tokens.spec.ts (DESIGN.md <-> CSS parity and contrast checks)
   state/       runes-based stores, provided through context (see below)
-  components/  app/ (charts, virtual list, spotlight, empty/error states, menu) · filters/ · explorer/ · research/ · ui/
-src/routes/    /  (datasets) · /explorer/[[dataset]] · /research
+  components/  app/ (virtual list, spotlight, empty/error states, menu) · charts/ (SVG chart components) · sentiment/ · docs/ · filters/ · explorer/ · research/ · ui/
+src/routes/    /  (datasets) · /explorer/[[dataset]] · /charts/[[dataset]] · /research · /sentiment · /docs  (+error.svelte for unmatched routes)
 ```
+
+## Docs page
+
+`/docs` is the in-app documentation: quick start, data sources and CSV rules, explorer controls,
+filters, indicators, research, API reference and troubleshooting, with a contents list that tracks
+the section in view (a pill row under the header on phones, a sticky list from 1199px).
+
+The reference tables are generated from the code instead of being written out by hand, so they
+cannot drift from behaviour: operators come from `filters/operators.ts`, indicators from the
+registry, research statistics from `research/columns.ts`. Only the API reference
+(`docs/api-reference.ts`) and the prose are hand-written; a test pins the endpoint list to the
+backend's.
+
+Interactive Swagger and ReDoc are served by the backend under `/api/docs` and `/api/redoc`
+(schema at `/api/openapi.json`), which leaves the bare `/docs` path to the app. They load their
+scripts from a CDN, so they need an internet connection; the in-app docs do not.
+
+## Charts and Sentiment pages
+
+**Charts** (`/charts/[[dataset]]`) draws analysis the backend computes: volume profile, return
+distribution, drawdown, rolling volatility, weekday-by-hour activity, seasonality and a correlation
+matrix. The page only draws what `GET /api/datasets/{id}/charts` returns and shows the backend's
+reason for any section it could not compute (`unavailable`), so no chart is ever an empty frame. The
+chart components (`components/charts/`: `AreaChart`, `BarChart`, `HBarChart`, `Heatmap`) are
+responsive SVG/HTML, colour only through design tokens, are keyboard navigable (arrows, Home/End) and
+carry a screen-reader table or summary. Their screen-reader tables sit inside a clipping wrapper
+because a `<table class="sr-only">` ignores the 1px width and widens the page.
+
+**Sentiment** (`/sentiment`) shows the CoinMarketCap Crypto Fear and Greed Index the backend
+fetches. With no reading available it shows the error and nothing else; with a failed refresh it keeps
+the last readings on screen and says when they were fetched. Zone colours come from
+`sentiment/bands.ts`, the single source for gauge, pills, chart bands and the zone bar, so one
+reading never appears in two colours.
 
 ## Backend contract
 
-| Endpoint                      | Client method  | Store                       | Screen                    |
-| ----------------------------- | -------------- | --------------------------- | ------------------------- |
-| `GET /api/datasets`           | `listDatasets` | `DatasetsStore.load`        | Datasets, dataset pickers |
-| `GET /api/datasets/{id}/bars` | `getBars`      | `ExplorerStore.openBackend` | Explorer                  |
-| `POST /api/research/run`      | `runResearch`  | `ResearchStore.run`         | Research                  |
+| Endpoint                        | Client method    | Store                         | Screen                    |
+| ------------------------------- | ---------------- | ----------------------------- | ------------------------- |
+| `GET /api/datasets`             | `listDatasets`   | `DatasetsStore.load`          | Datasets, dataset pickers |
+| `GET /api/datasets/{id}/bars`   | `getBars`        | `ExplorerStore.openBackend`   | Explorer                  |
+| `POST /api/research/run`        | `runResearch`    | `ResearchStore.run`           | Research                  |
+| `GET /api/datasets/{id}/charts` | `getCharts`      | `ChartsStore.open`            | Charts                    |
+| `GET /api/charts/correlation`   | `getCorrelation` | `ChartsStore.loadCorrelation` | Charts (Correlation)      |
+| `GET /api/sentiment/fear-greed` | `getFearGreed`   | `SentimentStore.load`         | Sentiment                 |
 
 `GET /api/health` and `GET /api/datasets/{id}/report` exist on the server but are not used yet.
 Errors arrive as `{"detail": string}` or FastAPI's validation list; both become an `ApiError`
@@ -139,17 +177,24 @@ field, and generates 1,282 presets from the registry; the research table exposes
 
 ## Component reference (main props)
 
-| Component                   | Props                                                                                                                             |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `VirtualList`               | `count`, `itemHeight`, `label`, `key?`, `minWidth?`, `class?` (must bound the height), snippets `header?`, `row(index)`, `empty?` |
-| `CandleChart`               | `columns`, `overlays`, `panes`, `mask`, `showVolume`, `label`, `focus?`, `intraday?`                                              |
-| `LineChart`                 | `series`, `label`                                                                                                                 |
-| `FilterBuilder`             | `tree`, `editor`, `catalog`, `evaluation`, `saved`, `unit`                                                                        |
-| `FieldPicker`               | `catalog`, `value`, `onchange`, `numericOnly?`, `placeholder?`                                                                    |
-| `ParamEditor`               | `specs`, `values`, `onchange(values)`, `title?`                                                                                   |
-| `ResultsTable`              | `research`, `table`                                                                                                               |
-| `EventStudyPanel`           | `study`, `horizons`, `onhorizons`, `onsetOnly`, `ononset`                                                                         |
-| `EmptyState` / `ErrorPanel` | `title`, `description?`, `icon?` / `error`, `title?`, `onretry?`                                                                  |
+| Component         | Props                                                                                                                             |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `VirtualList`     | `count`, `itemHeight`, `label`, `key?`, `minWidth?`, `class?` (must bound the height), snippets `header?`, `row(index)`, `empty?` |
+| `CandleChart`     | `columns`, `overlays`, `panes`, `mask`, `showVolume`, `label`, `focus?`, `intraday?`                                              |
+| `LineChart`       | `series`, `label`                                                                                                                 |
+| `FilterBuilder`   | `tree`, `editor`, `catalog`, `evaluation`, `saved`, `unit`                                                                        |
+| `FieldPicker`     | `catalog`, `value`, `onchange`, `numericOnly?`, `placeholder?`                                                                    |
+| `ParamEditor`     | `specs`, `values`, `onchange(values)`, `title?`                                                                                   |
+| `ResultsTable`    | `research`, `table`                                                                                                               |
+| `EventStudyPanel` | `study`, `horizons`, `onhorizons`, `onsetOnly`, `ononset`                                                                         |
+| `EmptyState`      | `title`, `description?`, `icon?`, `tone?` (`violet` / `magenta` / `orange` renders a spotlight card), children = call to action   |
+| `SpotlightCard`   | `tone?`, `class?`, children                                                                                                       |
+| `ErrorPanel`      | `error`, `title?`, `onretry?`                                                                                                     |
+| `ImportCsv`       | `datasets`, `onimported`, `variant?` (errors surface in the app shell banner)                                                     |
+| `MobileMenu`      | `open` (bindable), `items`, `isActive`, `status`; loaded on first open                                                            |
+| `DocSection`      | `id`, `title`, `lead?`, children (prose), `wide?` snippet (full-width reference)                                                  |
+| `CodeBlock`       | `code` (copied exactly as written), `label?`; copy has visible success and failure states                                         |
+| `DocsToc`         | `items`, `active`                                                                                                                 |
 
 ## Performance
 
@@ -162,17 +207,19 @@ field, and generates 1,282 presets from the registry; the research table exposes
   (RSI + SMA + volume breakout) ~120 ms, editing a threshold ~6 ms, unchanged re-evaluation ~2 ms.
   That is fast enough that compute stays on the main thread; the pure functions are worker-ready
   if larger captures demand it.
-- Route-level code splitting: first load is ~88 kB gzip (JS + CSS) for the datasets page, ~149 kB for
-  research and ~167 kB for the explorer (which carries the indicator library). The mobile menu and
-  its dialog primitive load on first open. Fonts are self-hosted: Inter subset 97 kB, Geist latin
-  28 kB, both `font-display: swap`, fetched only for the glyphs on screen.
+- Route-level code splitting: first load (JS + CSS, gzip) is about 96 kB for the datasets page,
+  116 kB for sentiment, 132 kB for docs, 150 kB for charts, 163 kB for research and 182 kB for the
+  explorer (which carries the indicator library). All routes share one stylesheet, so a new page's
+  utility classes add a few kB everywhere. The mobile menu and its dialog primitive load on first
+  open. Fonts are self-hosted: Inter subset 97 kB, Geist latin 28 kB, both `font-display: swap`,
+  fetched only for the glyphs on screen.
 
 ## Svelte audit (against the official `svelte-core-bestpractices` guidance)
 
 Runes mode is forced project-wide. No `$:`, `export let`, `on:`, `<slot>`, `use:`, `class:` or
 `svelte/store` in app code. `$effect` is used four times, all to sync with something outside
 Svelte (three push props into canvas controllers inside `{@attach}`, one maps the URL to the
-store). All 35 `{#each}` blocks are keyed. Derived values use `$derived`; `$state.raw` holds
+store). All 86 `{#each}` blocks are keyed. Derived values use `$derived`; `$state.raw` holds
 API payloads and typed arrays. `svelte-check` and `eslint-plugin-svelte` (including
 `prefer-svelte-reactivity` and `no-navigation-without-resolve`) pass with no findings.
 

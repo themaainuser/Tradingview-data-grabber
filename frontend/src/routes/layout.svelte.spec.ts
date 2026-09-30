@@ -34,6 +34,7 @@ describe('app shell', () => {
 		await expect
 			.element(nav.getByRole('link', { name: 'Research' }))
 			.toHaveAttribute('aria-current', 'page');
+		await expect.element(nav.getByRole('link', { name: 'Docs' })).toHaveAttribute('href', '/docs');
 		await expect
 			.element(nav.getByRole('link', { name: 'Datasets' }))
 			.not.toHaveAttribute('aria-current');
@@ -74,7 +75,7 @@ describe('app shell', () => {
 		const menu = page.getByRole('dialog');
 		await expect.element(menu).toBeVisible();
 		await expect.element(menu.getByRole('navigation', { name: 'Mobile' })).toBeInTheDocument();
-		expect(menu.getByRole('link').elements()).toHaveLength(3);
+		expect(menu.getByRole('link').elements()).toHaveLength(6);
 		await page.getByRole('button', { name: 'Close' }).click();
 		await vi.waitFor(() => expect(page.getByRole('dialog').elements()).toHaveLength(0));
 	});

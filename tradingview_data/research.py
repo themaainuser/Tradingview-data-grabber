@@ -18,6 +18,17 @@ DEFAULT_BASE_URL = "http://localhost:11434/v1"
 MAX_MODEL_NOTE_LENGTH = 6000
 
 
+def unique_label(label: str, taken: set[str]) -> str:
+    """Return ``label`` or ``label-2``, ``label-3``... whichever is free, and mark it as taken."""
+
+    candidate, suffix = label, 2
+    while candidate in taken:
+        candidate = f"{label}-{suffix}"
+        suffix += 1
+    taken.add(candidate)
+    return candidate
+
+
 def strategy_permutations() -> list[dict[str, Any]]:
     """Return a small, deterministic grid of interpretable long-only rules."""
 
@@ -290,12 +301,7 @@ def build_research(
     results: list[dict[str, Any]] = []
     names: set[str] = set()
     for label, source, data in datasets:
-        symbol = label
-        suffix = 2
-        while symbol in names:
-            symbol = f"{label}-{suffix}"
-            suffix += 1
-        names.add(symbol)
+        symbol = unique_label(label, names)
         if data.empty:
             raise ValueError(f"{symbol} contains no rows to research")
         if "close" not in data.columns or not isinstance(data.index, pd.DatetimeIndex):

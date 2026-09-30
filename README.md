@@ -28,9 +28,10 @@ command while preserving the old script names as compatibility entry points.
   permutations, next-bar signals, transaction-cost-aware returns, risk metrics,
   and later-period forward folds across multiple captures.
 - **Charts** — candlesticks, volume profile with a 70% value area, liquidity
-  and volatility heatmaps, return/ATR, technical panels, correlations, and an
-  offline HTML gallery. Multi-symbol runs use separate directories rather than
-  overwriting earlier charts.
+  and volatility heatmaps, return/ATR, technical panels, return distribution
+  against a fitted normal with VaR, drawdown (underwater) plots, weekday/hour
+  seasonality, correlations, and an offline HTML gallery. Multi-symbol runs use
+  separate directories rather than overwriting earlier charts.
 
 ## Install
 
@@ -113,7 +114,12 @@ tvdata chart data/BINANCE_BTCUSDT/5.csv data/BINANCE_ETHUSDT/5.csv -o charts/com
 
 Open `dashboard.html` from the output directory in a browser. Click a chart to
 enlarge it, pin up to four charts (saved in that browser's local storage), and
-refresh images after a new analysis run. A multi-symbol output contains one
+refresh images after a new analysis run. Each dataset gets
+`9_return_distribution.png`, `10_drawdown.png`, and `11_seasonality.png` in
+addition to the first seven charts; a chart is skipped when the capture is too
+short for it (30 returns for the distribution and weekday seasonality, 2 bars
+for drawdown); the hour panel also needs intraday bars and 48 returns.
+Seasonality is computed in UTC. A multi-symbol output contains one
 subdirectory per source CSV and, when timestamps overlap, a correlation chart
 at the output root.
 
@@ -204,28 +210,53 @@ without it they come from the directory and file names (flat files have no
 timeframe). Hidden files, sidecars, other extensions, deeper directories, and
 symlinks that leave the data directory are ignored.
 
-| Endpoint | Response |
-| --- | --- |
-| `GET /api/health` | `{"status", "data_dir", "dataset_count"}` |
-| `GET /api/datasets` | `{"datasets": [...]}` sorted by symbol then timeframe. Each entry has `id`, `symbol`, `timeframe`, `path`, `rows`, `size_bytes`, `modified` (UTC ISO-8601), `start`/`end` (epoch seconds), `valid`, and `error`. Unreadable CSVs are listed with `valid: false` and an `error` message instead of failing the listing. |
-| `GET /api/datasets/{id}/bars?limit=&start=&end=` | Columnar OHLCV: `columns` holds parallel `time` (UTC epoch seconds), `open`, `high`, `low`, `close`, `volume` arrays. `limit` (1–5,000,000) keeps the most recent bars of the inclusive `start`–`end` window. `total_rows`, `dropped_rows`, `duplicate_rows_collapsed`, and `quality` describe the whole file. |
-| `GET /api/datasets/{id}/report` | The `tvdata analyze` market report. |
-| `POST /api/research/run` | Body `{"dataset_ids": [1–20 unique ids], "fee_bps": 5, "periods_per_year": 252}`; returns the `tvdata research` JSON (`schema_version` 1). Assets are labelled `<symbol>` or `<symbol>-<timeframe>` in request order. No model endpoint is called. |
+| Endpoint                                                                        | Response                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GET /api/health`                                                               | `{"status", "data_dir", "dataset_count"}`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `GET /api/datasets`                                                             | `{"datasets": [...]}` sorted by symbol then timeframe. Each entry has `id`, `symbol`, `timeframe`, `path`, `rows`, `size_bytes`, `modified` (UTC ISO-8601), `start`/`end` (epoch seconds), `valid`, and `error`. Unreadable CSVs are listed with `valid: false` and an `error` message instead of failing the listing.                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `GET /api/datasets/{id}/bars?limit=&start=&end=`                                | Columnar OHLCV: `columns` holds parallel `time` (UTC epoch seconds), `open`, `high`, `low`, `close`, `volume` arrays. `limit` (1–5,000,000) keeps the most recent bars of the inclusive `start`–`end` window. `total_rows`, `dropped_rows`, `duplicate_rows_collapsed`, and `quality` describe the whole file.                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `GET /api/datasets/{id}/report`                                                 | The `tvdata analyze` market report.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `GET /api/datasets/{id}/charts?bins=60&value_area=0.7&window=30&return_bins=41` | Chart data computed by the same code as the PNG charts: `volume_profile` (POC, value area), `return_distribution` (histogram, fitted-normal counts, VaR/CVaR stats), `drawdown` (decimated underwater curve, deepest drawdown, recovery), `rolling_volatility`, UTC hour × weekday `activity` grids, and `seasonality`. Also `bars`, `interval_seconds`, and `intraday`. A section that needs more data or intraday bars is `null` and explained under `unavailable` (seasonality blocks are keyed `seasonality.by_weekday` and `seasonality.by_hour`). `bins` 10–200, `value_area` 0.5–0.95, `window` 5–500, `return_bins` 10–101.                                                                                      |
+| `GET /api/charts/correlation?ids=<id>&ids=<id>`                                 | Close-to-close return correlation of 2–20 unique datasets over their shared timestamps: `{labels, matrix, observations, start, end}` (labels as in research; 422 when fewer than 3 returns overlap).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `GET /api/sentiment/fear-greed?days=`                                           | CoinMarketCap's Crypto Fear and Greed Index, read by the server with no API key: `{source, fetched_at, stale, stale_reason, bands, current, snapshots, points, total_points}`. `current` and each snapshot (`yesterday`, `week_ago`, `month_ago`, `year_high`, `year_low`) carry `score` (0–100), `label`, `band` and `time`; a day with no reading is `null`. `points` holds parallel `time`, `score`, `btc_price` and `btc_volume` columns (price and volume are `null` when CoinMarketCap omits them). `days` (1–3650) returns only the most recent history. Cached for 10 minutes; if a refresh fails the last good readings are returned with `stale: true`, and with none cached the route answers 502. See below. |
+| `POST /api/research/run`                                                        | Body `{"dataset_ids": [1–20 unique ids], "fee_bps": 5, "periods_per_year": 252}`; returns the `tvdata research` JSON (`schema_version` 1). Assets are labelled `<symbol>` or `<symbol>-<timeframe>` in request order. No model endpoint is called.                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 Dataset ids are opaque slugs that are only resolved against the scanned file
 list; client input is never used as a filesystem path. Errors use FastAPI's
 shape: `{"detail": "message"}` for 404 (unknown id), 422 (unreadable file,
-`start` after `end`, unknown id in a research request, or a research
-`ValueError`), and the standard list of field errors for request validation.
-NaN and infinite values are returned as `null`. Interactive docs are served
-at `/docs`.
+`start` after `end`, unknown id in a research or correlation request, a
+bad correlation id list, or a research `ValueError`), 502 for an unreadable
+Fear & Greed source, and the standard list of field errors for request validation.
+NaN and infinite values are returned as `null`. Interactive Swagger docs are
+served at `/api/docs` (ReDoc at `/api/redoc`, schema at `/api/openapi.json`); the
+dashboard's own documentation page lives at `/docs`.
+
+### Fear & Greed source
+
+CoinMarketCap's documented Fear and Greed API (`pro-api.coinmarketcap.com/v3/fear-and-greed`)
+requires an API key. `tradingview_data/sentiment.py` instead reads
+`https://api.coinmarketcap.com/data-api/v3/fear-greed/chart`, the public route CoinMarketCap's own
+chart page calls, which needs no key. Things to know before relying on it:
+
+- It is **not a published API**. CoinMarketCap can change, rate limit or withdraw it without notice, and
+  CoinMarketCap's terms of use apply to the data.
+- Nothing is invented. When the route cannot be read, `GET /api/sentiment/fear-greed` answers 502 with
+  the reason (or serves the last good readings flagged `stale`), and the dashboard shows the error
+  instead of a number.
+- The server sends its own `User-Agent` and no credentials, asks upstream at most once per ten
+  minutes however many clients connect, and waits a minute after a failure before trying again.
+- Upstream reports some failures as HTTP 200 with a non-zero `status.error_code`; those are treated as
+  failures. Bands follow CoinMarketCap's dial: 0–19 extreme fear, 20–39 fear, 40–59 neutral, 60–79
+  greed, 80–100 extreme greed.
+- The Bitcoin price column comes from the same payload.
 
 ## Web dashboard
 
 `frontend/` is a Svelte 5 dashboard for exploring captures (candlesticks, 127
 indicators, compound bar filters, forward-return studies) and screening research
 runs. It shows only data from `tvdata serve` or a CSV you import; with no captures
-it renders empty states. See [`frontend/README.md`](frontend/README.md).
+it renders empty states. It includes its own documentation at `/docs`. See
+[`frontend/README.md`](frontend/README.md).
 
 ```bash
 cd frontend && pnpm install && pnpm build
