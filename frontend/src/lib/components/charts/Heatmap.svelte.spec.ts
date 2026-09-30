@@ -1,6 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { userEvent } from 'vitest/browser';
-import { divergingColor, heatLinearRgb, sequentialColor } from '$lib/charts/chart-math';
+import {
+	contrastInk,
+	divergingColor,
+	heatLinearRgb,
+	normalize,
+	sequentialColor
+} from '$lib/charts/chart-math';
 import Heatmap from './Heatmap.svelte';
 import { mountChart, paintOf, pointer, tooltipEl, tooltipText } from './test-utils';
 
@@ -16,6 +22,8 @@ const cell = (r: number, c: number) =>
 	document.querySelector<HTMLElement>(`[data-r="${r}"][data-c="${c}"]`)!;
 const printed = () => cellsEl().filter((c) => c.textContent?.trim()).length;
 const base = { rows, cols, values, label: 'Test heatmap' };
+
+afterEach(() => document.documentElement.removeAttribute('data-theme'));
 
 describe('Heatmap', () => {
 	it('renders one gridcell per row and column, with headers', async () => {
@@ -107,6 +115,50 @@ describe('Heatmap', () => {
 		await expect.poll(printed).toBe(11);
 		expect(cell(0, 0).querySelector('span')!.getAttribute('style')).toContain('var(--ink)');
 		expect(cell(0, 3).querySelector('span')!.getAttribute('style')).toContain('var(--on-primary)');
+	});
+
+	it.each(['dark', 'light'] as const)('picks cell text for the %s theme', async (theme) => {
+		document.documentElement.setAttribute('data-theme', theme);
+		mountChart(Heatmap, { ...base, showValues: true }, 600);
+		await expect.poll(printed).toBe(11);
+		// Domain is the data extent, [0, 1], so a cell's value is its position on the ramp.
+		for (const [r, c, v] of [
+			[0, 0, 0],
+			[0, 1, 0.25],
+			[0, 2, 0.5],
+			[0, 3, 1]
+		] as const) {
+			const t = normalize(v, [0, 1], 'sequential');
+			expect(cell(r, c).querySelector('span')!.getAttribute('style'), `${theme} ${v}`).toContain(
+				contrastInk(t, 'sequential', theme)
+			);
+		}
+	});
+
+	it('repaints the cell text when the theme flips after mount', async () => {
+		// One row; the domain is [0, 1], so 1/3 is the pure violet stop of the ramp.
+		mountChart(
+			Heatmap,
+			{
+				rows: ['r'],
+				cols: ['a', 'b', 'c'],
+				values: [[1 / 3, 0, 1]],
+				label: 'Flip',
+				showValues: true
+			},
+			600
+		);
+		await expect.poll(printed).toBe(3);
+		const ink = () => cell(0, 0).querySelector('span')!.getAttribute('style');
+		const dark = contrastInk(1 / 3, 'sequential', 'dark');
+		const light = contrastInk(1 / 3, 'sequential', 'light');
+		// The cell is chosen so the two themes disagree; otherwise this test would prove nothing.
+		expect(dark).not.toBe(light);
+		expect(ink()).toContain(dark);
+		document.documentElement.setAttribute('data-theme', 'light');
+		await expect.poll(ink).toContain(light);
+		document.documentElement.setAttribute('data-theme', 'dark');
+		await expect.poll(ink).toContain(dark);
 	});
 
 	it('has a roving tabindex and moves focus with the arrow keys', async () => {

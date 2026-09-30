@@ -37,8 +37,11 @@ and `src/lib/design/tokens.spec.ts` fails if any color, spacing, radius or type 
 front matter drifts from the CSS, or if a text/background pairing the UI uses drops below WCAG
 contrast (4.5:1 text, 3:1 graphics).
 
-- **Dark only.** Canvas `#090909`, surfaces `#141414` / `#1c1c1c`, hairlines `#262626` / `#1a1a1a`.
-  Depth comes from surface lift, not shadows. There is no light mode and no theme toggle.
+- **Dark and light.** A system / dark / light toggle (see Theming). Dark is the original design:
+  canvas `#090909`, surfaces `#141414` / `#1c1c1c`, hairlines `#262626` / `#1a1a1a`. Light was
+  added at the owner's request and is derived (`#fafafa`, `#f0f0f0` / `#e5e5e5`, `#d0d0d0` /
+  `#e3e3e3`; see DESIGN.md, Known Gaps). Depth comes from surface lift, not shadows, apart from
+  floating layers.
 - **Type.** Inter Variable for text, using the official Latin subset from `inter-ui` so the
   `cv01 cv05 cv09 cv11 ss03 ss07 dlig` character variants work (Google's build strips them).
   Geist stands in for GT Walsheim in display type, as the spec suggests. Tracking is stored in
@@ -46,26 +49,62 @@ contrast (4.5:1 text, 3:1 graphics).
 - **Shapes.** Every CTA is a pill (`rounded-pill`); the only bordered controls are form fields.
   Primary = white pill, secondary = charcoal pill (`secondary` on the canvas, `translucent` inside
   cards, where surface-1 would vanish). Press feedback is `scale(0.96)`.
-- **Accent.** `#0099ff` appears only as hyperlink, focus and selection colour: focus ring, the
-  highlight of chart bars that match a filter, `link` buttons.
+- **Accent.** `accent-blue` (`#0099ff` in dark, `#005fb8` in light, darkened to reach 4.5:1 as
+  link text) appears only as hyperlink, focus and selection colour: focus ring, the highlight of
+  chart bars that match a filter, `link` buttons.
 - **Gradient spotlight cards** (`SpotlightCard`) are scarce: at most one per page, only for the
   empty state or the dataset summary. Text on each stop keeps at least 4.5:1.
-- **Responsive.** Tablet breakpoint 810px: the nav collapses into a hamburger overlay (loaded on
-  first use), dataset rows stack instead of scrolling sideways.
+- **Responsive.** Tablet breakpoint 810px: dataset rows stack instead of scrolling sideways. The
+  nav collapses into a hamburger overlay (loaded on first use, with the theme toggle) below 1199px,
+  because seven links plus Import CSV and the toggle need about 1190px.
 
 Adaptations for a dense analytical tool, where the marketing spec is silent or insufficient:
 
-| Spec                                       | Here                                                                                                    | Why                                                             |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| No second chromatic accent                 | Up = `semantic-success`, down = `gradient-coral`, series = gradient family + white + muted              | Market direction needs two colors; both are documented tokens   |
-| Focus ring `rgba(0,153,255,.15) 0 0 0 1px` | Same halo plus a solid 1px `#0099ff` edge                                                               | A 15% 1px ring alone is not reliably visible to keyboard users  |
-| ~1199px content width                      | Full-width container up to 1600px                                                                       | Charts and 10+ column tables need the room                      |
-| Buttons 10px 15px padding (34px tall)      | Same on desktop, 44px minimum on touch pointers                                                         | Spec says 44px tap targets but its padding gives 34px           |
-| Marketing display sizes                    | `display-xl` on the Datasets hero, `display-lg` on the Docs and 404 heroes; tool pages use `display-md` | A 62-110px heading costs too much vertical space in a workbench |
+| Spec                                       | Here                                                                                                    | Why                                                                    |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| No second chromatic accent                 | Up = `semantic-success`, down = `gradient-coral`, series = gradient family + white + muted              | Market direction needs two colors; both are documented tokens          |
+| Focus ring `rgba(0,153,255,.15) 0 0 0 1px` | Same halo plus a solid 1px `accent-blue` edge                                                           | A 15% 1px ring alone is not reliably visible to keyboard users         |
+| Hamburger below 810px                      | Hamburger below 1199px                                                                                  | The header no longer fits seven links, Import CSV and the theme toggle |
+| ~1199px content width                      | Full-width container up to 1600px                                                                       | Charts and 10+ column tables need the room                             |
+| Buttons 10px 15px padding (34px tall)      | Same on desktop, 44px minimum on touch pointers                                                         | Spec says 44px tap targets but its padding gives 34px                  |
+| Marketing display sizes                    | `display-xl` on the Datasets hero, `display-lg` on the Docs and 404 heroes; tool pages use `display-md` | A 62-110px heading costs too much vertical space in a workbench        |
 
 UI primitives are [shadcn-svelte](https://shadcn-svelte.com) (bits-ui), restyled onto the tokens in
 `src/lib/components/ui`. 21st.dev components are React/TSX and cannot be installed into a Svelte
 project, so this is the Svelte port of the same design system.
+
+## Theming
+
+The resolved theme is `data-theme="dark" | "light"` on `<html>` (never `system`), with
+`color-scheme` set to match. Dark is the default in `:root` of `src/routes/layout.css` (and the
+no-JS state); light overrides the same token names in `:root[data-theme='light']`. Tailwind's
+`dark:` variant follows the attribute.
+
+- **Preference.** `ThemeStore` (`src/lib/state/theme.svelte.ts`, reachable as `app.theme`) holds
+  `system | dark | light` (default `system`), persists it in `localStorage['tvdata-theme']`,
+  follows `prefers-color-scheme` live while on `system`, syncs other tabs through the `storage`
+  event and keeps `<meta name="theme-color">` on the canvas token. It never touches `window` until
+  the root layout calls `attach()`. `ThemeToggle` is the control (header pill from 1199px, a
+  labelled row in the mobile menu).
+- **No flash.** A synchronous script in `src/app.html` applies the same resolution before first
+  paint, and a small `<style>` there paints the right ground before `layout.css` loads.
+  `theme.spec.ts` runs that script's text against the store's test matrix, so the two cannot
+  drift. The app is a static SPA, so inline script and style need no CSP change; behind a CSP,
+  allow them by hash.
+- **Adding a token.** Declare it in `:root` (dark) and, if it differs, in
+  `:root[data-theme='light']`; list hex values in DESIGN.md (`colors`, and `colors-light` for
+  overrides); add it to `@theme inline` if you want a utility. Components never hard-code colour
+  (`no-hardcoded-colors.spec.ts` fails on hex, `rgb()`, `text-white`, `bg-black`...). Coloured
+  text uses the `*-ink` tokens (`text-success-ink`, `text-coral-ink`), which are darker in light;
+  the vivid brand colours are for fills.
+- **Theme in JS.** Canvas charts re-resolve colours and redraw when `data-theme` changes
+  (`charts/host.ts`). Code that needs the resolved theme reads `renderedTheme()` (reactive); the
+  heatmap's contrast maths keeps `TOKEN_RGB[theme]` in `charts/chart-math.ts`, checked against
+  the CSS.
+- **Testing.** `tokens.spec.ts` checks both palettes against DESIGN.md and every contrast pairing
+  in both themes; `theme.spec.ts` covers the store and the `app.html` script;
+  `ThemeToggle.svelte.spec.ts` and `layout.svelte.spec.ts` cover the UI in Chromium;
+  `host.svelte.spec.ts` covers canvas repaint.
 
 ## Layout
 
@@ -81,10 +120,11 @@ src/lib/
   data/        csv.ts (client-side OHLCV import, same rules as the backend loader)
   docs/        api-reference.ts (endpoint reference data) · scrollspy.ts (active-section tracking)
   sentiment/   bands (colours, wording) · gauge (geometry) · stats (range, zone and summary maths)
+  verdict/     form (bounds that mirror the backend) · present (wording and number formatting)
   design/      tokens.spec.ts (DESIGN.md <-> CSS parity and contrast checks)
   state/       runes-based stores, provided through context (see below)
-  components/  app/ (virtual list, spotlight, empty/error states, menu) · charts/ (SVG chart components) · sentiment/ · docs/ · filters/ · explorer/ · research/ · ui/
-src/routes/    /  (datasets) · /explorer/[[dataset]] · /charts/[[dataset]] · /research · /sentiment · /docs  (+error.svelte for unmatched routes)
+  components/  app/ (virtual list, spotlight, empty/error states, menu) · charts/ (SVG chart components) · sentiment/ · verdict/ · docs/ · filters/ · explorer/ · research/ · ui/
+src/routes/    /  (datasets) · /explorer/[[dataset]] · /charts/[[dataset]] · /research · /verdict/[[dataset]] · /sentiment · /docs  (+error.svelte for unmatched routes)
 ```
 
 ## Docs page
@@ -120,16 +160,46 @@ the last readings on screen and says when they were fetched. Zone colours come f
 `sentiment/bands.ts`, the single source for gauge, pills, chart bands and the zone bar, so one
 reading never appears in two colours.
 
+## Verdict page
+
+`/verdict/[[dataset]]` is the front end of the backend's honest verdict engine (see the root README).
+It shows one of three labels, the 16 rules with their trade counts, and, for the rules that pass the
+trade-count gate, their evidence; then the statistics, the sealed holdout, the trial ledger and the
+integrity checks. The page never computes a statistic itself: it only draws what the backend
+returned.
+
+- **No ranking.** Rows are ordered by grid or by trade count; there is no control that sorts by
+  performance, and the validator rejects a payload in which a gated rule carries statistics or whose
+  label contradicts its rules (`api/verdict.ts`). The Research page now opens sorted by trade count
+  for the same reason and links here.
+- **One-way actions are guarded.** Run, freeze and the holdout read are POSTs that are never retried
+  or aborted; each is guarded against a double click; after any failure the store refetches the
+  server state, because a timeout can hide an action that happened. The read needs an explicit
+  acknowledgement, and the store stops offering it once the server says it was read or a result is
+  stored. Errors sit at panel level so they survive that refetch.
+- **Defaults come from the backend** (`defaults` in `GET /api/verdict/{id}`), including the basis for
+  each cost assumption, so the form and the engine cannot disagree.
+- **Layout.** Every grid that hosts a table has an explicit `minmax(0, 1fr)` column and every scroll
+  wrapper is `relative`: `sr-only` text is absolutely positioned and would otherwise escape the
+  wrapper's clip and widen the page (a regression test covers it).
+
 ## Backend contract
 
-| Endpoint                        | Client method    | Store                         | Screen                    |
-| ------------------------------- | ---------------- | ----------------------------- | ------------------------- |
-| `GET /api/datasets`             | `listDatasets`   | `DatasetsStore.load`          | Datasets, dataset pickers |
-| `GET /api/datasets/{id}/bars`   | `getBars`        | `ExplorerStore.openBackend`   | Explorer                  |
-| `POST /api/research/run`        | `runResearch`    | `ResearchStore.run`           | Research                  |
-| `GET /api/datasets/{id}/charts` | `getCharts`      | `ChartsStore.open`            | Charts                    |
-| `GET /api/charts/correlation`   | `getCorrelation` | `ChartsStore.loadCorrelation` | Charts (Correlation)      |
-| `GET /api/sentiment/fear-greed` | `getFearGreed`   | `SentimentStore.load`         | Sentiment                 |
+| Endpoint                              | Client method      | Store                         | Screen                    |
+| ------------------------------------- | ------------------ | ----------------------------- | ------------------------- |
+| `GET /api/datasets`                   | `listDatasets`     | `DatasetsStore.load`          | Datasets, dataset pickers |
+| `GET /api/datasets/{id}/bars`         | `getBars`          | `ExplorerStore.openBackend`   | Explorer                  |
+| `POST /api/research/run`              | `runResearch`      | `ResearchStore.run`           | Research                  |
+| `GET /api/datasets/{id}/charts`       | `getCharts`        | `ChartsStore.open`            | Charts                    |
+| `GET /api/charts/correlation`         | `getCorrelation`   | `ChartsStore.loadCorrelation` | Charts (Correlation)      |
+| `GET /api/sentiment/fear-greed`       | `getFearGreed`     | `SentimentStore.load`         | Sentiment                 |
+| `GET /api/verdict/{id}`               | `getVerdictState`  | `VerdictStore.open`           | Verdict                   |
+| `POST /api/verdict/run`               | `runVerdict`       | `VerdictStore.run`            | Verdict                   |
+| `POST /api/verdict/{id}/seal`         | `sealHoldout`      | `VerdictStore.run`            | Verdict                   |
+| `GET /api/verdict/{id}/ledger`        | `getVerdictLedger` | `VerdictStore.loadLedger`     | Verdict                   |
+| `POST /api/verdict/{id}/freeze`       | `freezeRules`      | `VerdictStore.freeze`         | Verdict                   |
+| `POST /api/verdict/{id}/holdout/read` | `readHoldout`      | `VerdictStore.readHoldout`    | Verdict                   |
+| `GET /api/verdict/{id}/forward`       | `getForward`       | `VerdictStore.loadForward`    | Verdict                   |
 
 `GET /api/health` and `GET /api/datasets/{id}/report` exist on the server but are not used yet.
 Errors arrive as `{"detail": string}` or FastAPI's validation list; both become an `ApiError`

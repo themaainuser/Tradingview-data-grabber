@@ -34,7 +34,9 @@ export class ResearchStore {
 	error = $state.raw<ApiError | null>(null);
 	report = $state.raw<ResearchReport | null>(null);
 	filter = $state<FilterGroup>(newGroup('and'));
-	sortKey = $state('forward.sharpe');
+	// Trade count, not Sharpe: a Sharpe ranking of rules that barely trade is noise, and putting it
+	// first invites reading the top row as a winner (see the Verdict page).
+	sortKey = $state('forward.trades');
 	sortDir = $state<'asc' | 'desc'>('desc');
 	visibleColumns = $state<string[]>([...DEFAULT_VISIBLE]);
 	/** Result ids whose equity curves are overlaid on the chart. */

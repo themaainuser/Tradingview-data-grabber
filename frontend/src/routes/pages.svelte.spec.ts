@@ -181,8 +181,13 @@ describe('Research page', () => {
 		const rendered = () => document.querySelectorAll('[role="row"]').length;
 		expect(rendered()).toBeLessThan(60); // 5,000 results, only the window is in the DOM
 
-		// Default order: forward Sharpe descending, so the last strategy comes first.
+		// Nothing is ranked by performance until asked: the table opens sorted by trade count.
+		expect(app.research.sortKey).toBe('forward.trades');
+		// Sorting by forward Sharpe is a deliberate click: descending first, so the last strategy leads...
+		await page.getByRole('button', { name: /Fwd · Sharpe/ }).click();
+		expect(app.research.sortKey).toBe('forward.sharpe');
 		await expect.element(page.getByRole('button', { name: 'Strategy 4999' })).toBeInTheDocument();
+		// ...and a second click flips it to ascending.
 		await page.getByRole('button', { name: /Fwd · Sharpe/ }).click();
 		await expect
 			.element(page.getByRole('button', { name: 'Strategy 0', exact: true }))

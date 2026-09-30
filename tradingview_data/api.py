@@ -1,7 +1,8 @@
-"""Read-only FastAPI adapter that serves captured OHLCV data to the dashboard.
+"""FastAPI adapter that serves captured OHLCV data to the dashboard.
 
 The API never fabricates data: it only reports CSV captures found under the
-configured data directory.  Dataset ids are resolved exclusively through a
+configured data directory.  The one thing it writes is the verdict engine's ledger, in a hidden
+state directory.  Dataset ids are resolved exclusively through a
 registry built by scanning that directory, so client input is never joined
 into a filesystem path.
 """
@@ -18,7 +19,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from functools import cached_property
 from pathlib import Path
-from typing import Annotated, Any, Mapping, Optional, Sequence, Union
+from typing import Annotated, Any, Callable, Mapping, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -35,8 +36,11 @@ from starlette.types import Scope
 from . import __version__
 from .analytics import data_quality_report, load_ohlcv, market_report
 from .charts import chart_payload, correlation_matrix
+from .holdout import DEFAULT_FRACTION, MAX_FRACTION, MIN_FRACTION
 from .research import build_research, unique_label
 from .sentiment import FearGreedService, SentimentUnavailable, build_response
+from .verdict import DEFAULT_MIN_TRADES, Costs
+from .verdict_service import DatasetView, VerdictError, VerdictService
 
 MAX_BAR_LIMIT = 5_000_000
 MAX_RESEARCH_DATASETS = 20
@@ -44,6 +48,8 @@ MAX_CORRELATION_DATASETS = 20
 FRAME_CACHE_SIZE = 16
 PRICE_COLUMNS = ("open", "high", "low", "close", "volume")
 IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable"
+STATE_DIR_NAME = ".tvdata-verdict"
+MAX_LEDGER_LIMIT = 500
 
 
 def _json_safe(value: Any) -> Any:
@@ -140,6 +146,49 @@ class ResearchRequest(BaseModel):
         if len(set(ids)) != len(ids):
             raise ValueError("dataset_ids must be unique")
         return ids
+
+
+class CostsRequest(BaseModel):
+    """Per-side trading costs of ``POST /api/verdict/run``."""
+
+    fee_bps_per_side: float = Field(default=Costs().fee_bps_per_side, ge=0, le=500, allow_inf_nan=False)
+    spread_bps: float = Field(default=Costs().spread_bps, ge=0, le=1000, allow_inf_nan=False)
+    slippage_k: float = Field(default=Costs().slippage_k, ge=0, le=5, allow_inf_nan=False)
+
+
+class VerdictRunRequest(BaseModel):
+    """Body of ``POST /api/verdict/run``; ``periods_per_year`` is inferred from the bar spacing when null."""
+
+    dataset_id: str
+    min_trades: int = Field(default=DEFAULT_MIN_TRADES, ge=1, le=1000)
+    costs: CostsRequest = Field(default_factory=CostsRequest)
+    periods_per_year: Optional[float] = Field(default=None, gt=0, allow_inf_nan=False)
+
+
+class SealRequest(BaseModel):
+    """Body of ``POST /api/verdict/{id}/seal``."""
+
+    holdout_fraction: float = Field(default=DEFAULT_FRACTION, ge=MIN_FRACTION, le=MAX_FRACTION, allow_inf_nan=False)
+
+
+class FreezeRequest(BaseModel):
+    """Body of ``POST /api/verdict/{id}/freeze``."""
+
+    run_id: str
+    rule_ids: list[str] = Field(min_length=1, max_length=2)
+
+    @field_validator("rule_ids")
+    @classmethod
+    def _unique_rules(cls, ids: list[str]) -> list[str]:
+        if len(set(ids)) != len(ids):
+            raise ValueError("rule_ids must be unique")
+        return ids
+
+
+class HoldoutReadRequest(BaseModel):
+    """Body of ``POST /api/verdict/{id}/holdout/read``."""
+
+    freeze_id: str
 
 
 class DatasetError(ValueError):
@@ -380,17 +429,20 @@ def create_app(
     static_dir: Union[str, Path, None] = None,
     cors_origins: Sequence[str] = (),
     fear_greed: Optional[FearGreedService] = None,
+    state_dir: Union[str, Path, None] = None,
 ) -> FastAPI:
     """Build the dashboard API for the captures stored in ``data_dir``.
 
     ``static_dir`` optionally hosts a built frontend at ``/``, ``cors_origins`` enables CORS for the
     listed origins (off by default because the dev server proxies ``/api``), and ``fear_greed``
     replaces the CoinMarketCap-backed Fear & Greed service (tests inject a fake; by default nothing
-    is fetched until the first request).
+    is fetched until the first request).  ``state_dir`` holds the verdict engine's ledger; it defaults
+    to a hidden directory inside ``data_dir``, which the dataset scan ignores.
     """
 
     root = Path(data_dir).expanduser().resolve()
     repository = DatasetRepository(root)
+    verdicts = VerdictService(Path(state_dir).expanduser().resolve() if state_dir else root / STATE_DIR_NAME)
     # Interactive docs live under /api so the bare /docs path can belong to the dashboard's own
     # documentation page (the SPA fallback serves it).
     app = FastAPI(
@@ -422,6 +474,17 @@ def create_app(
             return file, repository.load(file)
         except DatasetError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    def verdict_view(dataset_id: str) -> DatasetView:
+        file, loaded = open_dataset(dataset_id)
+        symbol, timeframe = _identity(file)
+        return DatasetView(id=file.id, key=file.relative, symbol=symbol, timeframe=timeframe, frame=loaded.data)
+
+    def verdict_answer(action: Callable[[], Any]) -> Response:
+        try:
+            return _json(action())
+        except VerdictError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
     @app.get("/api/health", response_model=HealthResponse)
     def health() -> Response:
@@ -556,6 +619,8 @@ def create_app(
         """Backtest the built-in strategy grid; ``assets[i]`` matches ``dataset_ids[i]``."""
 
         registry = repository.registry()
+        ledger_state = verdicts.ledger.read()
+        sealed: list[dict[str, Any]] = []
         datasets: list[tuple[str, str, pd.DataFrame]] = []
         for dataset_id in body.dataset_ids:
             file = registry.get(dataset_id)
@@ -566,12 +631,80 @@ def create_app(
             except DatasetError as exc:
                 raise HTTPException(status_code=422, detail=f"{file.relative}: {exc}") from exc
             symbol, timeframe = _identity(file)
-            datasets.append((f"{symbol}-{timeframe}" if timeframe else symbol, file.relative, loaded.data))
+            frame, excluded = verdicts.restrict(ledger_state, file.relative, loaded.data)
+            if excluded is not None:
+                sealed.append({"dataset_id": dataset_id, "excluded_bars": excluded})
+            datasets.append((f"{symbol}-{timeframe}" if timeframe else symbol, file.relative, frame))
         try:
             report = build_research(datasets, fee_bps=body.fee_bps, periods_per_year=body.periods_per_year)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        if sealed:
+            report["metadata"]["sealed_holdouts"] = sealed
         return _json(report)
+
+    @app.post("/api/verdict/run")
+    def run_verdict(body: VerdictRunRequest) -> Response:
+        """Judge the built-in rule grid on the research window; appends the run to the ledger.
+
+        Seals the default holdout first when the dataset has none.  Ends in exactly one label and never
+        ranks rules.
+        """
+
+        view = verdict_view(body.dataset_id)
+        return verdict_answer(
+            lambda: verdicts.run(
+                view,
+                min_trades=body.min_trades,
+                costs=Costs(**body.costs.model_dump()),
+                periods_per_year=body.periods_per_year,
+            )
+        )
+
+    @app.get("/api/verdict/{dataset_id}")
+    def get_verdict(dataset_id: str) -> Response:
+        """Seal, ledger counts, latest report, freeze and holdout result; never writes."""
+
+        view = verdict_view(dataset_id)
+        return verdict_answer(lambda: verdicts.overview(view))
+
+    @app.post("/api/verdict/{dataset_id}/seal")
+    def seal_verdict(dataset_id: str, body: SealRequest = SealRequest()) -> Response:
+        """Seal the last ``holdout_fraction`` of the capture; 409 when already sealed."""
+
+        view = verdict_view(dataset_id)
+        return verdict_answer(lambda: verdicts.seal(view, body.holdout_fraction))
+
+    @app.get("/api/verdict/{dataset_id}/ledger")
+    def get_verdict_ledger(
+        dataset_id: str,
+        limit: Annotated[int, Query(ge=1, le=MAX_LEDGER_LIMIT, description="newest N entries")] = 100,
+    ) -> Response:
+        """The hash-chained trial ledger for the dataset, oldest entry first."""
+
+        view = verdict_view(dataset_id)
+        return verdict_answer(lambda: verdicts.ledger_view(view, limit))
+
+    @app.post("/api/verdict/{dataset_id}/freeze")
+    def freeze_verdict(dataset_id: str, body: FreezeRequest) -> Response:
+        """Freeze one or two candidate rules of the latest run; 409 once the seal has a freeze."""
+
+        view = verdict_view(dataset_id)
+        return verdict_answer(lambda: verdicts.freeze(view, body.run_id, body.rule_ids))
+
+    @app.post("/api/verdict/{dataset_id}/holdout/read")
+    def read_verdict_holdout(dataset_id: str, body: HoldoutReadRequest) -> Response:
+        """Read the sealed holdout for the frozen rules; 409 on any second attempt."""
+
+        view = verdict_view(dataset_id)
+        return verdict_answer(lambda: verdicts.read_holdout(view, body.freeze_id))
+
+    @app.get("/api/verdict/{dataset_id}/forward")
+    def get_verdict_forward(dataset_id: str) -> Response:
+        """Frozen rules on bars captured since the freeze (nothing is stored); 409 without a freeze."""
+
+        view = verdict_view(dataset_id)
+        return verdict_answer(lambda: verdicts.forward(view))
 
     if static_dir is not None:
         static_root = Path(static_dir).expanduser().resolve()

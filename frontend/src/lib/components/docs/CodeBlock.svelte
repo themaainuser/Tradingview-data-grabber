@@ -51,7 +51,7 @@
 		>
 			<!-- One icon per state, cross-faded (scale, opacity, blur) so the swap reads as a single control. -->
 			<span class="relative block size-4">
-				{#each [{ icon: Copy, on: 'idle', tone: '' }, { icon: Check, on: 'copied', tone: 'text-success' }, { icon: CircleAlert, on: 'failed', tone: 'text-gradient-coral' }] as item (item.on)}
+				{#each [{ icon: Copy, on: 'idle', tone: '' }, { icon: Check, on: 'copied', tone: 'text-success-ink' }, { icon: CircleAlert, on: 'failed', tone: 'text-coral-ink' }] as item (item.on)}
 					<item.icon
 						class="absolute inset-0 transition-[opacity,scale,filter] duration-150 ease-[cubic-bezier(0.2,0,0,1)] {item.tone} {state ===
 						item.on

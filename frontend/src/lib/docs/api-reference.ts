@@ -196,6 +196,220 @@ export const API_ENDPOINTS: readonly Endpoint[] = [
 		usedBy: 'Charts (Correlation)'
 	},
 	{
+		id: 'verdict-run',
+		method: 'POST',
+		path: '/api/verdict/run',
+		summary:
+			'Runs the honest verdict engine on the research window of one dataset: next-open fills, fees, spread and slippage on both sides, a trade-count gate, then (only for rules that pass it) a block bootstrap, deflated Sharpe ratio, probability of backtest overfitting and cost stress tests. Appends the run to the trial ledger and answers with exactly one of INSUFFICIENT_DATA, INDISTINGUISHABLE_FROM_LUCK or CANDIDATE.',
+		params: [
+			{
+				name: 'dataset_id',
+				in: 'body',
+				type: 'string',
+				required: true,
+				description: 'Id from /api/datasets.'
+			},
+			{
+				name: 'min_trades',
+				in: 'body',
+				type: 'integer 1 to 1000',
+				required: false,
+				description: 'Entries a rule needs before it gets any statistic. Default 30.'
+			},
+			{
+				name: 'costs',
+				in: 'body',
+				type: '{ fee_bps_per_side, spread_bps, slippage_k }',
+				required: false,
+				description:
+					'Per-side costs. Defaults 10 bps, 1 bps and 0.1 x ATR(14); verify them against your venue.'
+			},
+			{
+				name: 'periods_per_year',
+				in: 'body',
+				type: 'number > 0 or null',
+				required: false,
+				description:
+					'Annualisation factor. null infers it from the bar spacing, assuming continuous trading.'
+			}
+		],
+		returns:
+			'{ run_id, verdict: { label, headline, reasons }, settings, data, ledger, rules, statistics, uncertainty, integrity, notes }',
+		errors: [
+			{ status: 404, when: 'The dataset id is unknown.' },
+			{
+				status: 409,
+				when: 'The ledger chain does not verify, or the bars before the seal changed since sealing.'
+			},
+			{
+				status: 422,
+				when: 'The file fails validation, has too few bars to seal, or a setting is out of range.'
+			}
+		],
+		usedBy: 'Verdict'
+	},
+	{
+		id: 'verdict-state',
+		method: 'GET',
+		path: '/api/verdict/{id}',
+		summary:
+			'The current state of one dataset: whether its holdout is sealed, the ledger counts, the latest verdict, any frozen rules, the stored holdout result and the form defaults. Read-only: it never writes to the ledger.',
+		params: [
+			{
+				name: 'id',
+				in: 'path',
+				type: 'string',
+				required: true,
+				description: 'Opaque id from /api/datasets.'
+			}
+		],
+		returns: '{ dataset, sealed, holdout, ledger, latest, freeze, holdout_read, defaults }',
+		errors: [{ status: 404, when: 'The id does not match a scanned file.' }],
+		usedBy: 'Verdict'
+	},
+	{
+		id: 'verdict-seal',
+		method: 'POST',
+		path: '/api/verdict/{id}/seal',
+		summary:
+			'Seals the most recent share of a dataset\u2019s bars as a holdout before any analysis. It is excluded from every research query from then on. Needs at least 100 bars.',
+		params: [
+			{
+				name: 'id',
+				in: 'path',
+				type: 'string',
+				required: true,
+				description: 'Opaque id from /api/datasets.'
+			},
+			{
+				name: 'holdout_fraction',
+				in: 'body',
+				type: 'number 0.10 to 0.30',
+				required: false,
+				description: 'Share of the most recent bars to seal. Default 0.20.'
+			}
+		],
+		returns: '{ holdout: { fraction, start, end, bars, sealed_at, status, read_at } }',
+		errors: [
+			{ status: 409, when: 'The dataset is already sealed.' },
+			{ status: 422, when: 'Too few bars, or the share is out of range.' }
+		],
+		usedBy: 'Verdict'
+	},
+	{
+		id: 'verdict-ledger',
+		method: 'GET',
+		path: '/api/verdict/{id}/ledger',
+		summary:
+			'The trial ledger: N for the dataset and in total, every distinct rule tried, and the most recent entries, with whether the hash chain still verifies.',
+		params: [
+			{
+				name: 'id',
+				in: 'path',
+				type: 'string',
+				required: true,
+				description: 'Opaque id from /api/datasets.'
+			},
+			{
+				name: 'limit',
+				in: 'query',
+				type: 'integer 1 to 500',
+				required: false,
+				description: 'How many recent entries to return. Default 100.'
+			}
+		],
+		returns: '{ intact, total_entries, trials: { dataset, total, keys }, entries }',
+		errors: [{ status: 404, when: 'The id does not match a scanned file.' }],
+		usedBy: 'Verdict'
+	},
+	{
+		id: 'verdict-freeze',
+		method: 'POST',
+		path: '/api/verdict/{id}/freeze',
+		summary:
+			'Freezes one or two candidate rules, with their parameters and cost settings, under a hash in the ledger. Only rules that are candidates in the latest run can be frozen, and there is one freeze per dataset.',
+		params: [
+			{
+				name: 'id',
+				in: 'path',
+				type: 'string',
+				required: true,
+				description: 'Opaque id from /api/datasets.'
+			},
+			{
+				name: 'run_id',
+				in: 'body',
+				type: 'string',
+				required: true,
+				description: 'The latest completed run, whose label must be CANDIDATE.'
+			},
+			{
+				name: 'rule_ids',
+				in: 'body',
+				type: 'string[] (1 to 2, unique)',
+				required: true,
+				description: 'Candidate rules from that run.'
+			}
+		],
+		returns: '{ id, run_id, rule_ids, rules, frozen_at, forward_start, hash }',
+		errors: [
+			{ status: 409, when: 'Rules are already frozen, or the ledger chain does not verify.' },
+			{
+				status: 422,
+				when: 'The run is not the latest, is not a CANDIDATE, or a rule is not a candidate in it.'
+			}
+		],
+		usedBy: 'Verdict'
+	},
+	{
+		id: 'verdict-holdout-read',
+		method: 'POST',
+		path: '/api/verdict/{id}/holdout/read',
+		summary:
+			'Evaluates the frozen rules on the sealed holdout. It can be done once per seal: a second read, with any rule set, is refused. The result is stored, so the page can show it again without reading twice. With a few hundred bars it is a sanity check, not a verdict.',
+		params: [
+			{
+				name: 'id',
+				in: 'path',
+				type: 'string',
+				required: true,
+				description: 'Opaque id from /api/datasets.'
+			},
+			{
+				name: 'freeze_id',
+				in: 'body',
+				type: 'string',
+				required: true,
+				description: 'The freeze to read the holdout for.'
+			}
+		],
+		returns: '{ freeze_id, read_at, start, end, bars, rules, caveat, sharpe_se_annualised_iid }',
+		errors: [
+			{ status: 409, when: 'Nothing is frozen, or the holdout was already read.' },
+			{ status: 422, when: 'The freeze id does not match.' }
+		],
+		usedBy: 'Verdict'
+	},
+	{
+		id: 'verdict-forward',
+		method: 'GET',
+		path: '/api/verdict/{id}/forward',
+		summary:
+			'The frozen rules evaluated only on bars captured after the freeze: the real out-of-sample record. Not stored; it grows as the capture runs, and is marked waiting until the first new bar arrives.',
+		params: [
+			{
+				name: 'id',
+				in: 'path',
+				type: 'string',
+				required: true,
+				description: 'Opaque id from /api/datasets.'
+			}
+		],
+		returns: '{ freeze, start, end, bars, waiting, rules, caveat, sharpe_se_annualised_iid }',
+		errors: [{ status: 409, when: 'Nothing is frozen.' }],
+		usedBy: 'Verdict'
+	},
+	{
 		id: 'fear-greed',
 		method: 'GET',
 		path: '/api/sentiment/fear-greed',

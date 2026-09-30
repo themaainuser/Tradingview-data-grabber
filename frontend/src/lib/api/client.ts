@@ -4,8 +4,16 @@ import type {
 	CorrelationResponse,
 	DatasetSummary,
 	FearGreedResponse,
+	ForwardResult,
+	HoldoutInfo,
+	HoldoutResult,
+	LedgerView,
 	ResearchReport,
-	ResearchRequest
+	ResearchRequest,
+	VerdictFreeze,
+	VerdictReport,
+	VerdictRequest,
+	VerdictState
 } from './contracts';
 import {
 	parseBars,
@@ -16,6 +24,15 @@ import {
 	parseResearch,
 	type Bars
 } from './validate';
+import {
+	parseForward,
+	parseFreeze,
+	parseHoldoutInfo,
+	parseHoldoutResult,
+	parseLedger,
+	parseVerdictReport,
+	parseVerdictState
+} from './verdict';
 
 export interface ApiClientOptions {
 	baseUrl?: string;
@@ -104,6 +121,19 @@ export function createApiClient(options: ApiClientOptions = {}) {
 		return body;
 	}
 
+	/** Mutating calls are never retried: a retry after a timeout could repeat a one-way action. */
+	const post = (path: string, body: unknown, opts: RequestOptions) =>
+		request(
+			path,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(body)
+			},
+			opts,
+			false
+		);
+
 	async function request(path: string, init: RequestInit, opts: RequestOptions, retry: boolean) {
 		const attempts = retry ? (opts.retries ?? retries) + 1 : 1;
 		let last: ApiError | null = null;
@@ -177,6 +207,79 @@ export function createApiClient(options: ApiClientOptions = {}) {
 			const params = new URLSearchParams();
 			for (const id of ids) params.append('ids', id);
 			return parseCorrelation(await request(`/api/charts/correlation?${params}`, {}, opts, true));
+		},
+
+		async getVerdictState(datasetId: string, opts: RequestOptions = {}): Promise<VerdictState> {
+			const json = await request(`/api/verdict/${encodeURIComponent(datasetId)}`, {}, opts, true);
+			return parseVerdictState(json);
+		},
+
+		/** Appends to the ledger, so it is a POST and never retried automatically. */
+		async runVerdict(body: VerdictRequest, opts: RequestOptions = {}): Promise<VerdictReport> {
+			return parseVerdictReport(
+				await post('/api/verdict/run', body, { timeoutMs: 5 * 60_000, ...opts })
+			);
+		},
+
+		async sealHoldout(
+			datasetId: string,
+			fraction: number,
+			opts: RequestOptions = {}
+		): Promise<HoldoutInfo> {
+			const json = await post(
+				`/api/verdict/${encodeURIComponent(datasetId)}/seal`,
+				{ holdout_fraction: fraction },
+				opts
+			);
+			return parseHoldoutInfo((json as { holdout?: unknown } | null)?.holdout);
+		},
+
+		async getVerdictLedger(
+			datasetId: string,
+			opts: RequestOptions & { limit?: number } = {}
+		): Promise<LedgerView> {
+			const query = opts.limit ? `?limit=${Math.trunc(opts.limit)}` : '';
+			const json = await request(
+				`/api/verdict/${encodeURIComponent(datasetId)}/ledger${query}`,
+				{},
+				opts,
+				true
+			);
+			return parseLedger(json);
+		},
+
+		async freezeRules(
+			datasetId: string,
+			body: { run_id: string; rule_ids: string[] },
+			opts: RequestOptions = {}
+		): Promise<VerdictFreeze> {
+			return parseFreeze(
+				await post(`/api/verdict/${encodeURIComponent(datasetId)}/freeze`, body, opts)
+			);
+		},
+
+		/** Irreversible: the backend refuses a second read. */
+		async readHoldout(
+			datasetId: string,
+			freezeId: string,
+			opts: RequestOptions = {}
+		): Promise<HoldoutResult> {
+			const json = await post(
+				`/api/verdict/${encodeURIComponent(datasetId)}/holdout/read`,
+				{ freeze_id: freezeId },
+				opts
+			);
+			return parseHoldoutResult(json);
+		},
+
+		async getForward(datasetId: string, opts: RequestOptions = {}): Promise<ForwardResult> {
+			const json = await request(
+				`/api/verdict/${encodeURIComponent(datasetId)}/forward`,
+				{},
+				opts,
+				true
+			);
+			return parseForward(json);
 		},
 
 		async runResearch(body: ResearchRequest, opts: RequestOptions = {}): Promise<ResearchReport> {

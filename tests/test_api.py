@@ -271,6 +271,13 @@ def test_openapi_documents_every_endpoint(client):
         "/api/charts/correlation",
         "/api/research/run",
         "/api/sentiment/fear-greed",
+        "/api/verdict/run",
+        "/api/verdict/{dataset_id}",
+        "/api/verdict/{dataset_id}/seal",
+        "/api/verdict/{dataset_id}/ledger",
+        "/api/verdict/{dataset_id}/freeze",
+        "/api/verdict/{dataset_id}/holdout/read",
+        "/api/verdict/{dataset_id}/forward",
     }
 
 

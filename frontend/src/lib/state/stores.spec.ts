@@ -302,6 +302,12 @@ describe('ResearchStore', () => {
 		expect(store.canRun).toBe(false);
 	});
 
+	it('does not rank by forward Sharpe until asked to', () => {
+		const store = new ResearchStore(api({}));
+		expect(store.sortKey).toBe('forward.trades');
+		expect(store.sortDir).toBe('desc');
+	});
+
 	it('sends the form values and exposes the sorted, filtered report', async () => {
 		const runResearch = vi.fn(async () => report([0.5, null, 2, -1]));
 		const store = new ResearchStore(api({ runResearch }));
@@ -314,6 +320,8 @@ describe('ResearchStore', () => {
 			expect.anything()
 		);
 		expect(store.status).toBe('ready');
+		store.setSort('forward.sharpe');
+		expect(store.sortDir).toBe('desc');
 		expect(Array.from(store.order)).toEqual([2, 0, 3, 1]); // forward Sharpe desc, missing last
 		store.setSort('forward.sharpe');
 		expect(store.sortDir).toBe('asc');

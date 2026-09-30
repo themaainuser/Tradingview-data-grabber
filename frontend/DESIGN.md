@@ -20,6 +20,29 @@ colors:
   gradient-orange: '#ff7a3d'
   gradient-coral: '#ff5577'
   semantic-success: '#22c55e'
+  success-ink: '#22c55e'
+  coral-ink: '#ff5577'
+  orange-ink: '#ff7a3d'
+  magenta-ink: '#d44df0'
+  spotlight-ink-white: '#ffffff'
+  spotlight-ink-black: '#000000'
+colors-light:
+  primary: '#050505'
+  on-primary: '#ffffff'
+  accent-blue: '#005fb8'
+  ink: '#050505'
+  ink-muted: '#595959'
+  canvas: '#fafafa'
+  surface-1: '#f0f0f0'
+  surface-2: '#e5e5e5'
+  hairline: '#d0d0d0'
+  hairline-soft: '#e3e3e3'
+  inverse-canvas: '#050505'
+  inverse-ink: '#ffffff'
+  success-ink: '#13723a'
+  coral-ink: '#c01545'
+  orange-ink: '#a64200'
+  magenta-ink: '#b82fd6'
 typography:
   display-xxl:
     fontFamily: GT Walsheim Framer Medium
@@ -369,6 +392,7 @@ The dark canvas IS the whitespace. Where lighter brands lean on white air to sep
 - **Gradient spotlight cards** are the dominant depth device — color saturation against black canvas substitutes for shadow-driven elevation.
 - **Layered product mockups** (browser frames containing live Framer-built sites) sit inside `{colors.surface-1}` cards with the level-2 light-edge treatment.
 - **Subtle blue ring (focus / selected)** is the only chromatic depth signal — used to mark the active state of input groups and pricing tier toggles without changing the underlying surface.
+- **Light theme elevation (derived).** The light top edge of the level-2 shadow is invisible on a pale surface, so in light the floating treatment is a 1px `rgba(5,5,5,0.08)` ring plus a softer `rgba(5,5,5,0.14)` 0px 10px 30px drop (`--elevation-float`, used by `shadow-float`). Level 3 is the same blue ring, drawn from the theme's `accent-blue`.
 
 ## Shapes
 
@@ -482,7 +506,7 @@ The defining decorative surface of Framer's marketing — oversized atmospheric 
 
 ### Don't
 
-- Don't ship a light-mode marketing page. Framer's identity is dark.
+- Don't ship a light-mode marketing page. Framer's identity is dark. (This dashboard is the owner-approved exception: it ships a system / dark / light toggle; see Known Gaps.)
 - Don't introduce mid-tone gray text outside `{colors.ink-muted}`. The hierarchy is binary: `ink` or `ink-muted`.
 - Don't use `{colors.accent-blue}` as a brand fill (e.g., a blue CTA pill). The blue is a signal color, not a surface.
 - Don't square off CTAs. Pill (`{rounded.pill}`) or full circle is the brand vocabulary.
@@ -533,5 +557,5 @@ The defining decorative surface of Framer's marketing — oversized atmospheric 
 
 - The exact gradient stops for the spotlight cards are derived from screenshot pixels rather than from CSS variables — the production gradients are likely defined as `linear-gradient` strings on individual elements rather than as design tokens. Treat the documented `{colors.gradient-*}` hex values as base anchors, not as exact gradient specs.
 - Form-field validation / error styling is not visible on the inspected pages because no error states render in the static screenshots.
-- Dark mode is the only mode — no light-mode adaptation is documented because the marketing site does not ship one.
+- **Light theme (added at the owner's request; the source spec documents dark only).** `colors-light` is derived, not extracted from framer.com. Canvas and surfaces are near-white steps (`#fafafa`, `#f0f0f0`, `#e5e5e5`) that mirror the dark lift; `primary` and `ink` swap to near-black `#050505` (so the primary pill is black with white text); the gradient colours, success green and the spotlight cards are unchanged because they are brand fills that read the same on either ground. `accent-blue` is darkened to `#005fb8` so it reaches 4.5:1 as link text and 3:1 as the focus ring. `success-ink`, `coral-ink`, `orange-ink` and `magenta-ink` are readable variants of the brand colours for coloured text, candles and thin chart strokes (vivid values stay for fills; in dark they equal the vivid values). `tokens.spec.ts` measures every text and graphic pairing in both palettes, but nothing here was checked against a reference design: Safari and Firefox rendering, real OS-level `prefers-color-scheme` switching and print are unverified, and form-field hairlines are below 3:1 against their surfaces in both themes (as in the original dark spec), so fields also rely on their fill, label and focus ring.
 - The marketplace template detail page returned sparser CSS variable data than the other pages; surface tokens for that page were inferred from the matching home / gallery treatment rather than extracted directly.

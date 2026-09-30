@@ -24,7 +24,7 @@ describe('Docs page', () => {
 		render(Docs);
 		await expect.element(page.getByRole('heading', { level: 1, name: 'Docs' })).toBeInTheDocument();
 		const links = [...document.querySelectorAll('nav[aria-label="Documentation contents"] a')];
-		expect(links).toHaveLength(10);
+		expect(links).toHaveLength(11);
 		for (const link of links) {
 			const id = link.getAttribute('href')!.slice(1);
 			const section = document.getElementById(id);
@@ -34,6 +34,16 @@ describe('Docs page', () => {
 			expect(section!.getAttribute('aria-labelledby')).toBe(`${id}-title`);
 			expect(document.getElementById(`${id}-title`)).not.toBeNull();
 		}
+	});
+
+	it('lists the contents in the order the sections appear, so the scroll-spy follows the page', async () => {
+		render(Docs);
+		await expect.element(page.getByRole('heading', { level: 1, name: 'Docs' })).toBeInTheDocument();
+		const listed = [...document.querySelectorAll('nav[aria-label="Documentation contents"] a')].map(
+			(a) => a.getAttribute('href')!.slice(1)
+		);
+		const onPage = [...document.querySelectorAll('section[id]')].map((s) => s.id);
+		expect(listed).toEqual(onPage);
 	});
 
 	it('generates the reference from the code, so it cannot drift', async () => {
@@ -105,7 +115,7 @@ describe('Docs page', () => {
 		const failed = page.getByRole('button', { name: 'Copy failed, select the text instead' });
 		await expect.element(failed).toBeInTheDocument();
 		// A coral alert icon is shown, so the failure is not conveyed by the label alone.
-		const icon = failed.element().querySelector('svg.text-gradient-coral') as SVGElement;
+		const icon = failed.element().querySelector('svg.text-coral-ink') as SVGElement;
 		expect(icon.getAttribute('class')).toContain('opacity-100');
 		await expect
 			.element(page.getByText('Copy failed. Select the text and copy it manually.'))

@@ -310,28 +310,44 @@ export function assignRows(spans: readonly { start: number; end: number }[], gap
 
 type Rgb = readonly [number, number, number];
 interface Stop {
-	token: string;
-	rgb: Rgb;
+	token: HeatToken;
 }
 
+/** Which palette the heatmap text contrast is computed for (the `data-theme` on <html>). */
+export type HeatTheme = 'dark' | 'light';
+
 /**
- * sRGB mirrors of the CSS tokens, needed to compute text contrast in JS. chart-math.spec.ts
- * checks every entry against layout.css, so a token change cannot silently break contrast.
+ * sRGB mirrors of the CSS tokens per theme, needed to compute text contrast in JS.
+ * chart-math.spec.ts checks every entry against layout.css (`:root` for dark,
+ * `:root[data-theme='light']` for light), so a token change cannot silently break contrast.
  */
 export const TOKEN_RGB = {
-	'--surface-2': [28, 28, 28],
-	'--gradient-violet': [106, 76, 245],
-	'--gradient-magenta': [212, 77, 240],
-	'--gradient-orange': [255, 122, 61],
-	'--gradient-coral': [255, 85, 119],
-	'--semantic-success': [34, 197, 94],
-	'--ink': [255, 255, 255],
-	'--on-primary': [0, 0, 0]
-} as const satisfies Record<string, Rgb>;
+	dark: {
+		'--surface-2': [28, 28, 28],
+		'--gradient-violet': [106, 76, 245],
+		'--gradient-magenta': [212, 77, 240],
+		'--gradient-orange': [255, 122, 61],
+		'--gradient-coral': [255, 85, 119],
+		'--semantic-success': [34, 197, 94],
+		'--ink': [255, 255, 255],
+		'--on-primary': [0, 0, 0]
+	},
+	light: {
+		'--surface-2': [229, 229, 229],
+		'--gradient-violet': [106, 76, 245],
+		'--gradient-magenta': [212, 77, 240],
+		'--gradient-orange': [255, 122, 61],
+		'--gradient-coral': [255, 85, 119],
+		'--semantic-success': [34, 197, 94],
+		'--ink': [5, 5, 5],
+		'--on-primary': [255, 255, 255]
+	}
+} as const satisfies Record<HeatTheme, Record<string, Rgb>>;
 
-const stop = (token: keyof typeof TOKEN_RGB): Stop => ({ token, rgb: TOKEN_RGB[token] });
+type HeatToken = keyof (typeof TOKEN_RGB)['dark'];
+const stop = (token: HeatToken): Stop => ({ token });
 
-/** The brand atmosphere gradient: charcoal into violet, magenta, orange. */
+/** The brand atmosphere gradient: charcoal (pale grey in light) into violet, magenta, orange. */
 const SEQUENTIAL: readonly Stop[] = [
 	stop('--surface-2'),
 	stop('--gradient-violet'),
@@ -396,16 +412,20 @@ function oklabToLinear([L, a, b]: readonly [number, number, number]): [number, n
 }
 
 /** Linear-light sRGB of the colour `heatColor(t, scale)` resolves to (oklab mix, gamut clamped). */
-export function heatLinearRgb(t: number, scale: HeatScale): [number, number, number] {
+export function heatLinearRgb(
+	t: number,
+	scale: HeatScale,
+	theme: HeatTheme = 'dark'
+): [number, number, number] {
 	const { a, b, p } = locate(ramp(scale), t);
-	const [La, Aa, Ba] = toOklab(a.rgb);
-	const [Lb, Ab, Bb] = toOklab(b.rgb);
+	const [La, Aa, Ba] = toOklab(TOKEN_RGB[theme][a.token]);
+	const [Lb, Ab, Bb] = toOklab(TOKEN_RGB[theme][b.token]);
 	return oklabToLinear([La + (Lb - La) * p, Aa + (Ab - Aa) * p, Ba + (Bb - Ba) * p]);
 }
 
 /** WCAG relative luminance of the colour `heatColor(t, scale)` resolves to. */
-export function heatLuminance(t: number, scale: HeatScale): number {
-	const [r, g, b] = heatLinearRgb(t, scale);
+export function heatLuminance(t: number, scale: HeatScale, theme: HeatTheme = 'dark'): number {
+	const [r, g, b] = heatLinearRgb(t, scale, theme);
 	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
@@ -415,20 +435,30 @@ const luminanceOf = (rgb: Rgb) => {
 };
 
 /** WCAG contrast ratio of a text token on the cell colour at `t`. */
-export function heatContrast(t: number, scale: HeatScale, ink: 'ink' | 'on-primary'): number {
-	const bg = heatLuminance(t, scale);
-	const fg = luminanceOf(TOKEN_RGB[ink === 'ink' ? '--ink' : '--on-primary']);
+export function heatContrast(
+	t: number,
+	scale: HeatScale,
+	ink: 'ink' | 'on-primary',
+	theme: HeatTheme = 'dark'
+): number {
+	const bg = heatLuminance(t, scale, theme);
+	const fg = luminanceOf(TOKEN_RGB[theme][ink === 'ink' ? '--ink' : '--on-primary']);
 	const [hi, lo] = fg > bg ? [fg, bg] : [bg, fg];
 	return (hi + 0.05) / (lo + 0.05);
 }
 
 /**
- * Text colour for a cell: white or black, whichever contrasts more. Black is `--on-primary`
- * rather than the canvas token because canvas/white peaks below 4.5:1 for mid-lightness cells
- * (about 4.46:1), whereas black/white never drops under 4.58:1.
+ * Text colour for a cell: the light or the dark of `--ink` / `--on-primary` (they swap roles
+ * between themes), whichever contrasts more. In dark the black is `--on-primary` rather than
+ * the canvas token because canvas/white peaks below 4.5:1 for mid-lightness cells (about
+ * 4.46:1), whereas black/white never drops under 4.58:1; light's ink is darker than the dark canvas for the same reason.
  */
-export function contrastInk(t: number, scale: HeatScale = 'sequential'): string {
-	return heatContrast(t, scale, 'ink') >= heatContrast(t, scale, 'on-primary')
+export function contrastInk(
+	t: number,
+	scale: HeatScale = 'sequential',
+	theme: HeatTheme = 'dark'
+): string {
+	return heatContrast(t, scale, 'ink', theme) >= heatContrast(t, scale, 'on-primary', theme)
 		? 'var(--ink)'
 		: 'var(--on-primary)';
 }

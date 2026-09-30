@@ -73,7 +73,7 @@
 						onclick={() => research.setSort(column.key)}
 					>
 						<span class="truncate">
-							{#if GROUP_SHORT[column.group]}<span class="opacity-60"
+							{#if GROUP_SHORT[column.group]}<span class="font-normal"
 									>{GROUP_SHORT[column.group]} ·</span
 								>{/if}
 							{column.label}

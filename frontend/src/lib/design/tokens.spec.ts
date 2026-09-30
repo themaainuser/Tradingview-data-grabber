@@ -44,6 +44,7 @@ function frontMatter(source: string): Record<string, Section> {
 const tokens = frontMatter(design);
 
 const rootBlock = /:root\s*\{([\s\S]*?)\n\}/.exec(css)![1];
+const lightBlock = /:root\[data-theme='light'\]\s*\{([\s\S]*?)\n\}/.exec(css)![1];
 const themeBlock = /@theme\s*\{([\s\S]*?)\n\}/.exec(css)![1];
 const declared = (block: string, name: string) =>
 	new RegExp(`--${name}:\\s*([^;]+);`).exec(block)?.[1].trim().toLowerCase();
@@ -64,6 +65,36 @@ describe('color tokens', () => {
 			expect(declared(rootBlock, name)).toBe(value.toLowerCase());
 		}
 	);
+});
+
+describe('light palette (colors-light)', () => {
+	const light = tokens['colors-light'] as Record<string, string>;
+
+	it('is parsed from the front matter', () => {
+		expect(Object.keys(light).length).toBeGreaterThanOrEqual(14);
+	});
+	it.each(Object.entries(light))('%s is declared in :root[data-theme=light]', (name, value) => {
+		expect(declared(lightBlock, name)).toBe(value.toLowerCase());
+	});
+	it('only overrides tokens that exist in the dark palette, under the same names', () => {
+		for (const name of Object.keys(light)) expect(tokens.colors, name).toHaveProperty(name);
+	});
+	it('declares nothing in the light block that DESIGN.md does not list', () => {
+		const names = [...lightBlock.matchAll(/^\s*--([\w-]+):/gm)].map((m) => m[1]);
+		// Derived, non-hex tokens are allowed; hex-valued ones must be documented.
+		const hexNames = names.filter((n) => /^#[0-9a-f]{3,8}$/i.test(declared(lightBlock, n) ?? ''));
+		expect(hexNames.filter((n) => !(n in light))).toEqual([]);
+	});
+	it('sets color-scheme per theme', () => {
+		expect(rootBlock).toMatch(/color-scheme:\s*dark;/);
+		expect(lightBlock).toMatch(/color-scheme:\s*light;/);
+	});
+	it('makes the vendored dark: variant follow the attribute instead of always applying', () => {
+		expect(css).toContain(
+			"@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));"
+		);
+		expect(css).not.toContain('@custom-variant dark (&:where(*))');
+	});
 });
 
 describe('spacing tokens', () => {
@@ -123,41 +154,114 @@ const contrast = (a: string, b: string) => {
 	const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
 	return (hi + 0.05) / (lo + 0.05);
 };
-const c = tokens.colors as Record<string, string>;
+/** `fg` at `alpha` composited over opaque `bg` (Tailwind's `bg-ink/10`, `border-ink-muted/75`...). */
+const over = (fg: string, bg: string, alpha: number) =>
+	'#' +
+	[1, 3, 5]
+		.map((i) =>
+			Math.round(
+				alpha * parseInt(fg.slice(i, i + 2), 16) + (1 - alpha) * parseInt(bg.slice(i, i + 2), 16)
+			)
+				.toString(16)
+				.padStart(2, '0')
+		)
+		.join('');
 
-describe('contrast of the pairings the UI uses', () => {
-	const text: [string, string, string][] = [
-		['ink', 'canvas', 'body text on the page'],
-		['ink', 'surface-1', 'text on cards'],
-		['ink', 'surface-2', 'text on featured cards, rows and popovers'],
-		['ink-muted', 'canvas', 'secondary text on the page'],
-		['ink-muted', 'surface-1', 'secondary text on cards'],
-		['ink-muted', 'surface-2', 'secondary text on rows and popovers'],
-		['on-primary', 'primary', 'white pill buttons'],
-		['accent-blue', 'canvas', 'hyperlinks'],
-		['accent-blue', 'surface-1', 'hyperlinks on cards'],
-		['semantic-success', 'canvas', 'positive values'],
-		['semantic-success', 'surface-1', 'positive values on cards'],
-		['semantic-success', 'surface-2', 'success badges'],
-		['gradient-coral', 'canvas', 'negative values'],
-		['gradient-coral', 'surface-1', 'negative values on cards'],
-		['gradient-coral', 'surface-2', 'error badges'],
-		['ink', 'gradient-violet', 'text on the violet spotlight (lightest stop)'],
-		['on-primary', 'gradient-orange', 'text on the orange spotlight (lightest stop)']
-	];
-	it.each(text)('%s on %s reaches 4.5:1 (%s)', (fg, bg) => {
-		expect(contrast(c[fg], c[bg])).toBeGreaterThanOrEqual(4.5);
+const palettes = {
+	dark: tokens.colors as Record<string, string>,
+	// Tokens the light block does not override (gradients, spotlight inks, success) are inherited.
+	light: {
+		...(tokens.colors as Record<string, string>),
+		...(tokens['colors-light'] as Record<string, string>)
+	}
+};
+
+describe.each(Object.entries(palettes))(
+	'contrast of the pairings the UI uses (%s)',
+	(_theme, c) => {
+		const text: [string, string, string][] = [
+			['ink', 'canvas', 'body text on the page'],
+			['ink', 'surface-1', 'text on cards'],
+			['ink', 'surface-2', 'text on featured cards, rows and popovers'],
+			['ink-muted', 'canvas', 'secondary text on the page'],
+			['ink-muted', 'surface-1', 'secondary text on cards and placeholder text in fields'],
+			['ink-muted', 'surface-2', 'secondary text on rows, popovers and badges'],
+			['on-primary', 'primary', 'primary pill buttons'],
+			['accent-blue', 'canvas', 'hyperlinks'],
+			['accent-blue', 'surface-1', 'hyperlinks on cards'],
+			['accent-blue', 'surface-2', 'hyperlinks on rows and popovers'],
+			['success-ink', 'canvas', 'positive values'],
+			['success-ink', 'surface-1', 'positive values on cards'],
+			['success-ink', 'surface-2', 'success badges'],
+			['coral-ink', 'canvas', 'negative values and errors'],
+			['coral-ink', 'surface-1', 'negative values on cards, destructive buttons'],
+			['coral-ink', 'surface-2', 'error badges'],
+			['orange-ink', 'canvas', 'fear band names'],
+			['orange-ink', 'surface-1', 'fear band names on cards'],
+			['orange-ink', 'surface-2', 'fear band names on the highlighted card'],
+			['spotlight-ink-white', 'gradient-violet', 'text on the violet spotlight (lightest stop)'],
+			['spotlight-ink-black', 'gradient-orange', 'text on the orange spotlight (lightest stop)']
+		];
+		it.each(text)('%s on %s reaches 4.5:1 (%s)', (fg, bg) => {
+			expect(contrast(c[fg], c[bg])).toBeGreaterThanOrEqual(4.5);
+		});
+
+		it.each([
+			['accent-blue', 'canvas', 'focus ring'],
+			['accent-blue', 'surface-1', 'focus ring on cards'],
+			['accent-blue', 'surface-2', 'focus ring on rows'],
+			['gradient-violet', 'surface-1', 'chart series'],
+			['orange-ink', 'surface-1', 'chart series'],
+			['magenta-ink', 'surface-1', 'chart series'],
+			['success-ink', 'surface-1', 'candles up and sign-coloured bars'],
+			['coral-ink', 'surface-1', 'candles down and sign-coloured bars'],
+			['ink', 'surface-1', 'chart series, gauge needle'],
+			['ink-muted', 'surface-1', 'chart axis and neutral band'],
+			['primary', 'canvas', 'primary pill and the selected theme segment'],
+			['primary', 'surface-1', 'primary pill inside cards, selected switch and checkbox']
+		])('%s on %s reaches 3:1 for graphics (%s)', (fg, bg) => {
+			expect(contrast(c[fg], c[bg])).toBeGreaterThanOrEqual(3);
+		});
+
+		it('keeps ink legible on the hover overlays (bg-ink/10 on ghost buttons, menu items, command rows)', () => {
+			for (const ground of ['canvas', 'surface-1', 'surface-2']) {
+				const hovered = over(c.ink, c[ground], 0.1);
+				expect(contrast(c.ink, hovered), `ink on hovered ${ground}`).toBeGreaterThanOrEqual(4.5);
+			}
+		});
+
+		it('keeps the checkbox edge (ink-muted at 75%) at 3:1 on canvas and cards', () => {
+			const edge = (ground: string) => over(c['ink-muted'], c[ground], 0.75);
+			expect(contrast(edge('canvas'), c.canvas)).toBeGreaterThanOrEqual(3);
+			expect(contrast(edge('surface-1'), c['surface-1'])).toBeGreaterThanOrEqual(3);
+		});
+	}
+);
+
+describe('the light palette', () => {
+	const { dark, light } = palettes;
+	it('is a different palette that keeps the dark one intact', () => {
+		expect(light.canvas).not.toBe(dark.canvas);
+		expect(luminance(light.canvas)).toBeGreaterThan(luminance(dark.canvas));
+		expect(luminance(light.ink)).toBeLessThan(luminance(light.canvas));
+		expect(dark.canvas).toBe('#090909');
+		expect(dark.ink).toBe('#ffffff');
 	});
-
-	it.each([
-		['accent-blue', 'canvas', 'focus ring'],
-		['accent-blue', 'surface-2', 'focus ring on rows'],
-		['gradient-violet', 'surface-1', 'chart series'],
-		['gradient-orange', 'surface-1', 'chart series'],
-		['gradient-magenta', 'surface-1', 'chart series'],
-		['ink-muted', 'surface-1', 'chart axis']
-	])('%s on %s reaches 3:1 for graphics (%s)', (fg, bg) => {
-		expect(contrast(c[fg], c[bg])).toBeGreaterThanOrEqual(3);
+	it('keeps the surface lift monotonic away from the canvas', () => {
+		expect(luminance(light.canvas)).toBeGreaterThan(luminance(light['surface-1']));
+		expect(luminance(light['surface-1'])).toBeGreaterThan(luminance(light['surface-2']));
+		expect(luminance(dark.canvas)).toBeLessThan(luminance(dark['surface-1']));
+		expect(luminance(dark['surface-1'])).toBeLessThan(luminance(dark['surface-2']));
+	});
+	it('needs its darker text variants: the vivid brand colours fail as text on the light canvas', () => {
+		for (const [vivid, ink] of [
+			['semantic-success', 'success-ink'],
+			['gradient-coral', 'coral-ink'],
+			['gradient-orange', 'orange-ink']
+		]) {
+			expect(contrast(light[vivid], light.canvas), vivid).toBeLessThan(4.5);
+			expect(contrast(light[ink], light.canvas), ink).toBeGreaterThanOrEqual(4.5);
+		}
 	});
 });
 

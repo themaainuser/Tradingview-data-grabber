@@ -38,35 +38,35 @@ export interface Bars {
 
 type Obj = Record<string, unknown>;
 
-function fail(path: string, expected: string): never {
+export function fail(path: string, expected: string): never {
 	throw new ApiError('contract', `Unexpected response: ${path} should be ${expected}`);
 }
 
-function obj(value: unknown, path: string): Obj {
+export function obj(value: unknown, path: string): Obj {
 	if (typeof value !== 'object' || value === null || Array.isArray(value)) fail(path, 'an object');
 	return value as Obj;
 }
 
-function arr(value: unknown, path: string): unknown[] {
+export function arr(value: unknown, path: string): unknown[] {
 	if (!Array.isArray(value)) fail(path, 'an array');
 	return value as unknown[];
 }
 
-function str(value: unknown, path: string): string {
+export function str(value: unknown, path: string): string {
 	if (typeof value !== 'string') fail(path, 'a string');
 	return value as string;
 }
 
-function num(value: unknown, path: string): number {
+export function num(value: unknown, path: string): number {
 	if (typeof value !== 'number' || !Number.isFinite(value)) fail(path, 'a finite number');
 	return value as number;
 }
 
-function nullableNum(value: unknown, path: string): number | null {
+export function nullableNum(value: unknown, path: string): number | null {
 	return value === null || value === undefined ? null : num(value, path);
 }
 
-function nullableStr(value: unknown, path: string): string | null {
+export function nullableStr(value: unknown, path: string): string | null {
 	return value === null || value === undefined ? null : str(value, path);
 }
 
@@ -165,7 +165,14 @@ function checkCurve(value: unknown, path: string): void {
 export function parseResearch(json: unknown): ResearchReport {
 	const o = obj(json, 'response');
 	if (o.schema_version !== 1) fail('schema_version', '1 (unsupported research schema)');
-	obj(o.metadata, 'metadata');
+	const metadata = obj(o.metadata, 'metadata');
+	if (metadata.sealed_holdouts !== undefined) {
+		for (const [i, raw] of arr(metadata.sealed_holdouts, 'metadata.sealed_holdouts').entries()) {
+			const sealed = obj(raw, `metadata.sealed_holdouts[${i}]`);
+			str(sealed.dataset_id, `metadata.sealed_holdouts[${i}].dataset_id`);
+			num(sealed.excluded_bars, `metadata.sealed_holdouts[${i}].excluded_bars`);
+		}
+	}
 	const assets = arr(o.assets, 'assets');
 	for (const [i, a] of assets.entries()) {
 		const asset = obj(a, `assets[${i}]`);
@@ -209,7 +216,7 @@ export function parseResearch(json: unknown): ResearchReport {
 
 const BAND_KEYS: readonly BandKey[] = ['extreme_fear', 'fear', 'neutral', 'greed', 'extreme_greed'];
 
-function bool(value: unknown, path: string): boolean {
+export function bool(value: unknown, path: string): boolean {
 	if (typeof value !== 'boolean') fail(path, 'a boolean');
 	return value as boolean;
 }
@@ -305,7 +312,7 @@ export function parseFearGreed(json: unknown): FearGreedResponse {
 
 // ---- Backend charts --------------------------------------------------------------------------
 
-function numbers(value: unknown, path: string, length?: number): number[] {
+export function numbers(value: unknown, path: string, length?: number): number[] {
 	const values = arr(value, path);
 	if (length !== undefined && values.length !== length) fail(path, `an array of ${length} values`);
 	return values.map((v, i) => num(v, `${path}[${i}]`));

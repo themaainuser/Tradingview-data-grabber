@@ -144,11 +144,7 @@
 	);
 
 	const colorOf = (v: number) =>
-		colorBy === 'sign'
-			? v >= 0
-				? 'var(--semantic-success)'
-				: 'var(--gradient-coral)'
-			: 'var(--ink)';
+		colorBy === 'sign' ? (v >= 0 ? 'var(--chart-up)' : 'var(--chart-down)') : 'var(--ink)';
 	const fillOf = (i: number, v: number) =>
 		colorBy === 'sign' ? colorOf(v) : i === cursor ? 'var(--ink)' : 'var(--ink-muted)';
 	const opacityOf = (i: number) =>

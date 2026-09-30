@@ -62,7 +62,7 @@
 	<div
 		class={cn(
 			'grid gap-2 rounded-lg bg-surface-2 p-[10px] transition-[opacity,box-shadow] duration-150 ease-out',
-			issue && 'shadow-[0_0_0_1px_rgb(255_85_119/0.55)]',
+			issue && 'shadow-[0_0_0_1px_color-mix(in_srgb,var(--coral-ink)_55%,transparent)]',
 			!node.enabled && 'opacity-50'
 		)}
 		data-testid="condition-row"
@@ -195,6 +195,6 @@
 		</div>
 	</div>
 	{#if issue}
-		<p class="px-2 type-caption text-gradient-coral" role="alert">{issue}</p>
+		<p class="px-2 type-caption text-coral-ink" role="alert">{issue}</p>
 	{/if}
 </div>

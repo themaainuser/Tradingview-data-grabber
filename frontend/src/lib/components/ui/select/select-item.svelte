@@ -20,7 +20,7 @@
 	data-slot="select-item"
 	class={cn(
 		"relative flex w-full cursor-default items-center gap-2 rounded-md py-2 pr-9 pl-3 type-body-sm text-ink outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
-		'data-highlighted:bg-white/10',
+		'data-highlighted:bg-ink/10',
 		className
 	)}
 	{...restProps}

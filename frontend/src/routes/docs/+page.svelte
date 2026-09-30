@@ -24,8 +24,9 @@
 		{ id: 'explorer', label: 'Explorer' },
 		{ id: 'filters', label: 'Filters' },
 		{ id: 'indicators', label: 'Indicators' },
-		{ id: 'charts', label: 'Charts' },
 		{ id: 'research', label: 'Research' },
+		{ id: 'verdict', label: 'Verdict' },
+		{ id: 'charts', label: 'Charts' },
 		{ id: 'sentiment', label: 'Sentiment' },
 		{ id: 'api', label: 'API reference' },
 		{ id: 'troubleshooting', label: 'Troubleshooting' }
@@ -81,6 +82,18 @@ tvdata serve --data-dir data --static-dir frontend/build`;
 		{
 			q: 'A chart says "Not available for this dataset"',
 			a: 'The backend could not compute that section and gave the reason. The usual ones are too few bars (the return statistics need at least 30 returns) and a capture that is not intraday (activity by hour needs bars shorter than a day). Capture more data or a shorter timeframe and press Refresh on the Datasets page.'
+		},
+		{
+			q: 'The verdict says "insufficient data"',
+			a: 'No rule traded at least the minimum number of times (30 by default) on the research part of the capture, so nothing can honestly be tested or ranked. This is expected for a few weeks of hourly bars: a moving-average rule that changes position a few dozen times has too few trades for any statistic to mean something. Capture a longer history, use a shorter timeframe, or add more datasets. Lowering the minimum only makes the statistics look more certain than they are.'
+		},
+		{
+			q: 'Why can I not read the holdout again?',
+			a: 'Looking at the same data a second time, with a different rule set, turns it into training data: you would keep choosing until something looks good. The backend refuses a second read for the whole dataset, not just for the same rules. The first result is stored and shown on the page. To test further, use the bars captured after the freeze.'
+		},
+		{
+			q: 'The Verdict numbers differ from the Research page',
+			a: 'They use different fill models. Research fills at the signal bar\u2019s close with a single cost per position change; Verdict fills at the next bar\u2019s open and charges fee, spread and slippage on both sides. Verdict also leaves out the sealed holdout. Use Research to explore and Verdict to decide whether anything is worth believing.'
 		},
 		{
 			q: 'A research run fails with a 422 error',
@@ -399,6 +412,97 @@ tvdata serve --data-dir data --static-dir frontend/build`;
 				{#snippet wide()}
 					<MetricGlossary />
 				{/snippet}
+			</DocSection>
+
+			<DocSection
+				id="verdict"
+				title="Verdict"
+				lead="Says what a dataset can and cannot support before anything is ranked, and never names a winner the data cannot back."
+			>
+				<p>
+					Open <a
+						class="text-accent-blue hover:underline"
+						href={resolve('/verdict/[[dataset]]', {})}>Verdict</a
+					>, pick a dataset and press
+					<strong class="font-medium text-ink">Seal holdout and run verdict</strong>. The backend
+					runs the same 16 fixed rules as Research, but with a stricter procedure, records every
+					run, and ends in exactly one of three labels.
+				</p>
+				<h3>The procedure</h3>
+				<ul>
+					<li>
+						<strong class="font-medium text-ink">Sealed holdout.</strong> The first run sets aside the
+						most recent 10 to 30% of the bars (20% by default) before any analysis. They are excluded
+						from every research query, including the older Research page, and cannot be read until the
+						end.
+					</li>
+					<li>
+						<strong class="font-medium text-ink">Next-open fills.</strong> A signal on a bar's close is
+						filled at the next bar's open. A fee, half the spread and slippage of a multiple of ATR(14)
+						are charged on both sides of every trade. Every rule is also run at 1.5&times; and 2&times;
+						those costs, and the cost at which its average trade stops paying is reported.
+					</li>
+					<li>
+						<strong class="font-medium text-ink">Trade-count gate.</strong> A rule needs a minimum number
+						of trades (30 by default) before it gets a Sharpe, p-value or DSR. Below that it is marked
+						"Too few trades" or "Never trades", is not ranked, and shows no statistics at all.
+					</li>
+					<li>
+						<strong class="font-medium text-ink">Statistics for the rules that pass.</strong> A block
+						bootstrap tests whether the best rule beats holding the asset for the same share of the time,
+						with a stepdown so several rules can be judged together. The deflated Sharpe ratio asks whether
+						a Sharpe is still above zero after trying many rules. The probability of backtest overfitting
+						is shown with a warning that it is noisy at short lengths.
+					</li>
+					<li>
+						<strong class="font-medium text-ink">Effective number of rules.</strong> Similar rules are
+						one bet, not many, so the deflation uses an estimate of the independent ones, with a bootstrap
+						interval because that estimate is itself uncertain.
+					</li>
+				</ul>
+				<h3>The three labels</h3>
+				<ul>
+					<li>
+						<strong class="font-medium text-ink">Insufficient data:</strong> no rule reached the minimum
+						number of trades. Nothing is tested, ranked or concluded.
+					</li>
+					<li>
+						<strong class="font-medium text-ink">Indistinguishable from luck:</strong> some rules traded
+						enough to test, but fail the bootstrap or the deflated Sharpe, or stop paying at 1.5&times;
+						costs.
+					</li>
+					<li>
+						<strong class="font-medium text-ink">Candidate:</strong> at least one rule passes the gate,
+						the bootstrap, the deflated Sharpe and the 1.5&times; cost stress. It can be frozen for one
+						look at the holdout.
+					</li>
+				</ul>
+				<h3>The ledger, the freeze and the holdout</h3>
+				<ul>
+					<li>
+						Every run is appended to a trial ledger. N is the number of distinct rules ever tried on
+						the dataset, failed runs included. It is read from the ledger, cannot be edited here,
+						and does not change when only the costs change. The ledger is hash-chained, so editing
+						it by hand is detectable.
+					</li>
+					<li>
+						A candidate's rules, parameters and costs can be frozen under a hash. The holdout can
+						then be read once per dataset. It is a sanity check, not a verdict, and a second read,
+						even with a different rule set, is refused.
+					</li>
+					<li>
+						After the freeze, bars captured later are the real out-of-sample record. Check them
+						whenever the capture has run for a while.
+					</li>
+				</ul>
+				<h3>Limits</h3>
+				<p>
+					With about a thousand hourly bars the honest answer is usually "insufficient data", and
+					that is the point. Combinatorial purged cross-validation, intrabar stops, funding and
+					liquidation, and per-regime analysis are not part of this version. The cost defaults are
+					assumptions to replace with your venue's real fees. The older Research page fills at the
+					signal bar's close, so its numbers differ from the Verdict page.
+				</p>
 			</DocSection>
 
 			<DocSection

@@ -83,7 +83,7 @@
 			bind:value={research.feeBps}
 			aria-invalid={research.validation.feeBps !== null}
 		/>
-		{#if research.validation.feeBps}<p class="type-caption text-gradient-coral" role="alert">
+		{#if research.validation.feeBps}<p class="type-caption text-coral-ink" role="alert">
 				{research.validation.feeBps}
 			</p>{/if}
 	</div>
@@ -99,10 +99,7 @@
 			bind:value={research.periodsPerYear}
 			aria-invalid={research.validation.periodsPerYear !== null}
 		/>
-		{#if research.validation.periodsPerYear}<p
-				class="type-caption text-gradient-coral"
-				role="alert"
-			>
+		{#if research.validation.periodsPerYear}<p class="type-caption text-coral-ink" role="alert">
 				{research.validation.periodsPerYear}
 			</p>{/if}
 		<div class="flex flex-wrap gap-1">

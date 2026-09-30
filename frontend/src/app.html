@@ -1,10 +1,41 @@
 <!doctype html>
-<html lang="en" style="background: #090909; color-scheme: dark">
+<html lang="en">
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="theme-color" content="#090909" />
 		<meta name="description" content="Quant research dashboard for captured market data" />
+		<!-- Pre-paint defaults: dark with no JS, and the right ground before layout.css arrives. Values mirror --canvas (theme.spec.ts checks). -->
+		<style>
+			html {
+				background: #090909;
+				color-scheme: dark;
+			}
+			html[data-theme='light'] {
+				background: #fafafa;
+				color-scheme: light;
+			}
+		</style>
+		<!-- Runs synchronously before first paint. Must resolve exactly like ThemeStore (theme.spec.ts executes this text against the same matrix). -->
+		<script>
+			(function () {
+				var preference = 'system';
+				try {
+					var stored = localStorage.getItem('tvdata-theme');
+					if (stored === 'dark' || stored === 'light' || stored === 'system') preference = stored;
+				} catch (e) {}
+				var dark = true;
+				try {
+					dark = matchMedia('(prefers-color-scheme: dark)').matches;
+				} catch (e) {}
+				var theme = preference === 'system' ? (dark ? 'dark' : 'light') : preference;
+				var root = document.documentElement;
+				root.setAttribute('data-theme', theme);
+				root.style.colorScheme = theme;
+				var meta = document.querySelector('meta[name="theme-color"]');
+				if (meta) meta.setAttribute('content', theme === 'dark' ? '#090909' : '#fafafa');
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

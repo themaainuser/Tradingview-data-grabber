@@ -1,6 +1,8 @@
 <script lang="ts">
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import FlaskConical from '@lucide/svelte/icons/flask-conical';
+	import Scale from '@lucide/svelte/icons/scale';
+	import { resolve } from '$app/paths';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import * as Card from '$lib/components/ui/card';
 	import * as Collapsible from '$lib/components/ui/collapsible';
@@ -30,6 +32,24 @@
 			filters.
 		</p>
 	</header>
+
+	<aside
+		class="flex items-start gap-3 rounded-xl bg-surface-1 p-5"
+		aria-label="About ranking these results"
+		data-testid="verdict-pointer"
+	>
+		<Scale class="mt-0.5 size-4 shrink-0 text-ink-muted" aria-hidden="true" />
+		<p class="max-w-[76ch] type-body-sm text-pretty text-ink-muted">
+			Sorting 16 rules by Sharpe on a short capture mostly surfaces luck, so this table opens sorted
+			by trade count. The
+			<a class="text-accent-blue hover:underline" href={resolve('/verdict/[[dataset]]', {})}
+				>Verdict page</a
+			>
+			counts every rule tried, seals the most recent bars, charges costs on both sides, and will not rank
+			rules that barely trade. This page fills at the signal bar&rsquo;s close, so its numbers differ
+			from the Verdict page, which fills at the next open.
+		</p>
+	</aside>
 
 	<div class="grid items-start gap-[30px] lg:grid-cols-[20rem_minmax(0,1fr)]">
 		<Card.Root class="lg:sticky lg:top-[76px]">
@@ -73,6 +93,16 @@
 							<span>{report.metadata.periods_per_year.toLocaleString('en-US')} periods / year</span>
 							{#if research.status === 'loading'}<span class="text-ink">Refreshing…</span>{/if}
 						</div>
+						{#if report.metadata.sealed_holdouts?.length}
+							<p class="type-caption text-pretty text-ink-muted" data-testid="sealed-note">
+								The most recent bars of {report.metadata.sealed_holdouts.length === 1
+									? 'one dataset are'
+									: `${report.metadata.sealed_holdouts.length} datasets are`} sealed on the Verdict page
+								and were left out of this run ({report.metadata.sealed_holdouts
+									.map((s) => `${s.excluded_bars.toLocaleString('en-US')} bars`)
+									.join(', ')}).
+							</p>
+						{/if}
 						<FilterBuilder
 							tree={research.filter}
 							editor={research.filterEditor}

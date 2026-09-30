@@ -311,8 +311,8 @@ export class CandleChartController {
 			ctx.globalAlpha = 1;
 		}
 
-		const positive = host.color('--semantic-success');
-		const negative = host.color('--gradient-coral');
+		const positive = host.color('--chart-up');
+		const negative = host.color('--chart-down');
 		ctx.lineWidth = 1;
 		for (const b of buckets) {
 			const up = b.close >= b.open;
@@ -378,8 +378,8 @@ export class CandleChartController {
 		const first = Math.max(0, Math.floor(view.start));
 		const last = Math.min(columns.close.length, Math.ceil(view.end));
 		const barWidth = width / (view.end - view.start);
-		const positive = host.color('--semantic-success');
-		const negative = host.color('--gradient-coral');
+		const positive = host.color('--chart-up');
+		const negative = host.color('--chart-down');
 		ctx.save();
 		ctx.beginPath();
 		ctx.rect(left, rect.top, width, rect.bottom - rect.top);

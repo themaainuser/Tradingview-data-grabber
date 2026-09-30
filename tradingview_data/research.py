@@ -53,8 +53,12 @@ def strategy_permutations() -> list[dict[str, Any]]:
     ]
 
 
-def strategy_positions(data: pd.DataFrame, strategy: dict[str, Any]) -> pd.Series:
-    """Build next-bar positions so a close cannot earn its own signal return."""
+def strategy_targets(data: pd.DataFrame, strategy: dict[str, Any]) -> pd.Series:
+    """Return the 0/1 position each rule wants once a bar has closed.
+
+    The value at a bar uses only that bar's close and earlier ones, so it is known at the close and
+    must not earn that bar's own return; ``strategy_positions`` applies the one-bar delay.
+    """
 
     parameters = strategy["parameters"]
     if strategy["family"] == "SMA crossover":
@@ -84,7 +88,13 @@ def strategy_positions(data: pd.DataFrame, strategy: dict[str, Any]) -> pd.Serie
                     state = 0.0
             targets.append(state)
         target = pd.Series(targets, index=data.index, dtype=float)
-    return target.shift(1).fillna(0.0).rename("position")
+    return target.rename("target")
+
+
+def strategy_positions(data: pd.DataFrame, strategy: dict[str, Any]) -> pd.Series:
+    """Delay each target by one bar so a close cannot earn its own signal return."""
+
+    return strategy_targets(data, strategy).shift(1).fillna(0.0).rename("position")
 
 
 def _trade_returns(

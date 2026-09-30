@@ -88,7 +88,7 @@
 			title="No datasets yet"
 			description="The backend data directory has no OHLCV captures. Capture bars with the command below, or use Import CSV in the top bar to explore a file locally."
 		>
-			<code class="rounded-md bg-black/35 px-3 py-2 font-mono type-caption"
+			<code class="rounded-md bg-spotlight-well px-3 py-2 font-mono type-caption"
 				>tvdata bars -n EXCHANGE:SYMBOL -t 5 -o data --once</code
 			>
 		</EmptyState>
@@ -143,7 +143,7 @@
 										d.size_bytes
 									)}
 								{:else}
-									<span class="text-gradient-coral">{d.error ?? 'Invalid file'}</span>
+									<span class="text-coral-ink">{d.error ?? 'Invalid file'}</span>
 								{/if}
 							</div>
 							<div class="flex items-center gap-2">
@@ -181,9 +181,8 @@
 								{#if d.valid}
 									<Badge variant="success">Ready</Badge>
 								{:else}
-									<span
-										class="block truncate type-caption text-gradient-coral"
-										title={d.error ?? ''}>{d.error ?? 'Invalid file'}</span
+									<span class="block truncate type-caption text-coral-ink" title={d.error ?? ''}
+										>{d.error ?? 'Invalid file'}</span
 									>
 								{/if}
 							</span>

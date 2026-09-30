@@ -6,6 +6,8 @@ import type { ExplorerStore } from './explorer.svelte';
 import { ResearchStore } from './research.svelte';
 import { SavedFilters } from './saved-filters.svelte';
 import { SentimentStore } from './sentiment.svelte';
+import { ThemeStore } from './theme.svelte';
+import { VerdictStore } from './verdict.svelte';
 
 /**
  * Root of the application state, created once in the root layout and shared through Svelte
@@ -22,7 +24,10 @@ export class AppState {
 	readonly charts: ChartsStore;
 	readonly research: ResearchStore;
 	readonly sentiment: SentimentStore;
+	readonly verdict: VerdictStore;
 	readonly explorerFilters = new SavedFilters('explorer');
+	/** Created here but wired to the browser by `theme.attach()` in the root layout. */
+	readonly theme = new ThemeStore();
 	readonly researchFilters = new SavedFilters('research');
 
 	constructor(api: ApiClient = createApiClient()) {
@@ -31,6 +36,7 @@ export class AppState {
 		this.charts = new ChartsStore(api);
 		this.research = new ResearchStore(api);
 		this.sentiment = new SentimentStore(api);
+		this.verdict = new VerdictStore(api);
 	}
 }
 

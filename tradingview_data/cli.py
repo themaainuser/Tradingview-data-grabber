@@ -196,7 +196,7 @@ def _run_serve(args: argparse.Namespace) -> int:
         return 2
     if args.static_dir and not Path(args.static_dir).is_dir():
         print(f"warning: static directory {args.static_dir} not found; serving the API only", file=sys.stderr)
-    app = create_app(args.data_dir, args.static_dir, args.cors_origin)
+    app = create_app(args.data_dir, args.static_dir, args.cors_origin, state_dir=args.state_dir)
     uvicorn.run(app, host=args.host, port=args.port)
     return 0
 
@@ -300,6 +300,10 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--host", default="127.0.0.1", help="interface to bind (default: 127.0.0.1)")
     serve.add_argument("--port", type=int, default=8000, help="port to listen on (default: 8000)")
     serve.add_argument("--static-dir", help="built frontend directory to host at / (e.g. frontend/build)")
+    serve.add_argument(
+        "--state-dir",
+        help="directory for the verdict ledger (default: <data-dir>/.tvdata-verdict); keep it to keep the holdout sealed",
+    )
     serve.add_argument(
         "--cors-origin",
         action="append",

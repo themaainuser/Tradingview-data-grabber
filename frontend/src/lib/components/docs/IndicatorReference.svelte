@@ -86,7 +86,7 @@
 							<p class="type-micro text-ink-muted tabular-nums">
 								{#each d.params as p, i (p.key)}{i ? ' · ' : ''}{p.label}
 									{p.default}
-									<span class="opacity-80">({p.min} to {p.max})</span>{/each}
+									<span>({p.min} to {p.max})</span>{/each}
 							</p>
 						{/if}
 						{#if d.outputs.length > 1 || d.guides?.length}
