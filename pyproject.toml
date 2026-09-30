@@ -19,7 +19,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+api = ["fastapi>=0.110", "uvicorn>=0.27"]
+dev = ["pytest>=8.0", "httpx>=0.27", "tradingview-data-grabber[api]"]
 
 [project.scripts]
 tvdata = "tradingview_data.cli:main"

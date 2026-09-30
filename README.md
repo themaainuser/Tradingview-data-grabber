@@ -40,6 +40,8 @@ Python 3.9 or newer is required.
 python -m pip install -r requirements.txt
 # or, for an editable development install:
 python -m pip install -e ".[dev]"
+# or, to run the dashboard API without the test tools:
+python -m pip install -e ".[api]"
 ```
 
 ## Unified CLI
@@ -176,6 +178,48 @@ Returned notes are labeled as model output in the dashboard and do not change
 the quantitative ranking. A model API call shares those summary metrics with
 the configured endpoint.
 
+## Dashboard API
+
+`tvdata serve` exposes captured data to the web dashboard through a small
+read-only FastAPI service (install the optional dependencies with
+`pip install -e ".[api]"`). **There is no sample data:** the API only reports
+CSV captures that exist under the data directory, so the dashboard stays empty
+until `tvdata bars` (or another capture) has written files there.
+
+```bash
+tvdata serve --data-dir data --host 127.0.0.1 --port 8000
+# also host a built frontend at / and allow a dev server origin via CORS:
+tvdata serve --static-dir frontend/build --cors-origin http://localhost:5173
+```
+
+The server binds to loopback by default and has no authentication; only bind
+another interface on a network you trust. Files are re-scanned on every
+request, so new captures appear without a restart. Parsed files are cached
+by path, modification time, and size.
+
+**Data layout.** Datasets are `<data-dir>/<symbol_dir>/<timeframe>.csv` (the
+default `bars` layout) or flat `<data-dir>/<name>.csv`. The
+`*.csv.meta.json` sidecar written by `bars` supplies the symbol and timeframe;
+without it they come from the directory and file names (flat files have no
+timeframe). Hidden files, sidecars, other extensions, deeper directories, and
+symlinks that leave the data directory are ignored.
+
+| Endpoint | Response |
+| --- | --- |
+| `GET /api/health` | `{"status", "data_dir", "dataset_count"}` |
+| `GET /api/datasets` | `{"datasets": [...]}` sorted by symbol then timeframe. Each entry has `id`, `symbol`, `timeframe`, `path`, `rows`, `size_bytes`, `modified` (UTC ISO-8601), `start`/`end` (epoch seconds), `valid`, and `error`. Unreadable CSVs are listed with `valid: false` and an `error` message instead of failing the listing. |
+| `GET /api/datasets/{id}/bars?limit=&start=&end=` | Columnar OHLCV: `columns` holds parallel `time` (UTC epoch seconds), `open`, `high`, `low`, `close`, `volume` arrays. `limit` (1–5,000,000) keeps the most recent bars of the inclusive `start`–`end` window. `total_rows`, `dropped_rows`, `duplicate_rows_collapsed`, and `quality` describe the whole file. |
+| `GET /api/datasets/{id}/report` | The `tvdata analyze` market report. |
+| `POST /api/research/run` | Body `{"dataset_ids": [1–20 unique ids], "fee_bps": 5, "periods_per_year": 252}`; returns the `tvdata research` JSON (`schema_version` 1). Assets are labelled `<symbol>` or `<symbol>-<timeframe>` in request order. No model endpoint is called. |
+
+Dataset ids are opaque slugs that are only resolved against the scanned file
+list; client input is never used as a filesystem path. Errors use FastAPI's
+shape: `{"detail": "message"}` for 404 (unknown id), 422 (unreadable file,
+`start` after `end`, unknown id in a research request, or a research
+`ValueError`), and the standard list of field errors for request validation.
+NaN and infinite values are returned as `null`. Interactive docs are served
+at `/docs`.
+
 ## Python API
 
 The modules can be used independently in another application:
@@ -209,6 +253,7 @@ tradingview_data/
 ├── analytics.py  # validation, indicators, quality, and reports
 ├── charts.py     # static charts and HTML gallery
 ├── research.py   # strategy permutations, evaluation, model notes, dashboard
+├── api.py        # read-only FastAPI service for the web dashboard
 ├── auth.py       # token retrieval without persistence
 └── cli.py        # unified command and compatibility adapters
 ```
@@ -257,8 +302,11 @@ python -m pytest
 python -m unittest discover -s tests -v
 ```
 
+`tests/test_api.py` is written for pytest and skips itself when the optional
+`api` dependencies are not installed.
+
 Tests are network-free and cover the protocol, CSV persistence, quote parsing,
-analytics, charts, and CLI behavior. The project was originally forked from
+analytics, charts, the dashboard API, and CLI behavior. The project was originally forked from
 [0xrushi/tradingview-scraper](https://github.com/0xrushi/tradingview-scraper)
 by rushic24; the modular implementation builds on that initial websocket
 approach.
