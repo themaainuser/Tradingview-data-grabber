@@ -1,0 +1,339 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '@fontsource-variable/geist/wght.css';
+
+/*
+ * Design system: frontend/DESIGN.md is the source of truth. Token values below are checked
+ * against its front matter by src/lib/design/tokens.spec.ts, so they cannot drift silently.
+ *
+ * Inter ships as the official Latin subset from `inter-ui`: unlike the Google-Fonts build in
+ * @fontsource it keeps the cv/ss OpenType features the design's body voice depends on.
+ */
+@font-face {
+	font-family: 'InterVariable';
+	font-style: normal;
+	font-weight: 100 900;
+	font-display: swap;
+	src: url('inter-ui/variable-latin/InterVariable-subset.woff2') format('woff2');
+}
+
+/* Dark is the only mode (DESIGN.md, Known Gaps): `dark:` utilities in vendored primitives always apply. */
+@custom-variant dark (&:where(*));
+
+:root {
+	color-scheme: dark;
+
+	/* colors */
+	--primary: #ffffff;
+	--on-primary: #000000;
+	--accent-blue: #0099ff;
+	--ink: #ffffff;
+	--ink-muted: #999999;
+	--canvas: #090909;
+	--surface-1: #141414;
+	--surface-2: #1c1c1c;
+	--hairline: #262626;
+	--hairline-soft: #1a1a1a;
+	--inverse-canvas: #ffffff;
+	--inverse-ink: #000000;
+	--gradient-magenta: #d44df0;
+	--gradient-violet: #6a4cf5;
+	--gradient-orange: #ff7a3d;
+	--gradient-coral: #ff5577;
+	--semantic-success: #22c55e;
+
+	/* spacing scale (DESIGN.md). Utilities use the nearest Tailwind step or an arbitrary value: 15px = [15px], 30px = [30px]. */
+	--space-hair: 1px;
+	--space-xxs: 4px;
+	--space-xs: 8px;
+	--space-sm: 12px;
+	--space-md: 15px;
+	--space-lg: 20px;
+	--space-xl: 30px;
+	--space-xxl: 40px;
+	--space-section: 96px;
+
+	/* chart tokens: market up = success, market down = coral (the design allows no other chromatic pair) */
+	--chart-bg: var(--surface-1);
+	--chart-grid: var(--hairline);
+	--chart-axis: var(--ink-muted);
+	--chart-1: var(--gradient-orange);
+	--chart-2: var(--gradient-magenta);
+	--chart-3: var(--ink);
+	--chart-4: var(--gradient-violet);
+	--chart-5: var(--ink-muted);
+}
+
+@theme inline {
+	/* design tokens as utilities: bg-canvas, bg-surface-1, text-ink-muted, border-hairline ... */
+	--color-primary: var(--primary);
+	--color-on-primary: var(--on-primary);
+	--color-accent-blue: var(--accent-blue);
+	--color-ink: var(--ink);
+	--color-ink-muted: var(--ink-muted);
+	--color-canvas: var(--canvas);
+	--color-surface-1: var(--surface-1);
+	--color-surface-2: var(--surface-2);
+	--color-hairline: var(--hairline);
+	--color-hairline-soft: var(--hairline-soft);
+	--color-gradient-magenta: var(--gradient-magenta);
+	--color-gradient-violet: var(--gradient-violet);
+	--color-gradient-orange: var(--gradient-orange);
+	--color-gradient-coral: var(--gradient-coral);
+	--color-success: var(--semantic-success);
+
+	/* shadcn-style semantic aliases used by the vendored primitives, mapped onto the tokens above */
+	--color-background: var(--canvas);
+	--color-foreground: var(--ink);
+	--color-card: var(--surface-1);
+	--color-card-foreground: var(--ink);
+	--color-popover: var(--surface-2);
+	--color-popover-foreground: var(--ink);
+	--color-primary-foreground: var(--on-primary);
+	--color-secondary: var(--surface-1);
+	--color-secondary-foreground: var(--ink);
+	--color-muted: var(--surface-2);
+	--color-muted-foreground: var(--ink-muted);
+	--color-accent: var(--surface-2);
+	--color-accent-foreground: var(--ink);
+	--color-destructive: var(--gradient-coral);
+	--color-border: var(--hairline);
+	--color-input: var(--hairline);
+	--color-ring: var(--accent-blue);
+	--color-positive: var(--semantic-success);
+	--color-negative: var(--gradient-coral);
+	--color-chart-1: var(--chart-1);
+	--color-chart-2: var(--chart-2);
+	--color-chart-3: var(--chart-3);
+	--color-chart-4: var(--chart-4);
+	--color-chart-5: var(--chart-5);
+}
+
+@theme {
+	--font-sans:
+		'InterVariable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	/* Geist stands in for GT Walsheim Medium (a substitute the design names explicitly). */
+	--font-display: 'Geist Variable', 'InterVariable', ui-sans-serif, system-ui, sans-serif;
+	--font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+
+	/* rounded scale */
+	--radius-xs: 4px;
+	--radius-sm: 6px;
+	--radius-md: 10px;
+	--radius-lg: 15px;
+	--radius-xl: 20px;
+	--radius-xxl: 30px;
+	--radius-pill: 100px;
+
+	/* documented breakpoints: tablet 810px, desktop 1199px */
+	--breakpoint-md: 810px;
+	--breakpoint-xl: 1199px;
+
+	/* elevation: level 2 (floating) and level 3 (focus / selected) */
+	--shadow-float: inset 0 0.5px 0 0 rgb(255 255 255 / 0.1), 0 10px 30px 0 rgb(0 0 0 / 0.25);
+	--shadow-selected: 0 0 0 1px rgb(0 153 255 / 0.15);
+	/* the design's translucent blue ring plus a solid 1px edge, so keyboard focus stays visible */
+	--shadow-focus: 0 0 0 1px #0099ff, 0 0 0 4px rgb(0 153 255 / 0.15);
+
+	--ease-out-soft: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@layer base {
+	* {
+		border-color: var(--hairline);
+	}
+	html {
+		background: var(--canvas);
+		-webkit-text-size-adjust: 100%;
+	}
+	body {
+		background: var(--canvas);
+		color: var(--ink);
+		font-family: var(--font-sans);
+		font-size: 15px;
+		font-weight: 400;
+		line-height: 1.3;
+		letter-spacing: -0.01em;
+		/* The character variants are the brand voice: single-storey a, tailed l, alternate 1 / 3, quotes. */
+		font-feature-settings: 'cv01', 'cv05', 'cv09', 'cv11', 'ss03', 'ss07', 'dlig';
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+	}
+	h1,
+	h2,
+	h3 {
+		text-wrap: balance;
+	}
+	p,
+	li {
+		text-wrap: pretty;
+	}
+	::selection {
+		background: rgb(0 153 255 / 0.35);
+		color: var(--ink);
+	}
+	/* Icon stroke follows text weight: 1.5 beside regular text, 2 beside medium (buttons, nav). */
+	svg.lucide {
+		stroke-width: 1.5;
+	}
+	[data-slot='button'] svg.lucide,
+	nav svg.lucide {
+		stroke-width: 2;
+	}
+	/* One focus treatment everywhere; the transparent outline keeps it visible in forced-colors mode. */
+	:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+		outline: 2px solid transparent;
+		outline-offset: 2px;
+		box-shadow: var(--shadow-focus);
+	}
+}
+
+/* Typography scale (DESIGN.md). Tracking is in em so the percentage survives the responsive size steps. */
+@utility type-display-xxl {
+	font-family: var(--font-display);
+	font-weight: 500;
+	font-size: 110px;
+	line-height: 0.85;
+	letter-spacing: -0.05em;
+	@media (max-width: 1199px) {
+		font-size: 62px;
+	}
+	@media (max-width: 809px) {
+		font-size: 32px;
+	}
+}
+@utility type-display-xl {
+	font-family: var(--font-display);
+	font-weight: 500;
+	font-size: 85px;
+	line-height: 0.95;
+	letter-spacing: -0.05em;
+	@media (max-width: 1199px) {
+		font-size: 52px;
+	}
+	@media (max-width: 809px) {
+		font-size: 32px;
+	}
+}
+@utility type-display-lg {
+	font-family: var(--font-display);
+	font-weight: 500;
+	font-size: 62px;
+	line-height: 1;
+	letter-spacing: -0.05em;
+	@media (max-width: 1199px) {
+		font-size: 44px;
+	}
+	@media (max-width: 809px) {
+		font-size: 32px;
+	}
+}
+@utility type-display-md {
+	font-family: var(--font-display);
+	font-weight: 500;
+	font-size: 32px;
+	line-height: 1.13;
+	letter-spacing: -0.031em;
+	@media (max-width: 809px) {
+		font-size: 28px;
+	}
+}
+@utility type-headline {
+	font-weight: 700;
+	font-size: 22px;
+	line-height: 1.2;
+	letter-spacing: -0.036em;
+}
+@utility type-subhead {
+	font-weight: 400;
+	font-size: 24px;
+	line-height: 1.3;
+	letter-spacing: -0.0004em;
+}
+@utility type-body-lg {
+	font-weight: 400;
+	font-size: 18px;
+	line-height: 1.3;
+	letter-spacing: -0.01em;
+}
+@utility type-body {
+	font-weight: 400;
+	font-size: 15px;
+	line-height: 1.3;
+	letter-spacing: -0.01em;
+}
+@utility type-body-sm {
+	font-weight: 500;
+	font-size: 14px;
+	line-height: 1.4;
+	letter-spacing: -0.01em;
+}
+@utility type-caption {
+	font-weight: 500;
+	font-size: 13px;
+	line-height: 1.2;
+	letter-spacing: -0.01em;
+}
+@utility type-micro {
+	font-weight: 400;
+	font-size: 12px;
+	line-height: 1.2;
+	letter-spacing: -0.01em;
+}
+@utility type-button {
+	font-weight: 500;
+	font-size: 14px;
+	line-height: 1;
+	letter-spacing: -0.01em;
+}
+
+/*
+ * Gradient spotlight cards: individual cards, never section grounds. The gradient stops are
+ * derived from the documented anchors (DESIGN.md, Known Gaps) and darkened where body text sits,
+ * so text keeps at least 4.5:1 against the fill.
+ */
+@utility spotlight-violet {
+	color: var(--ink);
+	background:
+		radial-gradient(
+			90% 80% at 100% 0%,
+			color-mix(in oklab, var(--gradient-magenta) 80%, transparent),
+			transparent 62%
+		),
+		linear-gradient(
+			155deg,
+			var(--gradient-violet) 0%,
+			color-mix(in oklab, var(--gradient-violet) 45%, #000) 100%
+		);
+}
+@utility spotlight-magenta {
+	color: var(--ink);
+	background:
+		radial-gradient(90% 80% at 100% 0%, var(--gradient-magenta), transparent 62%),
+		linear-gradient(
+			160deg,
+			color-mix(in oklab, var(--gradient-magenta) 62%, #000) 0%,
+			color-mix(in oklab, var(--gradient-violet) 40%, #000) 100%
+		);
+}
+@utility spotlight-orange {
+	color: var(--on-primary);
+	background:
+		radial-gradient(90% 90% at 0% 100%, var(--gradient-coral), transparent 62%),
+		linear-gradient(
+			150deg,
+			var(--gradient-orange) 0%,
+			color-mix(in oklab, var(--gradient-orange) 55%, var(--gradient-coral)) 100%
+		);
+}
+
+/* Motion is decorative here; drop it for users who ask. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	::before,
+	::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}

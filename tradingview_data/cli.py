@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Callable, Sequence
 
@@ -181,6 +182,25 @@ def _run_auth(_: argparse.Namespace) -> int:
     return 0
 
 
+def _run_serve(args: argparse.Namespace) -> int:
+    try:
+        import uvicorn
+
+        from .api import create_app
+    except ImportError as exc:
+        print(
+            f"error: the dashboard API needs optional dependencies ({exc}); "
+            'install them with: pip install -e ".[api]"',
+            file=sys.stderr,
+        )
+        return 2
+    if args.static_dir and not Path(args.static_dir).is_dir():
+        print(f"warning: static directory {args.static_dir} not found; serving the API only", file=sys.stderr)
+    app = create_app(args.data_dir, args.static_dir, args.cors_origin)
+    uvicorn.run(app, host=args.host, port=args.port)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the public ``tvdata`` command parser."""
 
@@ -274,6 +294,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     auth = commands.add_parser("auth", help="verify account credentials without writing a token")
     auth.set_defaults(handler=_run_auth)
+
+    serve = commands.add_parser("serve", help="serve captured data and research to the dashboard over HTTP")
+    serve.add_argument("--data-dir", default="data", help="directory containing bars output (default: data)")
+    serve.add_argument("--host", default="127.0.0.1", help="interface to bind (default: 127.0.0.1)")
+    serve.add_argument("--port", type=int, default=8000, help="port to listen on (default: 8000)")
+    serve.add_argument("--static-dir", help="built frontend directory to host at / (e.g. frontend/build)")
+    serve.add_argument(
+        "--cors-origin",
+        action="append",
+        default=[],
+        metavar="URL",
+        help="allow this browser origin via CORS; repeat as needed (off by default)",
+    )
+    serve.set_defaults(handler=_run_serve)
     return parser
 
 
