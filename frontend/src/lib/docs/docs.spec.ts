@@ -8,8 +8,11 @@ describe('API reference data', () => {
 			[
 				'GET /api/datasets',
 				'GET /api/datasets/{id}/bars',
+				'GET /api/datasets/{id}/charts',
 				'GET /api/datasets/{id}/report',
+				'GET /api/charts/correlation',
 				'GET /api/health',
+				'GET /api/sentiment/fear-greed',
 				'POST /api/research/run'
 			].sort()
 		);
@@ -21,13 +24,20 @@ describe('API reference data', () => {
 			expect(e.summary.length, e.id).toBeGreaterThan(20);
 			for (const p of e.params.filter((p) => p.in === 'path'))
 				expect(e.path).toContain(`{${p.name}}`);
-			for (const err of e.errors) expect([404, 422]).toContain(err.status);
+			for (const err of e.errors) expect([404, 422, 502]).toContain(err.status);
 		}
 	});
 
 	it('only claims UI usage for endpoints the client actually calls', () => {
 		const used = API_ENDPOINTS.filter((e) => e.usedBy).map((e) => e.path);
-		expect(used.sort()).toEqual(['/api/datasets', '/api/datasets/{id}/bars', '/api/research/run']);
+		expect(used.sort()).toEqual([
+			'/api/charts/correlation',
+			'/api/datasets',
+			'/api/datasets/{id}/bars',
+			'/api/datasets/{id}/charts',
+			'/api/research/run',
+			'/api/sentiment/fear-greed'
+		]);
 	});
 });
 

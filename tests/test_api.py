@@ -267,7 +267,10 @@ def test_openapi_documents_every_endpoint(client):
         "/api/datasets",
         "/api/datasets/{dataset_id}/bars",
         "/api/datasets/{dataset_id}/report",
+        "/api/datasets/{dataset_id}/charts",
+        "/api/charts/correlation",
         "/api/research/run",
+        "/api/sentiment/fear-greed",
     }
 
 

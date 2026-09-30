@@ -5,11 +5,13 @@
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import BookOpen from '@lucide/svelte/icons/book-open';
+	import ChartArea from '@lucide/svelte/icons/chart-area';
 	import CandlestickChart from '@lucide/svelte/icons/chart-candlestick';
 	import type { Component } from 'svelte';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import Database from '@lucide/svelte/icons/database';
 	import FlaskConical from '@lucide/svelte/icons/flask-conical';
+	import Gauge from '@lucide/svelte/icons/gauge';
 	import Menu from '@lucide/svelte/icons/menu';
 	import X from '@lucide/svelte/icons/x';
 	import * as Alert from '$lib/components/ui/alert';
@@ -32,7 +34,9 @@
 	const NAV = [
 		{ href: home, label: 'Datasets', icon: Database },
 		{ href: resolve('/explorer/[[dataset]]', {}), label: 'Explorer', icon: CandlestickChart },
+		{ href: resolve('/charts/[[dataset]]', {}), label: 'Charts', icon: ChartArea },
 		{ href: resolve('/research'), label: 'Research', icon: FlaskConical },
+		{ href: resolve('/sentiment'), label: 'Sentiment', icon: Gauge },
 		{ href: resolve('/docs'), label: 'Docs', icon: BookOpen }
 	] as const;
 

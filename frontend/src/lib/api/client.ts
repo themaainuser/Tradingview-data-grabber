@@ -1,6 +1,21 @@
 import { ApiError, toApiError } from './errors';
-import type { DatasetSummary, ResearchReport, ResearchRequest } from './contracts';
-import { parseBars, parseDatasetList, parseResearch, type Bars } from './validate';
+import type {
+	ChartsResponse,
+	CorrelationResponse,
+	DatasetSummary,
+	FearGreedResponse,
+	ResearchReport,
+	ResearchRequest
+} from './contracts';
+import {
+	parseBars,
+	parseCharts,
+	parseCorrelation,
+	parseDatasetList,
+	parseFearGreed,
+	parseResearch,
+	type Bars
+} from './validate';
 
 export interface ApiClientOptions {
 	baseUrl?: string;
@@ -16,6 +31,8 @@ export interface ApiClientOptions {
 export interface RequestOptions {
 	signal?: AbortSignal;
 	timeoutMs?: number;
+	/** Overrides the client's retry count for this GET (0 = try once). */
+	retries?: number;
 }
 
 /** FastAPI sends `{detail: string}` or, for validation, `{detail: [{loc, msg}]}`. */
@@ -88,7 +105,7 @@ export function createApiClient(options: ApiClientOptions = {}) {
 	}
 
 	async function request(path: string, init: RequestInit, opts: RequestOptions, retry: boolean) {
-		const attempts = retry ? retries + 1 : 1;
+		const attempts = retry ? (opts.retries ?? retries) + 1 : 1;
 		let last: ApiError | null = null;
 		for (let i = 0; i < attempts; i++) {
 			try {
@@ -116,6 +133,50 @@ export function createApiClient(options: ApiClientOptions = {}) {
 				true
 			);
 			return parseBars(json);
+		},
+
+		/**
+		 * The backend fetches CoinMarketCap itself and backs off after a failure, so retrying here only
+		 * delays the error message; one attempt is enough.
+		 */
+		async getFearGreed(opts: RequestOptions & { days?: number } = {}): Promise<FearGreedResponse> {
+			const query = opts.days ? `?days=${Math.trunc(opts.days)}` : '';
+			return parseFearGreed(
+				await request(`/api/sentiment/fear-greed${query}`, {}, { retries: 0, ...opts }, true)
+			);
+		},
+
+		async getCharts(
+			id: string,
+			opts: RequestOptions & {
+				bins?: number;
+				valueArea?: number;
+				window?: number;
+				returnBins?: number;
+			} = {}
+		): Promise<ChartsResponse> {
+			const params = new URLSearchParams();
+			if (opts.bins) params.set('bins', String(Math.trunc(opts.bins)));
+			if (opts.valueArea) params.set('value_area', String(opts.valueArea));
+			if (opts.window) params.set('window', String(Math.trunc(opts.window)));
+			if (opts.returnBins) params.set('return_bins', String(Math.trunc(opts.returnBins)));
+			const query = params.size ? `?${params}` : '';
+			const json = await request(
+				`/api/datasets/${encodeURIComponent(id)}/charts${query}`,
+				{},
+				opts,
+				true
+			);
+			return parseCharts(json);
+		},
+
+		async getCorrelation(
+			ids: readonly string[],
+			opts: RequestOptions = {}
+		): Promise<CorrelationResponse> {
+			const params = new URLSearchParams();
+			for (const id of ids) params.append('ids', id);
+			return parseCorrelation(await request(`/api/charts/correlation?${params}`, {}, opts, true));
 		},
 
 		async runResearch(body: ResearchRequest, opts: RequestOptions = {}): Promise<ResearchReport> {

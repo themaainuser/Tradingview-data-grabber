@@ -75,7 +75,7 @@ describe('app shell', () => {
 		const menu = page.getByRole('dialog');
 		await expect.element(menu).toBeVisible();
 		await expect.element(menu.getByRole('navigation', { name: 'Mobile' })).toBeInTheDocument();
-		expect(menu.getByRole('link').elements()).toHaveLength(4);
+		expect(menu.getByRole('link').elements()).toHaveLength(6);
 		await page.getByRole('button', { name: 'Close' }).click();
 		await vi.waitFor(() => expect(page.getByRole('dialog').elements()).toHaveLength(0));
 	});

@@ -24,7 +24,7 @@ describe('Docs page', () => {
 		render(Docs);
 		await expect.element(page.getByRole('heading', { level: 1, name: 'Docs' })).toBeInTheDocument();
 		const links = [...document.querySelectorAll('nav[aria-label="Documentation contents"] a')];
-		expect(links).toHaveLength(8);
+		expect(links).toHaveLength(10);
 		for (const link of links) {
 			const id = link.getAttribute('href')!.slice(1);
 			const section = document.getElementById(id);

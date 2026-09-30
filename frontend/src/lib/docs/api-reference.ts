@@ -121,6 +121,103 @@ export const API_ENDPOINTS: readonly Endpoint[] = [
 		usedBy: null
 	},
 	{
+		id: 'charts',
+		method: 'GET',
+		path: '/api/datasets/{id}/charts',
+		summary:
+			'Chart data for one dataset, computed by the same code that draws the PNG charts: volume profile, return distribution, drawdown, rolling volatility, UTC hour-by-weekday activity grids and seasonality. A section that needs more bars, or intraday bars, is null and explained under unavailable.',
+		params: [
+			{
+				name: 'id',
+				in: 'path',
+				type: 'string',
+				required: true,
+				description: 'Opaque id from /api/datasets.'
+			},
+			{
+				name: 'bins',
+				in: 'query',
+				type: 'integer 10 to 200',
+				required: false,
+				description: 'Price bins of the volume profile. Default 60.'
+			},
+			{
+				name: 'value_area',
+				in: 'query',
+				type: 'number 0.5 to 0.95',
+				required: false,
+				description: 'Share of volume inside the value area. Default 0.7.'
+			},
+			{
+				name: 'window',
+				in: 'query',
+				type: 'integer 5 to 500',
+				required: false,
+				description: 'Rolling volatility window in bars. Default 30.'
+			},
+			{
+				name: 'return_bins',
+				in: 'query',
+				type: 'integer 10 to 101',
+				required: false,
+				description: 'Bins of the return histogram. Default 41.'
+			}
+		],
+		returns:
+			'{ id, symbol, timeframe, bars, interval_seconds, intraday, volume_profile, return_distribution, drawdown, rolling_volatility, activity, seasonality, unavailable }',
+		errors: [
+			{ status: 404, when: 'The id does not match a scanned file.' },
+			{ status: 422, when: 'The file fails validation, or a parameter is outside its range.' }
+		],
+		usedBy: 'Charts'
+	},
+	{
+		id: 'correlation',
+		method: 'GET',
+		path: '/api/charts/correlation',
+		summary:
+			'Correlation of bar-to-bar returns across datasets, over the timestamps they share. Repeat the ids parameter once per dataset.',
+		params: [
+			{
+				name: 'ids',
+				in: 'query',
+				type: 'string[] (2 to 20, unique)',
+				required: true,
+				description: 'Dataset ids from /api/datasets.'
+			}
+		],
+		returns: '{ labels, matrix, observations, start, end }',
+		errors: [
+			{
+				status: 422,
+				when: 'Fewer than two or more than twenty ids, a duplicate or unknown id, a file that fails validation, or fewer than 3 overlapping returns.'
+			}
+		],
+		usedBy: 'Charts (Correlation)'
+	},
+	{
+		id: 'fear-greed',
+		method: 'GET',
+		path: '/api/sentiment/fear-greed',
+		summary:
+			"CoinMarketCap's Crypto Fear and Greed Index, read by the backend from the public endpoint CoinMarketCap's own chart page uses (no API key). That endpoint is not a published API. Results are cached for ten minutes; if a refresh fails the last good readings are returned with stale: true. Nothing is ever substituted for a missing reading.",
+		params: [
+			{
+				name: 'days',
+				in: 'query',
+				type: 'integer 1 to 3650',
+				required: false,
+				description: 'Return only the last N days of history.'
+			}
+		],
+		returns:
+			'{ source, fetched_at, stale, stale_reason, bands, current, snapshots, points: { time, score, btc_price, btc_volume }, total_points }',
+		errors: [
+			{ status: 502, when: 'CoinMarketCap could not be read and no earlier reading is cached.' }
+		],
+		usedBy: 'Sentiment'
+	},
+	{
 		id: 'research',
 		method: 'POST',
 		path: '/api/research/run',

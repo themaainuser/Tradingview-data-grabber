@@ -8,16 +8,16 @@ from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-from tradingview_data.charts import build_dashboard, generate_charts
+from tradingview_data.charts import build_dashboard, build_html, generate_charts
 from tradingview_data.storage import CSV_COLUMNS, CSV_TIME_FORMAT
 
 
-def make_csv(path, offset=0):
+def make_csv(path, offset=0, rows=40):
     start = datetime(2024, 1, 1, 9, 15, tzinfo=ZoneInfo("Asia/Kolkata"))
     with path.open("w", newline="") as handle:
         writer = csv.writer(handle)
         writer.writerow(CSV_COLUMNS)
-        for index in range(40):
+        for index in range(rows):
             price = 100 + offset + index * 0.5
             writer.writerow(
                 [
@@ -51,6 +51,9 @@ class ChartTests(unittest.TestCase):
                 "5_price_time_heatmap.png",
                 "6_returns_atr.png",
                 "7_technical_indicators.png",
+                "9_return_distribution.png",
+                "10_drawdown.png",
+                "11_seasonality.png",
                 "dashboard.html",
             }
             self.assertEqual({path.name for path in generated}, expected)
@@ -66,6 +69,31 @@ class ChartTests(unittest.TestCase):
             self.assertTrue((multi / "btc" / "1_candles_volume.png").exists())
             self.assertTrue((multi / "eth" / "1_candles_volume.png").exists())
             self.assertTrue((multi / "8_correlation_heatmap.png").exists())
+
+    def test_charts_that_need_more_history_are_skipped(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            short = root / "short.csv"
+            make_csv(short, rows=12)
+
+            generated = generate_charts([short], root / "out")
+
+            names = {path.name for path in generated}
+            self.assertIn("10_drawdown.png", names)
+            self.assertNotIn("9_return_distribution.png", names)
+            self.assertNotIn("11_seasonality.png", names)
+            self.assertIn("10 Drawdown", (root / "out" / "dashboard.html").read_text())
+
+    def test_build_html_orders_numbered_charts_naturally(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            for name in ("10_drawdown.png", "2_volume_profile.png", "1_candles_volume.png"):
+                (root / name).write_bytes(b"png")
+
+            document = build_html(root).read_text()
+
+            self.assertLess(document.index("1_candles_volume.png"), document.index("2_volume_profile.png"))
+            self.assertLess(document.index("2_volume_profile.png"), document.index("10_drawdown.png"))
 
     def test_dashboard_escapes_labels_and_contains_offline_gallery_controls(self):
         with tempfile.TemporaryDirectory() as directory:

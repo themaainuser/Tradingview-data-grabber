@@ -11,6 +11,7 @@
 	import IndicatorReference from '$lib/components/docs/IndicatorReference.svelte';
 	import MetricGlossary from '$lib/components/docs/MetricGlossary.svelte';
 	import OperatorReference from '$lib/components/docs/OperatorReference.svelte';
+	import { API_ENDPOINTS } from '$lib/docs/api-reference';
 	import { observeSections } from '$lib/docs/scrollspy';
 	import { generatePresets } from '$lib/explorer/presets';
 	import { MAX_IMPORT_BYTES } from '$lib/data/csv';
@@ -23,7 +24,9 @@
 		{ id: 'explorer', label: 'Explorer' },
 		{ id: 'filters', label: 'Filters' },
 		{ id: 'indicators', label: 'Indicators' },
+		{ id: 'charts', label: 'Charts' },
 		{ id: 'research', label: 'Research' },
+		{ id: 'sentiment', label: 'Sentiment' },
 		{ id: 'api', label: 'API reference' },
 		{ id: 'troubleshooting', label: 'Troubleshooting' }
 	];
@@ -46,6 +49,7 @@ pnpm dev`;
 	const SINGLE_SERVER = `cd frontend && pnpm build && cd ..
 tvdata serve --data-dir data --static-dir frontend/build`;
 
+	const usedEndpoints = API_ENDPOINTS.filter((e) => e.usedBy).length;
 	const presetCount = generatePresets().length;
 	const maxImportMb = MAX_IMPORT_BYTES / 1024 / 1024;
 
@@ -69,6 +73,14 @@ tvdata serve --data-dir data --static-dir frontend/build`;
 		{
 			q: 'My filter matches nothing',
 			a: 'Indicators have no value during warm-up (for example the first 13 bars of a 14-period RSI), and a missing value never satisfies a condition. Check the matched count next to the filter, and look for a red condition: unknown fields and invalid operands are reported on the row instead of being ignored. Percentile conditions rank against the whole sample, so they can also match fewer bars than you expect.'
+		},
+		{
+			q: 'The Sentiment page shows an error',
+			a: 'Your backend could not read the index from CoinMarketCap, and nothing is shown in its place. The message says why: a timeout, no internet access from the machine running the backend, or CoinMarketCap answering with an error or limiting access. Press Retry. The backend waits a minute after a failure before asking again. "This backend does not serve the Fear & Greed index" means the backend is older than the dashboard; update it and restart tvdata serve.'
+		},
+		{
+			q: 'A chart says "Not available for this dataset"',
+			a: 'The backend could not compute that section and gave the reason. The usual ones are too few bars (the return statistics need at least 30 returns) and a capture that is not intraday (activity by hour needs bars shorter than a day). Capture more data or a shorter timeframe and press Refresh on the Datasets page.'
 		},
 		{
 			q: 'A research run fails with a 422 error',
@@ -390,9 +402,100 @@ tvdata serve --data-dir data --static-dir frontend/build`;
 			</DocSection>
 
 			<DocSection
+				id="charts"
+				title="Charts"
+				lead="Analysis your backend computes from a capture, drawn in the dashboard."
+			>
+				<p>
+					Open <a class="text-accent-blue hover:underline" href={resolve('/charts/[[dataset]]', {})}
+						>Charts</a
+					>
+					and pick a dataset. The numbers come from the backend, using the same code that draws the PNG
+					charts from
+					<code>tvdata chart</code>, so the two always agree. Imported CSV files are not available
+					here because the backend cannot see them. All times are UTC.
+				</p>
+				<ul>
+					<li>
+						<strong class="font-medium text-ink">Volume profile:</strong> where trading happened by price.
+						The point of control (POC) is the busiest price and the value area holds 70% of the volume.
+						Choose 30, 60 or 100 price bins.
+					</li>
+					<li>
+						<strong class="font-medium text-ink">Return distribution:</strong> a histogram of bar-to-bar
+						returns against a normal curve with the same mean and spread, with VaR and CVaR at 95%. Extreme
+						bars outside the plotted range are counted in the statistics and listed beneath.
+					</li>
+					<li>
+						<strong class="font-medium text-ink">Drawdown:</strong> how far the close sits below its running
+						peak, with the deepest drop, when it happened and whether it has recovered.
+					</li>
+					<li>
+						<strong class="font-medium text-ink">Rolling volatility:</strong> the standard deviation of
+						bar returns over a sliding window of 10 to 100 bars. It is per bar and not annualised.
+					</li>
+					<li>
+						<strong class="font-medium text-ink">Activity by time of week:</strong> a weekday by UTC hour
+						grid of bar range, volume or return. It needs intraday bars.
+					</li>
+					<li>
+						<strong class="font-medium text-ink">Seasonality:</strong> average return and share of up
+						bars by weekday and by hour. Short captures produce noisy patterns, so check the counts.
+					</li>
+					<li>
+						<strong class="font-medium text-ink">Correlation:</strong> tick two to twenty datasets to
+						compare their returns over the timestamps they share. It needs at least three overlapping
+						returns.
+					</li>
+				</ul>
+				<p>
+					When a capture is too short, or is not intraday, a section is replaced by the reason the
+					backend gave, such as "needs intraday bars", instead of an empty chart.
+				</p>
+			</DocSection>
+
+			<DocSection
+				id="sentiment"
+				title="Sentiment"
+				lead="The CMC Crypto Fear and Greed Index, fetched by your backend from CoinMarketCap with no API key."
+			>
+				<p>
+					The index runs from 0 (extreme fear) to 100 (extreme greed) in five zones: extreme fear
+					below 20, fear to 40, neutral to 60, greed to 80 and extreme greed above. The
+					<a class="text-accent-blue hover:underline" href={resolve('/sentiment')}>Sentiment</a> page
+					shows the current reading on a gauge, how it compares with yesterday, a week and a month ago
+					and with the year's high and low, a history chart with Bitcoin's price on a second axis, the
+					share of time spent in each zone, and a summary for the chosen range (30 days, 90 days, 1 year
+					or all).
+				</p>
+				<h3>Where the data comes from</h3>
+				<ul>
+					<li>
+						CoinMarketCap's documented Fear and Greed API needs a key. The backend instead reads the
+						public endpoint that CoinMarketCap's own chart page uses, which needs none.
+					</li>
+					<li>
+						That endpoint is not a published API. It can change, be rate limited or be withdrawn,
+						and CoinMarketCap's terms apply to the data.
+					</li>
+					<li>
+						The backend identifies itself honestly, sends no credentials and asks at most once every
+						ten minutes however many tabs are open.
+					</li>
+					<li>
+						If a refresh fails, the last good readings are shown with a notice saying when they were
+						fetched. If there are none, you see the error and no reading. Nothing is ever estimated
+						or filled in.
+					</li>
+					<li>A comparison date with no reading shows a dash rather than a guess.</li>
+				</ul>
+				<p>A sentiment index describes the market. It is not investment advice.</p>
+			</DocSection>
+
+			<DocSection
 				id="api"
 				title="API reference"
-				lead="A small, read-only FastAPI service. The dashboard uses three of its five endpoints."
+				lead="A small, read-only FastAPI service. The dashboard uses {usedEndpoints} of its {API_ENDPOINTS.length} endpoints."
 			>
 				<p>
 					Every path starts with <code>/api</code>. Errors use FastAPI's shape:

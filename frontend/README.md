@@ -77,13 +77,14 @@ src/lib/
   explorer/    field keys · BarSource (memoised indicator compute) · generated presets · catalog
   research/    column model for the results table · catalog
   analysis/    event-study.ts (conditional forward returns)
-  charts/      canvas controllers (candles, lines) + pure viewport / decimation / scale maths
+  charts/      canvas controllers (candles, lines) + pure viewport / decimation / scale maths · chart-math (scales, colour) · distribution (histogram helpers)
   data/        csv.ts (client-side OHLCV import, same rules as the backend loader)
   docs/        api-reference.ts (endpoint reference data) · scrollspy.ts (active-section tracking)
+  sentiment/   bands (colours, wording) · gauge (geometry) · stats (range, zone and summary maths)
   design/      tokens.spec.ts (DESIGN.md <-> CSS parity and contrast checks)
   state/       runes-based stores, provided through context (see below)
-  components/  app/ (charts, virtual list, spotlight, empty/error states, menu) · docs/ · filters/ · explorer/ · research/ · ui/
-src/routes/    /  (datasets) · /explorer/[[dataset]] · /research · /docs  (+error.svelte for unmatched routes)
+  components/  app/ (virtual list, spotlight, empty/error states, menu) · charts/ (SVG chart components) · sentiment/ · docs/ · filters/ · explorer/ · research/ · ui/
+src/routes/    /  (datasets) · /explorer/[[dataset]] · /charts/[[dataset]] · /research · /sentiment · /docs  (+error.svelte for unmatched routes)
 ```
 
 ## Docs page
@@ -102,13 +103,33 @@ Interactive Swagger and ReDoc are served by the backend under `/api/docs` and `/
 (schema at `/api/openapi.json`), which leaves the bare `/docs` path to the app. They load their
 scripts from a CDN, so they need an internet connection; the in-app docs do not.
 
+## Charts and Sentiment pages
+
+**Charts** (`/charts/[[dataset]]`) draws analysis the backend computes: volume profile, return
+distribution, drawdown, rolling volatility, weekday-by-hour activity, seasonality and a correlation
+matrix. The page only draws what `GET /api/datasets/{id}/charts` returns and shows the backend's
+reason for any section it could not compute (`unavailable`), so no chart is ever an empty frame. The
+chart components (`components/charts/`: `AreaChart`, `BarChart`, `HBarChart`, `Heatmap`) are
+responsive SVG/HTML, colour only through design tokens, are keyboard navigable (arrows, Home/End) and
+carry a screen-reader table or summary. Their screen-reader tables sit inside a clipping wrapper
+because a `<table class="sr-only">` ignores the 1px width and widens the page.
+
+**Sentiment** (`/sentiment`) shows the CoinMarketCap Crypto Fear and Greed Index the backend
+fetches. With no reading available it shows the error and nothing else; with a failed refresh it keeps
+the last readings on screen and says when they were fetched. Zone colours come from
+`sentiment/bands.ts`, the single source for gauge, pills, chart bands and the zone bar, so one
+reading never appears in two colours.
+
 ## Backend contract
 
-| Endpoint                      | Client method  | Store                       | Screen                    |
-| ----------------------------- | -------------- | --------------------------- | ------------------------- |
-| `GET /api/datasets`           | `listDatasets` | `DatasetsStore.load`        | Datasets, dataset pickers |
-| `GET /api/datasets/{id}/bars` | `getBars`      | `ExplorerStore.openBackend` | Explorer                  |
-| `POST /api/research/run`      | `runResearch`  | `ResearchStore.run`         | Research                  |
+| Endpoint                        | Client method    | Store                         | Screen                    |
+| ------------------------------- | ---------------- | ----------------------------- | ------------------------- |
+| `GET /api/datasets`             | `listDatasets`   | `DatasetsStore.load`          | Datasets, dataset pickers |
+| `GET /api/datasets/{id}/bars`   | `getBars`        | `ExplorerStore.openBackend`   | Explorer                  |
+| `POST /api/research/run`        | `runResearch`    | `ResearchStore.run`           | Research                  |
+| `GET /api/datasets/{id}/charts` | `getCharts`      | `ChartsStore.open`            | Charts                    |
+| `GET /api/charts/correlation`   | `getCorrelation` | `ChartsStore.loadCorrelation` | Charts (Correlation)      |
+| `GET /api/sentiment/fear-greed` | `getFearGreed`   | `SentimentStore.load`         | Sentiment                 |
 
 `GET /api/health` and `GET /api/datasets/{id}/report` exist on the server but are not used yet.
 Errors arrive as `{"detail": string}` or FastAPI's validation list; both become an `ApiError`
@@ -186,18 +207,19 @@ field, and generates 1,282 presets from the registry; the research table exposes
   (RSI + SMA + volume breakout) ~120 ms, editing a threshold ~6 ms, unchanged re-evaluation ~2 ms.
   That is fast enough that compute stays on the main thread; the pure functions are worker-ready
   if larger captures demand it.
-- Route-level code splitting: first load (JS + CSS, gzip) is about 91 kB for the datasets page,
-  124 kB for docs, 154 kB for research and 172 kB for the explorer (which carries the indicator
-  library). All routes share one stylesheet, so a new page's utility classes add a few kB everywhere.
-  The mobile menu and its dialog primitive load on first open. Fonts are self-hosted: Inter subset
-  97 kB, Geist latin 28 kB, both `font-display: swap`, fetched only for the glyphs on screen.
+- Route-level code splitting: first load (JS + CSS, gzip) is about 96 kB for the datasets page,
+  116 kB for sentiment, 132 kB for docs, 150 kB for charts, 163 kB for research and 182 kB for the
+  explorer (which carries the indicator library). All routes share one stylesheet, so a new page's
+  utility classes add a few kB everywhere. The mobile menu and its dialog primitive load on first
+  open. Fonts are self-hosted: Inter subset 97 kB, Geist latin 28 kB, both `font-display: swap`,
+  fetched only for the glyphs on screen.
 
 ## Svelte audit (against the official `svelte-core-bestpractices` guidance)
 
 Runes mode is forced project-wide. No `$:`, `export let`, `on:`, `<slot>`, `use:`, `class:` or
 `svelte/store` in app code. `$effect` is used four times, all to sync with something outside
 Svelte (three push props into canvas controllers inside `{@attach}`, one maps the URL to the
-store). All 51 `{#each}` blocks are keyed. Derived values use `$derived`; `$state.raw` holds
+store). All 86 `{#each}` blocks are keyed. Derived values use `$derived`; `$state.raw` holds
 API payloads and typed arrays. `svelte-check` and `eslint-plugin-svelte` (including
 `prefer-svelte-reactivity` and `no-navigation-without-resolve`) pass with no findings.
 
