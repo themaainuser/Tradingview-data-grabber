@@ -217,15 +217,17 @@ list; client input is never used as a filesystem path. Errors use FastAPI's
 shape: `{"detail": "message"}` for 404 (unknown id), 422 (unreadable file,
 `start` after `end`, unknown id in a research request, or a research
 `ValueError`), and the standard list of field errors for request validation.
-NaN and infinite values are returned as `null`. Interactive docs are served
-at `/docs`.
+NaN and infinite values are returned as `null`. Interactive Swagger docs are
+served at `/api/docs` (ReDoc at `/api/redoc`, schema at `/api/openapi.json`); the
+dashboard's own documentation page lives at `/docs`.
 
 ## Web dashboard
 
 `frontend/` is a Svelte 5 dashboard for exploring captures (candlesticks, 127
 indicators, compound bar filters, forward-return studies) and screening research
 runs. It shows only data from `tvdata serve` or a CSV you import; with no captures
-it renders empty states. See [`frontend/README.md`](frontend/README.md).
+it renders empty states. It includes its own documentation at `/docs`. See
+[`frontend/README.md`](frontend/README.md).
 
 ```bash
 cd frontend && pnpm install && pnpm build

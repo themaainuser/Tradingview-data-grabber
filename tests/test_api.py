@@ -261,7 +261,7 @@ def test_new_captures_appear_without_restarting(data_dir, client):
 
 
 def test_openapi_documents_every_endpoint(client):
-    paths = set(client.get("/openapi.json").json()["paths"])
+    paths = set(client.get("/api/openapi.json").json()["paths"])
     assert paths == {
         "/api/health",
         "/api/datasets",
@@ -758,7 +758,7 @@ def test_api_routes_win_over_static_files(data_dir, hosted):
     write_capture(data_dir / BTC)
     assert hosted.get("/api/health").json()["status"] == "ok"
     assert [item["path"] for item in hosted.get("/api/datasets").json()["datasets"]] == [BTC]
-    assert hosted.get("/openapi.json").status_code == 200
+    assert hosted.get("/api/openapi.json").status_code == 200
 
 
 def test_without_a_static_dir_or_with_a_missing_one_only_the_api_is_served(tmp_path, data_dir):
@@ -846,3 +846,22 @@ def test_serve_explains_how_to_install_missing_optional_dependencies(data_dir, m
     monkeypatch.setitem(sys.modules, "uvicorn", None)
     assert main(["serve", "--data-dir", str(data_dir)]) == 2
     assert 'pip install -e ".[api]"' in capsys.readouterr().err
+
+
+def test_interactive_docs_live_under_api_so_the_dashboard_can_own_docs(data_dir, hosted):
+    # Swagger and ReDoc sit under /api; the bare /docs path belongs to the single-page app.
+    for path in ("/api/docs", "/api/redoc"):
+        response = hosted.get(path)
+        assert response.status_code == 200, path
+        assert "text/html" in response.headers["content-type"]
+    assert "swagger" in hosted.get("/api/docs").text.lower()
+
+    spa = hosted.get("/docs")
+    assert spa.status_code == 200
+    assert "swagger" not in spa.text.lower()
+    assert spa.text == hosted.get("/").text  # SPA fallback: the client router renders the page
+    assert hosted.get("/openapi.json").text == spa.text
+
+    api_only = TestClient(create_app(data_dir))
+    assert api_only.get("/docs").status_code == 404
+    assert api_only.get("/api/docs").status_code == 200

@@ -3,7 +3,8 @@
  * every color, spacing, radius and type token in its front matter must exist in layout.css with
  * the same value, and every text/background pairing the UI uses must meet WCAG contrast.
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
@@ -157,5 +158,27 @@ describe('contrast of the pairings the UI uses', () => {
 		['ink-muted', 'surface-1', 'chart axis']
 	])('%s on %s reaches 3:1 for graphics (%s)', (fg, bg) => {
 		expect(contrast(c[fg], c[bg])).toBeGreaterThanOrEqual(3);
+	});
+});
+
+/**
+ * DESIGN.md names spacing steps (xs, md, lg...), but only Tailwind's numeric scale and arbitrary
+ * values generate utilities here. A class like `gap-md` compiles to nothing and silently drops
+ * the gap, so no source file may use one.
+ */
+describe('spacing utilities', () => {
+	const walk = (dir: string): string[] =>
+		readdirSync(dir).flatMap((name) => {
+			const path = join(dir, name);
+			if (statSync(path).isDirectory()) return walk(path);
+			return /\.(svelte|ts)$/.test(name) && !/\.spec\.ts$/.test(name) ? [path] : [];
+		});
+	const root = fileURLToPath(new URL('../../', import.meta.url));
+	const named =
+		/(?:^|[\s"'`{:])-?(?:gap|gap-x|gap-y|p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr|space-x|space-y)-(?:hair|xxs|xs|sm|md|lg|xl|xxl|section)(?=[\s"'`}:]|$)/;
+
+	it('never uses a named spacing step that generates no CSS', () => {
+		const offenders = walk(root).filter((file) => named.test(readFileSync(file, 'utf8')));
+		expect(offenders.map((f) => f.slice(root.length))).toEqual([]);
 	});
 });

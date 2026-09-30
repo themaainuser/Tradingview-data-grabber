@@ -386,7 +386,15 @@ def create_app(
 
     root = Path(data_dir).expanduser().resolve()
     repository = DatasetRepository(root)
-    app = FastAPI(title="TradingView Data Grabber dashboard API", version=__version__)
+    # Interactive docs live under /api so the bare /docs path can belong to the dashboard's own
+    # documentation page (the SPA fallback serves it).
+    app = FastAPI(
+        title="TradingView Data Grabber dashboard API",
+        version=__version__,
+        docs_url="/api/docs",
+        redoc_url="/api/redoc",
+        openapi_url="/api/openapi.json",
+    )
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request(_request: Any, exc: RequestValidationError) -> Response:

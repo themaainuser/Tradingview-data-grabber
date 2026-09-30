@@ -38,7 +38,8 @@ type NumberFn = (row: ResearchResult, ctx: RowContext) => number;
 const nan = (value: number | null | undefined): number =>
 	typeof value === 'number' && Number.isFinite(value) ? value : NaN;
 
-const METRICS: {
+/** The eleven statistics the backend reports per window; also the source of the docs glossary. */
+export const METRICS: {
 	key: keyof PerformanceMetrics;
 	label: string;
 	format: NumberFormat;
@@ -118,7 +119,7 @@ const METRICS: {
 	{ key: 'bars', label: 'Bars', format: 'int', better: null, description: 'Bars in the window.' }
 ];
 
-const WINDOW_LABELS: Record<MetricWindow, string> = {
+export const WINDOW_LABELS: Record<MetricWindow, string> = {
 	full_sample: 'Full sample',
 	in_sample: 'In-sample',
 	forward: 'Forward'
@@ -163,6 +164,13 @@ function numberColumn(
 	higherIsBetter: boolean | null = true
 ): ResearchColumn {
 	return { key, label, group, kind: 'numeric', format, description, higherIsBetter, number };
+}
+
+/** Columns derived from a run (versus buy-and-hold, fold aggregates, final equity), for the docs glossary. */
+export function derivedColumns(): ResearchColumn[] {
+	return staticColumns().filter((c) =>
+		['Versus buy-and-hold', 'Forward folds', 'Equity curve'].includes(c.group)
+	);
 }
 
 function staticColumns(): ResearchColumn[] {
