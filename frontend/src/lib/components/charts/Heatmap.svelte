@@ -9,6 +9,7 @@
 		type HeatScale
 	} from '$lib/charts/chart-math';
 	import { MISSING } from '$lib/format';
+	import { renderedTheme } from '$lib/state/theme.svelte';
 	import ChartTooltip from './ChartTooltip.svelte';
 	import { measure } from './measure';
 	import type { HeatmapLegend } from './types';
@@ -95,13 +96,21 @@
 		return [-m, m];
 	});
 
+	// Cell text is picked per theme: --ink and --on-primary swap roles, and the ramp starts at surface-2.
+	const theme = $derived(renderedTheme());
+
 	const cells = $derived(
 		rows.map((_, r) =>
 			cols.map((_, c) => {
 				const v = values[r]?.[c];
 				if (typeof v !== 'number' || !Number.isFinite(v)) return null;
 				const t = normalize(v, dom, scale);
-				return { value: v, text: fmt(v), bg: heatColor(t, scale), ink: contrastInk(t, scale) };
+				return {
+					value: v,
+					text: fmt(v),
+					bg: heatColor(t, scale),
+					ink: contrastInk(t, scale, theme)
+				};
 			})
 		)
 	);

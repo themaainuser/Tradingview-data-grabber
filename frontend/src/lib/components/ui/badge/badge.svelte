@@ -8,8 +8,8 @@
 			variant: {
 				default: 'bg-surface-2 text-ink',
 				secondary: 'bg-surface-2 text-ink-muted',
-				success: 'bg-surface-2 text-success',
-				destructive: 'bg-surface-2 text-gradient-coral'
+				success: 'bg-surface-2 text-success-ink',
+				destructive: 'bg-surface-2 text-coral-ink'
 			}
 		},
 		defaultVariants: {

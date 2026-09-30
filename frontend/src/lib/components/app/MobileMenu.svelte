@@ -2,6 +2,7 @@
 	import type { Component } from 'svelte';
 	import type { SVGAttributes } from 'svelte/elements';
 	import * as Sheet from '$lib/components/ui/sheet';
+	import ThemeToggle from './ThemeToggle.svelte';
 
 	interface NavItem {
 		href: string;
@@ -40,6 +41,10 @@
 				<!-- eslint-enable svelte/no-navigation-without-resolve -->
 			{/each}
 		</nav>
+		<div class="flex items-center justify-between gap-3 px-[15px] py-2" data-testid="menu-theme">
+			<span class="type-body-sm text-ink-muted" aria-hidden="true">Theme</span>
+			<ThemeToggle variant="labelled" />
+		</div>
 		<p class="flex items-center gap-2 px-[15px] pb-2 type-caption text-ink-muted" role="status">
 			<span class="size-2 rounded-full {status.dot}" aria-hidden="true"></span>
 			{status.label}

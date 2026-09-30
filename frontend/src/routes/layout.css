@@ -17,13 +17,18 @@
 	src: url('inter-ui/variable-latin/InterVariable-subset.woff2') format('woff2');
 }
 
-/* Dark is the only mode (DESIGN.md, Known Gaps): `dark:` utilities in vendored primitives always apply. */
-@custom-variant dark (&:where(*));
+/*
+ * Theming: the resolved theme is `data-theme="dark" | "light"` on <html> (never "system"; the
+ * inline script in app.html and ThemeStore resolve that). Dark values are the defaults in
+ * :root, which is also the no-JS state; light overrides the same token names in
+ * :root[data-theme='light']. Vendored `dark:` utilities follow the attribute.
+ */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
 :root {
 	color-scheme: dark;
 
-	/* colors */
+	/* colors (dark palette) */
 	--primary: #ffffff;
 	--on-primary: #000000;
 	--accent-blue: #0099ff;
@@ -42,6 +47,24 @@
 	--gradient-coral: #ff5577;
 	--semantic-success: #22c55e;
 
+	/*
+	 * Readable variants of the brand colours for text and thin graphics. The vivid values above
+	 * stay for fills (spotlights, dots); in light they would be 2-3:1 on the canvas, so the
+	 * light palette darkens these four. In dark they equal the vivid values.
+	 */
+	--success-ink: #22c55e;
+	--coral-ink: #ff5577;
+	--orange-ink: #ff7a3d;
+	--magenta-ink: #d44df0;
+
+	/* Ink on the gradient spotlight cards: the same in both themes, because the gradients are. */
+	--spotlight-ink-white: #ffffff;
+	--spotlight-ink-black: #000000;
+	--spotlight-well: rgb(0 0 0 / 0.3);
+
+	/* modal scrim */
+	--scrim: rgb(0 0 0 / 0.6);
+
 	/* spacing scale (DESIGN.md). Utilities use the nearest Tailwind step or an arbitrary value: 15px = [15px], 30px = [30px]. */
 	--space-hair: 1px;
 	--space-xxs: 4px;
@@ -57,11 +80,59 @@
 	--chart-bg: var(--surface-1);
 	--chart-grid: var(--hairline);
 	--chart-axis: var(--ink-muted);
-	--chart-1: var(--gradient-orange);
-	--chart-2: var(--gradient-magenta);
+	--chart-up: var(--success-ink);
+	--chart-down: var(--coral-ink);
+	--chart-1: var(--orange-ink);
+	--chart-2: var(--magenta-ink);
 	--chart-3: var(--ink);
 	--chart-4: var(--gradient-violet);
 	--chart-5: var(--ink-muted);
+
+	/* Fear & Greed "greed" band: a notch quieter than extreme greed, in both themes. */
+	--band-greed: color-mix(in oklab, var(--success-ink) 74%, var(--surface-2));
+
+	/*
+	 * elevation. Level 2 (floating): dark keeps the design's light top edge plus a black drop.
+	 * Level 3 (focus/selected) is the accent ring; the halo follows --accent-blue per theme.
+	 */
+	--elevation-float: inset 0 0.5px 0 0 rgb(255 255 255 / 0.1), 0 10px 30px 0 rgb(0 0 0 / 0.25);
+	--shadow-selected: 0 0 0 1px color-mix(in srgb, var(--accent-blue) 15%, transparent);
+	/* the design's translucent blue ring plus a solid 1px edge, so keyboard focus stays visible */
+	--shadow-focus:
+		0 0 0 1px var(--accent-blue), 0 0 0 4px color-mix(in srgb, var(--accent-blue) 15%, transparent);
+}
+
+/*
+ * Light palette (frontend/DESIGN.md, `colors-light`). Only the tokens that differ are listed;
+ * everything else (gradients, success/spotlight constants, spacing) is inherited from :root.
+ */
+:root[data-theme='light'] {
+	color-scheme: light;
+
+	--primary: #050505;
+	--on-primary: #ffffff;
+	--accent-blue: #005fb8;
+	--ink: #050505;
+	--ink-muted: #595959;
+	--canvas: #fafafa;
+	--surface-1: #f0f0f0;
+	--surface-2: #e5e5e5;
+	--hairline: #d0d0d0;
+	--hairline-soft: #e3e3e3;
+	--inverse-canvas: #050505;
+	--inverse-ink: #ffffff;
+	--success-ink: #13723a;
+	--coral-ink: #c01545;
+	--orange-ink: #a64200;
+	--magenta-ink: #b82fd6;
+
+	--scrim: rgb(5 5 5 / 0.4);
+
+	/* Light surfaces cannot carry a white top edge; a hairline ring and a soft drop lift instead. */
+	--elevation-float: 0 0 0 1px rgb(5 5 5 / 0.08), 0 10px 30px 0 rgb(5 5 5 / 0.14);
+
+	/* Greed reads as a notch deeper than extreme greed (mixing towards the pale surface would wash it out). */
+	--band-greed: color-mix(in oklab, var(--success-ink) 78%, var(--ink));
 }
 
 @theme inline {
@@ -81,6 +152,12 @@
 	--color-gradient-orange: var(--gradient-orange);
 	--color-gradient-coral: var(--gradient-coral);
 	--color-success: var(--semantic-success);
+	--color-success-ink: var(--success-ink);
+	--color-coral-ink: var(--coral-ink);
+	--color-orange-ink: var(--orange-ink);
+	--color-magenta-ink: var(--magenta-ink);
+	--color-scrim: var(--scrim);
+	--color-spotlight-well: var(--spotlight-well);
 
 	/* shadcn-style semantic aliases used by the vendored primitives, mapped onto the tokens above */
 	--color-background: var(--canvas);
@@ -96,12 +173,12 @@
 	--color-muted-foreground: var(--ink-muted);
 	--color-accent: var(--surface-2);
 	--color-accent-foreground: var(--ink);
-	--color-destructive: var(--gradient-coral);
+	--color-destructive: var(--coral-ink);
 	--color-border: var(--hairline);
 	--color-input: var(--hairline);
 	--color-ring: var(--accent-blue);
-	--color-positive: var(--semantic-success);
-	--color-negative: var(--gradient-coral);
+	--color-positive: var(--success-ink);
+	--color-negative: var(--coral-ink);
 	--color-chart-1: var(--chart-1);
 	--color-chart-2: var(--chart-2);
 	--color-chart-3: var(--chart-3);
@@ -128,12 +205,6 @@
 	/* documented breakpoints: tablet 810px, desktop 1199px */
 	--breakpoint-md: 810px;
 	--breakpoint-xl: 1199px;
-
-	/* elevation: level 2 (floating) and level 3 (focus / selected) */
-	--shadow-float: inset 0 0.5px 0 0 rgb(255 255 255 / 0.1), 0 10px 30px 0 rgb(0 0 0 / 0.25);
-	--shadow-selected: 0 0 0 1px rgb(0 153 255 / 0.15);
-	/* the design's translucent blue ring plus a solid 1px edge, so keyboard focus stays visible */
-	--shadow-focus: 0 0 0 1px #0099ff, 0 0 0 4px rgb(0 153 255 / 0.15);
 
 	--ease-out-soft: cubic-bezier(0.2, 0, 0, 1);
 }
@@ -169,7 +240,7 @@
 		text-wrap: pretty;
 	}
 	::selection {
-		background: rgb(0 153 255 / 0.35);
+		background: color-mix(in srgb, var(--accent-blue) 35%, transparent);
 		color: var(--ink);
 	}
 	/* Icon stroke follows text weight: 1.5 beside regular text, 2 beside medium (buttons, nav). */
@@ -186,6 +257,11 @@
 		outline-offset: 2px;
 		box-shadow: var(--shadow-focus);
 	}
+}
+
+/* Floating elevation (level 2). A utility rather than a @theme shadow: Tailwind inlines theme shadows at build time, so they could not follow the theme. */
+@utility shadow-float {
+	box-shadow: var(--elevation-float);
 }
 
 /* Typography scale (DESIGN.md). Tracking is in em so the percentage survives the responsive size steps. */
@@ -293,7 +369,7 @@
  * so text keeps at least 4.5:1 against the fill.
  */
 @utility spotlight-violet {
-	color: var(--ink);
+	color: var(--spotlight-ink-white);
 	background:
 		radial-gradient(
 			90% 80% at 100% 0%,
@@ -307,7 +383,7 @@
 		);
 }
 @utility spotlight-magenta {
-	color: var(--ink);
+	color: var(--spotlight-ink-white);
 	background:
 		radial-gradient(90% 80% at 100% 0%, var(--gradient-magenta), transparent 62%),
 		linear-gradient(
@@ -317,7 +393,7 @@
 		);
 }
 @utility spotlight-orange {
-	color: var(--on-primary);
+	color: var(--spotlight-ink-black);
 	background:
 		radial-gradient(90% 90% at 0% 100%, var(--gradient-coral), transparent 62%),
 		linear-gradient(

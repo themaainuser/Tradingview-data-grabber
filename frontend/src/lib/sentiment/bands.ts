@@ -3,26 +3,27 @@
  * zone bar so one reading is never drawn in two different colours.
  *
  * DESIGN.md allows no chromatic colour outside its tokens, so fear is the documented coral and
- * orange, greed is the documented success green, and neutral is the muted ink.
+ * orange, greed is the documented success green, and neutral is the muted ink. The `*-ink`
+ * variants are the brand colours darkened in the light theme, so arcs and text stay readable.
  */
 import type { BandKey } from '$lib/api/contracts';
 
 /** Fill for arcs, dots and chart bands. */
 export const BAND_FILL: Record<BandKey, string> = {
-	extreme_fear: 'var(--gradient-coral)',
-	fear: 'var(--gradient-orange)',
+	extreme_fear: 'var(--coral-ink)',
+	fear: 'var(--orange-ink)',
 	neutral: 'var(--ink-muted)',
-	greed: 'color-mix(in oklab, var(--semantic-success) 74%, var(--surface-2))',
-	extreme_greed: 'var(--semantic-success)'
+	greed: 'var(--band-greed)',
+	extreme_greed: 'var(--success-ink)'
 };
 
 /** Colour for text naming a band; every value here clears 4.5:1 on canvas and the surfaces. */
 export const BAND_TEXT: Record<BandKey, string> = {
-	extreme_fear: 'var(--gradient-coral)',
-	fear: 'var(--gradient-orange)',
+	extreme_fear: 'var(--coral-ink)',
+	fear: 'var(--orange-ink)',
 	neutral: 'var(--ink)',
-	greed: 'var(--semantic-success)',
-	extreme_greed: 'var(--semantic-success)'
+	greed: 'var(--success-ink)',
+	extreme_greed: 'var(--success-ink)'
 };
 
 /** A short plain-English reading of what a band implies, for the gauge caption. */

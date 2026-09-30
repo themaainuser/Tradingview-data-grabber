@@ -310,31 +310,59 @@ describe('heatmap colour ramps', () => {
 			previous = y;
 		}
 	});
-	it('keeps text at 4.5:1 or better on every cell of both scales', () => {
+	const THEMES = ['dark', 'light'] as const;
+	it.each(THEMES)('keeps text at 4.5:1 or better on every cell of both scales (%s)', (theme) => {
 		for (const scale of ['sequential', 'diverging'] as const) {
-			for (let i = 0; i <= 200; i++) {
-				const t = i / 200;
-				const ink = contrastInk(t, scale);
+			for (let i = 0; i <= 1000; i++) {
+				const t = i / 1000;
+				const ink = contrastInk(t, scale, theme);
 				const key = ink === 'var(--ink)' ? 'ink' : 'on-primary';
-				expect(heatContrast(t, scale, key), `${scale} ${t}`).toBeGreaterThanOrEqual(4.5);
+				expect(heatContrast(t, scale, key, theme), `${theme} ${scale} ${t}`).toBeGreaterThanOrEqual(
+					4.5
+				);
 			}
 		}
 	});
-	it('picks white on dark cells and black on light ones', () => {
+	it('picks white on dark cells and black on light ones (dark theme)', () => {
 		expect(contrastInk(0, 'sequential')).toBe('var(--ink)');
 		expect(contrastInk(1, 'sequential')).toBe('var(--on-primary)');
 		expect(contrastInk(0.5, 'diverging')).toBe('var(--ink)');
+		expect(contrastInk(0, 'sequential', 'dark')).toBe('var(--ink)');
 	});
-	it('mirrors the layout.css tokens', () => {
+	it('picks near-black ink on the pale light-theme start of a ramp and white on saturated stops', () => {
+		// Light: --ink is near-black and --on-primary is white, the reverse of dark.
+		expect(contrastInk(0, 'sequential', 'light')).toBe('var(--ink)');
+		expect(contrastInk(0.5, 'diverging', 'light')).toBe('var(--ink)');
+		expect(contrastInk(1 / 3, 'sequential', 'light')).toBe('var(--on-primary)');
+		expect(contrastInk(0, 'diverging', 'light')).not.toBe(contrastInk(0, 'diverging', 'dark'));
+	});
+	it('computes the same cell differently per theme (the ramp starts at surface-2)', () => {
+		expect(heatLuminance(0, 'sequential', 'light')).toBeGreaterThan(
+			heatLuminance(0, 'sequential', 'dark')
+		);
+		expect(heatLuminance(1, 'sequential', 'light')).toBeCloseTo(
+			heatLuminance(1, 'sequential', 'dark'),
+			6
+		);
+	});
+	it.each(THEMES)('mirrors the layout.css tokens (%s)', (theme) => {
 		const css = readFileSync(
 			fileURLToPath(new URL('../../routes/layout.css', import.meta.url)),
 			'utf8'
 		);
-		for (const [token, rgb] of Object.entries(TOKEN_RGB)) {
-			const hex = new RegExp(`${token}:\\s*#([0-9a-fA-F]{6});`).exec(css)?.[1];
-			expect(hex, token).toBeDefined();
+		const block =
+			theme === 'dark'
+				? /:root\s*\{([\s\S]*?)\n\}/.exec(css)![1]
+				: /:root\[data-theme='light'\]\s*\{([\s\S]*?)\n\}/.exec(css)![1];
+		for (const [token, rgb] of Object.entries(TOKEN_RGB[theme])) {
+			// Tokens the light block does not override are inherited from :root.
+			const source = new RegExp(`${token}:`).test(block)
+				? block
+				: /:root\s*\{([\s\S]*?)\n\}/.exec(css)![1];
+			const hex = new RegExp(`${token}:\\s*#([0-9a-fA-F]{6});`).exec(source)?.[1];
+			expect(hex, `${theme} ${token}`).toBeDefined();
 			const parsed = [0, 2, 4].map((i) => parseInt(hex!.slice(i, i + 2), 16));
-			expect(parsed, token).toEqual([...rgb]);
+			expect(parsed, `${theme} ${token}`).toEqual([...rgb]);
 		}
 	});
 });

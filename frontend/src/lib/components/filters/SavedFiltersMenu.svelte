@@ -42,7 +42,7 @@
 			<Button type="submit" size="sm" disabled={!canSave || !name.trim()}>Save</Button>
 		</form>
 		{#if saved.persistError}
-			<p class="type-caption text-gradient-coral" role="alert">{saved.persistError}</p>
+			<p class="type-caption text-coral-ink" role="alert">{saved.persistError}</p>
 		{/if}
 		{#if saved.items.length === 0}
 			<p class="type-body-sm text-pretty text-ink-muted">

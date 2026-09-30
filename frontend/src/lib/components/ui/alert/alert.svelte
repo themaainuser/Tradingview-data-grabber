@@ -6,7 +6,7 @@
 		variants: {
 			variant: {
 				default: 'text-ink',
-				destructive: 'text-ink *:[svg]:text-gradient-coral'
+				destructive: 'text-ink *:[svg]:text-coral-ink'
 			}
 		},
 		defaultVariants: {

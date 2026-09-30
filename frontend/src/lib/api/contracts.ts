@@ -136,6 +136,8 @@ export interface ResearchReport {
 		periods_per_year: number;
 		strategy_count_per_asset: number;
 		forward_validation: string;
+		/** Present only when a dataset has a sealed holdout: the bars this run was not allowed to see. */
+		sealed_holdouts?: { dataset_id: string; excluded_bars: number }[];
 	};
 	assets: ResearchAsset[];
 	results: ResearchResult[];
@@ -289,4 +291,239 @@ export interface CorrelationResponse {
 	observations: number;
 	start: number;
 	end: number;
+}
+
+// ---- Verdict engine (POST /api/verdict/run and friends) ---------------------------------------
+
+export type VerdictLabel = 'INSUFFICIENT_DATA' | 'INDISTINGUISHABLE_FROM_LUCK' | 'CANDIDATE';
+export type RuleStatus = 'NEVER_TRADES' | 'INSUFFICIENT_TRADES' | 'PASSED_GATE' | 'ERROR';
+
+export interface VerdictCosts {
+	fee_bps_per_side: number;
+	spread_bps: number;
+	slippage_k: number;
+}
+
+export interface VerdictRequest {
+	dataset_id: string;
+	min_trades: number;
+	costs: VerdictCosts;
+	/** null lets the backend infer it from the bar spacing (continuous trading assumed). */
+	periods_per_year: number | null;
+}
+
+export interface HoldoutInfo {
+	fraction: number;
+	/** UTC epoch seconds. */
+	start: number;
+	end: number;
+	bars: number;
+	sealed_at: number;
+	status: 'unread' | 'read';
+	read_at: number | null;
+}
+
+export interface VerdictStress {
+	multiplier: number;
+	sharpe: number | null;
+	mean_trade_return_pct: number | null;
+	total_return_pct: number | null;
+}
+
+export interface VerdictEvidence {
+	sharpe: number | null;
+	sharpe_se: number | null;
+	mean_trade_return_pct: number | null;
+	adjusted_p: number | null;
+	dsr: number | null;
+	dsr_sensitivity: {
+		low_n: { n: number | null; dsr: number | null };
+		high_n: { n: number | null; dsr: number | null };
+	};
+	break_even: {
+		round_trip_bps: number | null;
+		base_round_trip_bps: number | null;
+		multiple: number | null;
+	};
+	stress: VerdictStress[];
+	checks: { bootstrap: boolean; dsr: boolean; stress: boolean };
+	candidate: boolean;
+}
+
+export interface VerdictRule {
+	id: string;
+	family: string;
+	name: string;
+	parameters: Record<string, number>;
+	status: RuleStatus;
+	trades: number;
+	closed_trades: number;
+	exposure_pct: number;
+	error: string | null;
+	/** null unless the rule passed the trade-count gate: gated rules get no Sharpe, p-value or DSR. */
+	evidence: VerdictEvidence | null;
+}
+
+export interface VerdictLedgerSummary {
+	trials_dataset: number;
+	trials_total: number;
+	runs_dataset: number;
+	intact: boolean;
+}
+
+export interface VerdictStatistics {
+	effective_n: {
+		estimate: number;
+		low: number;
+		high: number;
+		level: number;
+		rules_used: number;
+		ledger_trials: number;
+		scaled_estimate: number;
+	};
+	reality_check: {
+		statistic: string;
+		best_rule: string | null;
+		p_value: number | null;
+		alpha: number;
+		rejected: boolean;
+		rules_tested: number;
+		replicates: number;
+		mean_block_length: number;
+		seed: number;
+	};
+	pbo: {
+		value: number | null;
+		blocks: number;
+		combinations: number;
+		rules: number;
+		noisy: boolean;
+		caveat: string;
+	} | null;
+	pbo_unavailable: string | null;
+}
+
+export interface VerdictReport {
+	run_id: string;
+	created_at: number;
+	dataset: { id: string; symbol: string; timeframe: string | null; path: string };
+	verdict: { label: VerdictLabel; headline: string; reasons: string[] };
+	settings: {
+		min_trades: number;
+		costs: VerdictCosts;
+		periods_per_year: number;
+		periods_per_year_inferred: boolean;
+		alpha: number;
+		dsr_threshold: number;
+		stress_multipliers: number[];
+		bootstrap: { replicates: number; mean_block_length: number; seed: number };
+	};
+	data: {
+		bars_total: number;
+		research_bars: number;
+		research_start: number;
+		research_end: number;
+		forward_bars: number;
+		holdout: HoldoutInfo & { created_now: boolean };
+	};
+	ledger: VerdictLedgerSummary;
+	rules: VerdictRule[];
+	statistics: VerdictStatistics | null;
+	uncertainty: {
+		research_bars: number;
+		sharpe_se_annualised_iid: number | null;
+		holdout_bars: number;
+		holdout_sharpe_se_annualised_iid: number | null;
+		note: string;
+	};
+	integrity: {
+		fill_model: string;
+		signal_shift_verified: boolean;
+		lookahead_probe: { passed: boolean; rules_checked: number; truncation_bar: number };
+		close_to_open_gap_bps: {
+			mean_abs: number | null;
+			p99_abs: number | null;
+			max_abs: number | null;
+		};
+		research_fingerprint: string;
+	};
+	notes: string[];
+}
+
+export interface VerdictFreeze {
+	id: string;
+	run_id: string;
+	rule_ids: string[];
+	rules: { id: string; name: string; family: string; parameters: Record<string, number> }[];
+	frozen_at: number;
+	forward_start: number;
+	hash: string;
+}
+
+export interface RuleWindow {
+	id: string;
+	name: string;
+	trades: number;
+	closed_trades: number;
+	exposure_pct: number;
+	net_return_pct: number | null;
+	sharpe: number | null;
+	sharpe_se: number | null;
+	mean_trade_return_pct: number | null;
+	buy_hold_return_pct: number | null;
+}
+
+export interface HoldoutResult {
+	freeze_id: string;
+	read_at: number;
+	start: number;
+	end: number;
+	bars: number;
+	rules: RuleWindow[];
+	caveat: string;
+	sharpe_se_annualised_iid: number | null;
+}
+
+export interface ForwardResult {
+	freeze: VerdictFreeze;
+	start: number;
+	end: number | null;
+	bars: number;
+	waiting: boolean;
+	rules: RuleWindow[];
+	caveat: string;
+	sharpe_se_annualised_iid: number | null;
+}
+
+export interface VerdictDefaults {
+	min_trades: number;
+	holdout_fraction: number;
+	costs: VerdictCosts;
+	cost_notes: { field: string; value: number; basis: string }[];
+	bootstrap_replicates: number;
+	alpha: number;
+	dsr_threshold: number;
+	stress_multipliers: number[];
+}
+
+export interface VerdictState {
+	dataset: { id: string; symbol: string; timeframe: string | null; path: string; rows: number };
+	sealed: boolean;
+	holdout: HoldoutInfo | null;
+	ledger: VerdictLedgerSummary;
+	latest: VerdictReport | null;
+	freeze: VerdictFreeze | null;
+	holdout_read: HoldoutResult | null;
+	defaults: VerdictDefaults;
+}
+
+export interface LedgerView {
+	intact: boolean;
+	total_entries: number;
+	trials: {
+		dataset: number;
+		total: number;
+		keys: { key: string; rule_id: string; first_seen: number; runs: number }[];
+	};
+	entries: { seq: number; type: string; at: string; hash: string; prev: string; summary: string }[];
 }

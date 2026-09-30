@@ -69,7 +69,7 @@
 		</div>
 	</header>
 	{#if invalid}
-		<p class="type-caption text-gradient-coral" role="alert">
+		<p class="type-caption text-coral-ink" role="alert">
 			Enter up to 8 whole numbers between 1 and 1000, separated by commas.
 		</p>
 	{/if}

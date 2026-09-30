@@ -11,12 +11,14 @@
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import Database from '@lucide/svelte/icons/database';
 	import FlaskConical from '@lucide/svelte/icons/flask-conical';
+	import Scale from '@lucide/svelte/icons/scale';
 	import Gauge from '@lucide/svelte/icons/gauge';
 	import Menu from '@lucide/svelte/icons/menu';
 	import X from '@lucide/svelte/icons/x';
 	import * as Alert from '$lib/components/ui/alert';
 	import { Button } from '$lib/components/ui/button';
 	import ImportCsv from '$lib/components/app/ImportCsv.svelte';
+	import ThemeToggle from '$lib/components/app/ThemeToggle.svelte';
 	import { AppState, setApp } from '$lib/state/app.svelte';
 	import favicon from '$lib/assets/favicon.svg';
 
@@ -28,6 +30,7 @@
 
 	onMount(() => {
 		app.datasets.load();
+		return app.theme.attach();
 	});
 
 	const home = resolve('/');
@@ -36,6 +39,7 @@
 		{ href: resolve('/explorer/[[dataset]]', {}), label: 'Explorer', icon: CandlestickChart },
 		{ href: resolve('/charts/[[dataset]]', {}), label: 'Charts', icon: ChartArea },
 		{ href: resolve('/research'), label: 'Research', icon: FlaskConical },
+		{ href: resolve('/verdict/[[dataset]]', {}), label: 'Verdict', icon: Scale },
 		{ href: resolve('/sentiment'), label: 'Sentiment', icon: Gauge },
 		{ href: resolve('/docs'), label: 'Docs', icon: BookOpen }
 	] as const;
@@ -46,11 +50,11 @@
 	const count = $derived(app.datasets.items.length);
 	const status = $derived(
 		app.datasets.status === 'error'
-			? { label: 'Backend unreachable', dot: 'bg-gradient-coral' }
+			? { label: 'Backend unreachable', dot: 'bg-coral-ink' }
 			: app.datasets.status === 'ready'
 				? {
 						label: `Backend connected · ${count} dataset${count === 1 ? '' : 's'}`,
-						dot: 'bg-success'
+						dot: 'bg-success-ink'
 					}
 				: { label: 'Connecting to backend…', dot: 'bg-ink-muted' }
 	);
@@ -87,7 +91,7 @@
 				</span>
 			</a>
 
-			<nav aria-label="Primary" class="hidden flex-1 items-center justify-center gap-1 md:flex">
+			<nav aria-label="Primary" class="hidden flex-1 items-center justify-center gap-1 xl:flex">
 				{#each NAV as item (item.href)}
 					<a
 						href={item.href}
@@ -100,20 +104,23 @@
 				{/each}
 			</nav>
 
-			<div class="ml-auto flex items-center gap-3 md:ml-0">
+			<div class="ml-auto flex items-center gap-3 xl:ml-0">
 				<span
 					class="hidden items-center gap-2 type-caption text-ink-muted xl:inline-flex"
 					role="status"
+					title={status.label}
 				>
 					<span class="size-2 rounded-full {status.dot}" aria-hidden="true"></span>
-					{status.label}
+					<!-- Seven links, Import CSV and the theme toggle leave no room for the sentence below 2xl: dot only (still announced). -->
+					<span class="sr-only 2xl:not-sr-only 2xl:whitespace-nowrap">{status.label}</span>
 				</span>
 				<ImportCsv datasets={app.datasets} onimported={(bars) => imported(bars.id)} />
+				<ThemeToggle class="hidden xl:inline-grid" />
 
 				<Button
 					variant="secondary"
 					size="icon"
-					class="md:hidden"
+					class="xl:hidden"
 					aria-label="Open menu"
 					aria-haspopup="dialog"
 					aria-expanded={menuOpen}

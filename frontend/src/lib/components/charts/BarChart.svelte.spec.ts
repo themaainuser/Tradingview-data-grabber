@@ -59,9 +59,9 @@ describe('BarChart', () => {
 	it('colours by sign with tokens only', async () => {
 		mountChart(BarChart, { ...base, colorBy: 'sign' }, 600);
 		await expect.poll(() => bars().length).toBe(4);
-		expect(bar(0).style.fill).toBe('var(--semantic-success)');
-		expect(bar(1).style.fill).toBe('var(--gradient-coral)');
-		expect(bar(2).style.fill).toBe('var(--semantic-success)');
+		expect(bar(0).style.fill).toBe('var(--chart-up)');
+		expect(bar(1).style.fill).toBe('var(--chart-down)');
+		expect(bar(2).style.fill).toBe('var(--chart-up)');
 		const painted = [...svg().querySelectorAll('*')].flatMap(paintOf);
 		for (const value of painted) expect(value).not.toMatch(/#|rgb\(/);
 	});

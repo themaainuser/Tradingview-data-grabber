@@ -14,7 +14,7 @@
 	bind:ref
 	data-slot="command-item"
 	class={cn(
-		"group/command-item relative flex cursor-default items-center gap-2 rounded-md px-3 py-2 type-body-sm text-ink outline-hidden select-none data-selected:bg-white/10 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+		"group/command-item relative flex cursor-default items-center gap-2 rounded-md px-3 py-2 type-body-sm text-ink outline-hidden select-none data-selected:bg-ink/10 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 		'data-disabled:pointer-events-none data-disabled:opacity-40',
 		className
 	)}

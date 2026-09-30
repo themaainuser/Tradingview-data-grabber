@@ -102,6 +102,22 @@ describe('parseResearch', () => {
 		expect(parseResearch(withoutNotes).model_notes).toEqual([]);
 	});
 
+	it('keeps and validates the optional sealed-holdout note', () => {
+		const sealed = { dataset_id: 'abc', excluded_bars: 200 };
+		const body = report();
+		const withSeal = { ...body, metadata: { ...body.metadata, sealed_holdouts: [sealed] } };
+		expect(parseResearch(withSeal).metadata.sealed_holdouts).toEqual([sealed]);
+		expect(parseResearch(body).metadata.sealed_holdouts).toBeUndefined();
+		const broken = {
+			...body,
+			metadata: { ...body.metadata, sealed_holdouts: [{ dataset_id: 'abc' }] }
+		};
+		expect(() => parseResearch(broken)).toThrow(/excluded_bars/);
+		expect(() =>
+			parseResearch({ ...body, metadata: { ...body.metadata, sealed_holdouts: 'x' } })
+		).toThrow(/sealed_holdouts/);
+	});
+
 	it('rejects unsupported schema versions and duplicate ids', () => {
 		expect(() => parseResearch({ ...report(), schema_version: 2 })).toThrow(/schema_version/);
 		expect(() => parseResearch(report([result('a'), result('a')]))).toThrow(/unique/);

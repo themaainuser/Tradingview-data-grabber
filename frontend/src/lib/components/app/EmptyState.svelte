@@ -20,7 +20,7 @@
 		{#if Icon}
 			<div
 				class="flex size-10 items-center justify-center rounded-full {tone
-					? 'bg-black/30 text-current'
+					? 'bg-spotlight-well text-current'
 					: 'bg-surface-2 text-ink-muted'}"
 			>
 				<Icon class="size-5" aria-hidden="true" />

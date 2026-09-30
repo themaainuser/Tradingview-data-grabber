@@ -14,8 +14,8 @@
 				default: 'bg-primary text-on-primary hover:bg-primary/90',
 				secondary: 'bg-surface-1 text-ink hover:bg-surface-2',
 				translucent: 'bg-surface-2 text-ink hover:bg-surface-2/70',
-				ghost: 'text-ink-muted hover:bg-white/10 hover:text-ink',
-				destructive: 'bg-surface-1 text-gradient-coral hover:bg-surface-2',
+				ghost: 'text-ink-muted hover:bg-ink/10 hover:text-ink',
+				destructive: 'bg-surface-1 text-coral-ink hover:bg-surface-2',
 				link: 'text-accent-blue underline-offset-4 hover:underline'
 			},
 			size: {

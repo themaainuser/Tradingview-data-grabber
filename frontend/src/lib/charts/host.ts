@@ -70,9 +70,13 @@ export function createCanvasHost(
 	};
 	const resizeObserver = new ResizeObserver(resize);
 	resizeObserver.observe(canvas);
-	// Theme is a class on <html>; repaint when it flips so token colours refresh.
+	// The theme is `data-theme` on <html>; repaint when it flips so token colours are re-resolved
+	// (schedule() drops the per-frame colour cache).
 	const themeObserver = new MutationObserver(() => host.schedule());
-	themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+	themeObserver.observe(document.documentElement, {
+		attributes: true,
+		attributeFilter: ['data-theme']
+	});
 	resize();
 	return host;
 }

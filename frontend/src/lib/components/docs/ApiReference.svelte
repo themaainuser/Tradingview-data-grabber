@@ -38,7 +38,7 @@
 										scope="row"
 										class="px-3 py-2 align-top font-mono font-medium whitespace-nowrap"
 									>
-										{p.name}{#if p.required}<span class="text-gradient-coral" title="required">
+										{p.name}{#if p.required}<span class="text-coral-ink" title="required">
 												*</span
 											>{/if}
 									</th>

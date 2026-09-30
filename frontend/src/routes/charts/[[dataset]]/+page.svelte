@@ -320,7 +320,7 @@
 						{
 							key: 'dd',
 							label: 'Drawdown',
-							color: 'var(--gradient-coral)',
+							color: 'var(--coral-ink)',
 							values: dd.drawdown_pct,
 							kind: 'area',
 							axis: 'left'
@@ -394,7 +394,7 @@
 						{
 							key: 'vol',
 							label: `${rv.window}-bar volatility`,
-							color: 'var(--gradient-orange)',
+							color: 'var(--orange-ink)',
 							values: rv.value_pct,
 							kind: 'line',
 							axis: 'left'
@@ -517,7 +517,7 @@
 				{#if charts.correlationIds.length < 2}
 					<p class="type-body text-ink-muted">Select at least two datasets to compare.</p>
 				{:else if charts.correlationStatus === 'error' && charts.correlationError}
-					<p class="type-body text-gradient-coral" role="alert">
+					<p class="type-body text-coral-ink" role="alert">
 						{charts.correlationError.message}
 					</p>
 				{:else if correlation}
