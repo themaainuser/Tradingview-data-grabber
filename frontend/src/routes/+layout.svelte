@@ -13,6 +13,7 @@
 	import FlaskConical from '@lucide/svelte/icons/flask-conical';
 	import Scale from '@lucide/svelte/icons/scale';
 	import Gauge from '@lucide/svelte/icons/gauge';
+	import PlugZap from '@lucide/svelte/icons/plug-zap';
 	import Menu from '@lucide/svelte/icons/menu';
 	import X from '@lucide/svelte/icons/x';
 	import * as Alert from '$lib/components/ui/alert';
@@ -41,6 +42,11 @@
 		{ href: resolve('/research'), label: 'Research', icon: FlaskConical },
 		{ href: resolve('/verdict/[[dataset]]', {}), label: 'Verdict', icon: Scale },
 		{ href: resolve('/sentiment'), label: 'Sentiment', icon: Gauge },
+		{
+			href: resolve('/providers/[[provider]]/[[endpoint]]', {}),
+			label: 'Providers',
+			icon: PlugZap
+		},
 		{ href: resolve('/docs'), label: 'Docs', icon: BookOpen }
 	] as const;
 

@@ -432,6 +432,83 @@ export const API_ENDPOINTS: readonly Endpoint[] = [
 		usedBy: 'Sentiment'
 	},
 	{
+		id: 'providers',
+		method: 'GET',
+		path: '/api/providers',
+		summary:
+			"The external data providers the backend offers, in the order of the Providers page's dropdown. Reports whether each provider's API key is set in the backend's environment, and never the key itself.",
+		params: [],
+		returns:
+			'{ providers: [{ id, name, description, website, docs_url, key_env, key_url, configured, endpoint_count, premium_count, limits_note, requests_this_session }] }',
+		errors: [],
+		usedBy: 'Providers'
+	},
+	{
+		id: 'provider-catalog',
+		method: 'GET',
+		path: '/api/providers/{provider_id}/catalog',
+		summary:
+			"A provider's endpoints with their parameters, which endpoints and options are premium, links to its documentation and the examples it documents. Needs no API key and contacts no one: the catalog is built from the provider's documentation when the catalog file is updated.",
+		params: [
+			{
+				name: 'provider_id',
+				in: 'path',
+				type: 'string',
+				required: true,
+				description: 'A provider id from /api/providers.'
+			}
+		],
+		returns: '{ provider, categories, endpoints }',
+		errors: [{ status: 404, when: 'No provider has this id.' }],
+		usedBy: 'Providers'
+	},
+	{
+		id: 'provider-query',
+		method: 'POST',
+		path: '/api/providers/{provider_id}/query',
+		summary:
+			"Fetches one endpoint from the provider and returns it as views to draw (series, table, facts, bars, feed, heatmap, text). The provider's API key is added by the backend and never appears in a response. Identical successful requests are cached for five minutes. Premium refusals, rate limits, a missing or rejected key and empty answers come back as HTTP 200 with a status and a message and no views; a response the provider marks as sample data is never turned into views.",
+		params: [
+			{
+				name: 'provider_id',
+				in: 'path',
+				type: 'string',
+				required: true,
+				description: 'A provider id from /api/providers.'
+			},
+			{
+				name: 'endpoint',
+				in: 'body',
+				type: 'string',
+				required: true,
+				description: "An endpoint id from the provider's catalog."
+			},
+			{
+				name: 'params',
+				in: 'body',
+				type: 'object',
+				required: false,
+				description:
+					"The endpoint's parameters as strings (a repeated parameter is a list). Checked against the catalog before anything is sent; the key and the response format are set by the server."
+			},
+			{
+				name: 'refresh',
+				in: 'body',
+				type: 'boolean',
+				required: false,
+				description:
+					'Skip the cache and ask the provider again. This uses one request from its quota.'
+			}
+		],
+		returns:
+			'{ provider, endpoint, title, status, message, cached, fetched_at, elapsed_ms, bytes, params, views, raw, raw_omitted, notes }',
+		errors: [
+			{ status: 404, when: 'No provider or no endpoint has this id.' },
+			{ status: 422, when: 'A parameter is missing, unknown or invalid.' }
+		],
+		usedBy: 'Providers'
+	},
+	{
 		id: 'research',
 		method: 'POST',
 		path: '/api/research/run',

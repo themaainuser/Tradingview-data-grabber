@@ -40,6 +40,9 @@ describe('app shell', () => {
 			.toHaveAttribute('aria-current', 'page');
 		await expect.element(nav.getByRole('link', { name: 'Docs' })).toHaveAttribute('href', '/docs');
 		await expect
+			.element(nav.getByRole('link', { name: 'Providers' }))
+			.toHaveAttribute('href', '/providers');
+		await expect
 			.element(nav.getByRole('link', { name: 'Datasets' }))
 			.not.toHaveAttribute('aria-current');
 		await expect.element(page.getByRole('button', { name: 'Import CSV' })).toBeInTheDocument();
@@ -115,7 +118,7 @@ describe('app shell', () => {
 		const menu = page.getByRole('dialog');
 		await expect.element(menu).toBeVisible();
 		await expect.element(menu.getByRole('navigation', { name: 'Mobile' })).toBeInTheDocument();
-		expect(menu.getByRole('link').elements()).toHaveLength(7);
+		expect(menu.getByRole('link').elements()).toHaveLength(8);
 		await page.getByRole('button', { name: 'Close' }).click();
 		await vi.waitFor(() => expect(page.getByRole('dialog').elements()).toHaveLength(0));
 	});

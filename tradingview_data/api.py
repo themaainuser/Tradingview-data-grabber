@@ -37,6 +37,9 @@ from . import __version__
 from .analytics import data_quality_report, load_ohlcv, market_report
 from .charts import chart_payload, correlation_matrix
 from .holdout import DEFAULT_FRACTION, MAX_FRACTION, MIN_FRACTION
+from .providers.base import ProviderRegistry
+from .providers.registry import default_registry
+from .providers.routes import register_provider_routes
 from .research import build_research, unique_label
 from .sentiment import FearGreedService, SentimentUnavailable, build_response
 from .verdict import DEFAULT_MIN_TRADES, Costs
@@ -430,6 +433,7 @@ def create_app(
     cors_origins: Sequence[str] = (),
     fear_greed: Optional[FearGreedService] = None,
     state_dir: Union[str, Path, None] = None,
+    providers: Optional[ProviderRegistry] = None,
 ) -> FastAPI:
     """Build the dashboard API for the captures stored in ``data_dir``.
 
@@ -437,7 +441,8 @@ def create_app(
     listed origins (off by default because the dev server proxies ``/api``), and ``fear_greed``
     replaces the CoinMarketCap-backed Fear & Greed service (tests inject a fake; by default nothing
     is fetched until the first request).  ``state_dir`` holds the verdict engine's ledger; it defaults
-    to a hidden directory inside ``data_dir``, which the dataset scan ignores.
+    to a hidden directory inside ``data_dir``, which the dataset scan ignores.  ``providers`` is the
+    registry of external data providers (Alpha Vantage by default); nothing is fetched until a query.
     """
 
     root = Path(data_dir).expanduser().resolve()
@@ -595,6 +600,8 @@ def create_app(
                 detail="fewer than 3 overlapping returns; the selected datasets do not share timestamps",
             )
         return _json(result)
+
+    register_provider_routes(app, providers or default_registry(), _json)
 
     sentiment = fear_greed or FearGreedService()
 

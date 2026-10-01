@@ -28,6 +28,7 @@
 		{ id: 'verdict', label: 'Verdict' },
 		{ id: 'charts', label: 'Charts' },
 		{ id: 'sentiment', label: 'Sentiment' },
+		{ id: 'providers', label: 'Providers' },
 		{ id: 'api', label: 'API reference' },
 		{ id: 'troubleshooting', label: 'Troubleshooting' }
 	];
@@ -594,6 +595,72 @@ tvdata serve --data-dir data --static-dir frontend/build`;
 					<li>A comparison date with no reading shows a dash rather than a guess.</li>
 				</ul>
 				<p>A sentiment index describes the market. It is not investment advice.</p>
+			</DocSection>
+
+			<DocSection
+				id="providers"
+				title="Providers"
+				lead="Data from outside services, fetched by your backend. Alpha Vantage first, with room for more."
+			>
+				<p>
+					The <a
+						class="text-accent-blue hover:underline"
+						href={resolve('/providers/[[provider]]/[[endpoint]]', {})}>Providers</a
+					> page lists everything a provider documents. Choose a provider in the dropdown, find an endpoint,
+					fill in its parameters (the first example from the provider's documentation is already filled
+					in) and press Fetch data. The answer is drawn as what it is: price history as candlesticks or
+					lines with a summary and a table, fundamentals as statements and figures, news as articles with
+					their sentiment, correlations as a matrix, and so on.
+				</p>
+				<h3>Your API key</h3>
+				<ul>
+					<li>
+						Set <code>ALPHAVANTAGE_API_KEY</code> in the backend's environment, or in a
+						<code>.env</code> file in the folder you run <code>tvdata serve</code> from (or pass
+						<code>--env-file</code>), and restart the backend. <code>.env.example</code> shows the format.
+					</li>
+					<li>
+						The key is read by the backend only. It is never sent to the browser, never returned in
+						a response and never written to the log. Without it you can still browse every endpoint;
+						Fetch data stays off and says why.
+					</li>
+				</ul>
+				<h3>Premium</h3>
+				<ul>
+					<li>
+						Premium endpoints are marked <strong>Premium</strong> in the list, with an orange edge, and
+						can be filtered with the Free and Premium buttons. A free key is refused by them.
+					</li>
+					<li>
+						Some free endpoints have premium options (for example the full history of a daily
+						series). These are marked <strong>Premium option</strong> beside the parameter.
+					</li>
+					<li>
+						When a key is not entitled, Alpha Vantage answers with made-up sample data. This page
+						detects that, shows the provider's own message and draws nothing.
+					</li>
+				</ul>
+				<h3>Limits and honesty</h3>
+				<ul>
+					<li>
+						Nothing is requested until you press Fetch data; opening a provider or an endpoint is
+						free. Free Alpha Vantage keys allow 25 requests a day, so identical requests are served
+						from a five minute cache and only Fetch again spends a request.
+					</li>
+					<li>
+						Rate limits, a rejected key, an unreachable provider and an empty answer each get their
+						own message. Nothing is estimated, filled in or shown in their place.
+					</li>
+					<li>
+						Intraday times are converted from the provider's time zone to UTC, and the chart says
+						so. Long tables and series are capped, and the page tells you how much was left out.
+					</li>
+				</ul>
+				<p>
+					The endpoint list is generated from the provider's documentation and kept in the
+					repository; it does not scrape anything while you use the app. To add a provider, see
+					<em>Data providers</em> in the README.
+				</p>
 			</DocSection>
 
 			<DocSection
