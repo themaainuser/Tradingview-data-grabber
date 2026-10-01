@@ -65,6 +65,9 @@ def test_the_embedded_definition_is_found_and_bad_pages_are_refused():
     page = "# Title\n\nText\n\n# OpenAPI definition\n\n```json\n" + json.dumps(BARS) + "\n```\n"
     assert docs.definition_of(page)["paths"].keys() == BARS["paths"].keys()
     assert docs.definition_of("# Title\n\nno code here") is None
+    broken = "```json\n{not json}\n```"
+    before = f"# Title\n\n{broken}\n\n```json\n[1, 2]\n```\n\n```json\n" + json.dumps({"info": {}}) + "\n```\n\n# OpenAPI definition\n\n```json\n" + json.dumps(BARS) + "\n```\n"
+    assert docs.definition_of(before)["paths"].keys() == BARS["paths"].keys()
     assert docs.definition_of("```json\n{not json}\n```") is None
     assert docs.definition_of('```json\n{"info": {}}\n```') is None
     assert docs.definition_of("```json\n[1, 2]\n```") is None

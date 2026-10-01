@@ -342,27 +342,29 @@ def _orderbooks(payload: Any, label: str) -> Built:
     books = {s: b for s, b in by_symbol(payload, "orderbooks").items() if isinstance(b, dict)}
     views: list[Optional[dict[str, Any]]] = []
     rows: list[dict[str, Any]] = []
-    for symbol, book in list(books.items())[:MAX_CHARTS]:
+    for position, (symbol, book) in enumerate(books.items()):
         bids, asks = _levels(book, "b", True), _levels(book, "a", False)
-        best_bid, best_ask = (bids[0][0] if bids else None), (asks[0][0] if asks else None)
-        spread = best_ask - best_bid if best_bid is not None and best_ask is not None else None
-        views.append(_facts(f"book-{_slug(symbol)}", f"{symbol} order book", [(None, [
-            _fact("best_bid", "Best bid", best_bid), _fact("best_ask", "Best ask", best_ask), _fact("spread", "Spread", spread),
-            _fact("spread_percent", "Spread", spread / best_ask * 100 if spread is not None and best_ask else None, "percent"),
-            _fact("bid_depth", "Total bid size", sum(s for _, s in bids) if bids else None), _fact("ask_depth", "Total ask size", sum(s for _, s in asks) if asks else None),
-            _fact("levels", "Price levels", len(bids) + len(asks), "integer"), _fact("time", "As of", stamp(book.get("t"), True), "text"),
-        ])]))
-        if len(books) == 1:
-            for side, levels in (("Bid", bids), ("Ask", asks)):
-                top = levels[:DEPTH_LEVELS]
-                views.append(V.bars_view(f"depth-{side.lower()}", f"{side} size at the best {len(top)} prices", [f"{p:g}" for p, _ in top], [s for _, s in top], value_label="Size"))
+        if position < MAX_CHARTS:
+            best_bid, best_ask = (bids[0][0] if bids else None), (asks[0][0] if asks else None)
+            spread = best_ask - best_bid if best_bid is not None and best_ask is not None else None
+            views.append(_facts(f"book-{_slug(symbol)}", f"{symbol} order book", [(None, [
+                _fact("best_bid", "Best bid", best_bid), _fact("best_ask", "Best ask", best_ask), _fact("spread", "Spread", spread),
+                _fact("spread_percent", "Spread", spread / best_ask * 100 if spread is not None and best_ask else None, "percent"),
+                _fact("bid_depth", "Total bid size", sum(s for _, s in bids) if bids else None), _fact("ask_depth", "Total ask size", sum(s for _, s in asks) if asks else None),
+                _fact("levels", "Price levels", len(bids) + len(asks), "integer"), _fact("time", "As of", stamp(book.get("t"), True), "text"),
+            ])]))
+            if len(books) == 1:
+                for side, levels in (("Bid", bids), ("Ask", asks)):
+                    top = levels[:DEPTH_LEVELS]
+                    views.append(V.bars_view(f"depth-{side.lower()}", f"{side} size at the best {len(top)} prices", [f"{p:g}" for p, _ in top], [s for _, s in top], value_label="Size"))
         for side, levels in (("bid", bids), ("ask", asks)):
             total = 0.0
             for price, size in levels:
                 total += size
                 rows.append({"symbol": symbol, "side": side, "price": price, "size": size, "cumulative_size": total})
     views.append(_table("book-table", label, rows))
-    return views, []
+    notes = [f"Facts are shown for the first {MAX_CHARTS} of {len(books)} symbols; the table has every price level of all of them."] if len(books) > MAX_CHARTS else []
+    return views, notes
 
 
 # --- one-off responses ----------------------------------------------------------------------------------------
@@ -458,7 +460,8 @@ def _rates(payload: Any, label: str) -> Built:
             views.append(_series(f"rates-{_slug(pair)}-chart", f"{pair} rates", items, columns))
         rows.extend({"pair": pair, "time": stamp(i.get("t"), True), "bid": num(i.get("bp")), "mid": num(i.get("mp")), "ask": num(i.get("ap"))} for i in items)
     views.append(_table("rates-table", label, rows))
-    return views, []
+    notes = [f"Charts are drawn for the first {MAX_CHARTS} of {len(data)} currency pairs; the table has every row."] if len(data) > MAX_CHARTS and any(isinstance(v, list) for v in data.values()) else []
+    return views, notes
 
 
 def _fixed_income(kind: str) -> Handler:

@@ -338,10 +338,22 @@ def test_a_subscription_refusal_names_the_plan_that_would_allow_it(keyed):
     assert "use the IEX feed (stocks) or the indicative feed (options)" in response["message"]
 
 
+def test_an_otc_refusal_does_not_send_the_user_to_algo_trader_plus(keyed):
+    refusal = failure(403, {"message": "subscription does not permit querying OTC data"})
+    alpaca, _ = provider(refusal, refusal)
+    otc = alpaca.query("stock_latest_trades", {"symbols": "AAPL", "feed": "otc"})
+    assert otc["status"] == "premium_required"
+    assert "Broker API partners" in otc["message"] and "upgrading will not help" in otc["message"] and "needs the Algo Trader Plus plan" not in otc["message"]
+    sip = alpaca.query("stock_latest_trades", {"symbols": "AAPL", "feed": "sip"})
+    assert "needs the Algo Trader Plus plan" in sip["message"] and "Broker API" not in sip["message"]
+
+
 def test_the_error_classifier_reads_data_and_failures_alike():
     assert classify_error(200, {"bars": {}}) is None
     assert classify_error(200, None) is None
     assert classify_error(403, {"message": "Subscription required"})[0] == "premium_required"
+    assert "Broker API partners" in classify_error(403, {"message": "Subscription required"}, {"feed": "otc"})[1]
+    assert "Algo Trader Plus plan" in classify_error(403, {"message": "Subscription required"}, {"feed": "sip"})[1]
     assert classify_error(401, None)[0] == "invalid_key"
     assert classify_error(503, None)[0] == "upstream_error"
     assert classify_error(400, {"message": ""}) == ("invalid_request", "Alpaca answered with HTTP 400.")

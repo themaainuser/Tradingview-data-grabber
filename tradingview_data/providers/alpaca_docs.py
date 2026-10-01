@@ -394,16 +394,20 @@ _DEFINITION = re.compile(r"```json\s*\n(.*?)\n```", re.S)
 
 
 def definition_of(markdown: str) -> Optional[dict[str, Any]]:
-    """The OpenAPI definition embedded in a reference page, or ``None`` when the page has none."""
+    """The OpenAPI definition embedded in a reference page, or ``None`` when the page has none.
 
-    match = _DEFINITION.search(markdown)
-    if not match:
-        return None
-    try:
-        parsed = json.loads(match.group(1))
-    except ValueError:
-        return None
-    return parsed if isinstance(parsed, dict) and "paths" in parsed else None
+    A page may show other JSON (an example request, say) before the definition, so every JSON block is
+    tried and the first one that is an OpenAPI document (an object with ``paths``) wins.
+    """
+
+    for match in _DEFINITION.finditer(markdown):
+        try:
+            parsed = json.loads(match.group(1))
+        except ValueError:
+            continue
+        if isinstance(parsed, dict) and "paths" in parsed:
+            return parsed
+    return None
 
 
 def reference_urls(index: str) -> list[str]:

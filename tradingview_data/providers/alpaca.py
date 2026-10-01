@@ -21,7 +21,7 @@ import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Mapping, Optional
 
 import requests
 
@@ -60,6 +60,7 @@ INFO = ProviderInfo(
 
 _HTTP_STATUSES = {400: "invalid_request", 401: "invalid_key", 403: "invalid_key", 404: "invalid_request", 422: "invalid_request", 429: "rate_limited"}
 _PLAN_HINT = f"This needs the {PLUS} plan. On {BASIC}, use the IEX feed (stocks) or the indicative feed (options), or ask for data at least 15 minutes old."
+_OTC_HINT = f"OTC data needs a separate subscription that Alpaca offers only to Broker API partners. {PLUS} does not include it, so upgrading will not help; choose another feed."
 _TIER_DEFAULTS = {
     "stock_latest": f"No feed was chosen, so Alpaca used the best one your plan allows: SIP with {PLUS}, IEX on {BASIC}.",
     "option_latest": f"No feed was chosen, so Alpaca used the best one your plan allows: OPRA with {PLUS}, the indicative feed on {BASIC}.",
@@ -111,19 +112,20 @@ def _message(payload: Any) -> str:
     return str(payload.get("message") or "").strip() if isinstance(payload, dict) else ""
 
 
-def classify_error(http_status: int, payload: Any) -> Optional[tuple[str, str]]:
+def classify_error(http_status: int, payload: Any, sent: Optional[Mapping[str, Any]] = None) -> Optional[tuple[str, str]]:
     """``(status, message)`` when the response is an Alpaca error, ``None`` when it is data.
 
     Alpaca answers errors with ``{"code": 42210000, "message": "..."}``; the first three digits of the
     code repeat the HTTP status. A message that mentions the subscription is a plan limit whatever the
-    status is. A refused key can also come back as an HTML page from the gateway, so the body is optional.
+    status is; for the OTC feed (``sent`` is what the request carried) the plan to name is not
+    Algo Trader Plus. A refused key can also come back as an HTML page from the gateway, so the body is optional.
     """
 
     if http_status == 200:
         return None
     text = _message(payload)
     if "subscription" in text.lower():
-        return "premium_required", f"{text.rstrip('.')}. {_PLAN_HINT}"
+        return "premium_required", f"{text.rstrip('.')}. {_OTC_HINT if (sent or {}).get('feed') == 'otc' else _PLAN_HINT}"
     status = _HTTP_STATUSES.get(http_status) or ("upstream_error" if http_status >= 500 else "invalid_request")
     if status == "invalid_key":
         detail = f": {text.rstrip('.')}" if text else ""
@@ -236,7 +238,7 @@ class Alpaca(Provider):
             payload = None
             if result.status == 200:
                 return self._response(endpoint, sent, "upstream_error", "Alpaca returned a response that could not be read.", credentials=credentials, elapsed=elapsed, size=size)
-        failure = classify_error(result.status, payload)
+        failure = classify_error(result.status, payload, sent)
         if failure:
             return self._response(endpoint, sent, failure[0], failure[1], credentials=credentials, elapsed=elapsed, size=size)
         if not has_data(payload):

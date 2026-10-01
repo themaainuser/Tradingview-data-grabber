@@ -207,6 +207,27 @@ def test_the_order_book_has_best_prices_spread_depth_and_running_totals():
     assert [r["cumulative_size"] for r in bids] == [pytest.approx(0.19), pytest.approx(2.19), pytest.approx(2.19)]
 
 
+def test_order_books_for_more_than_six_symbols_keep_every_symbol_in_the_table_and_say_so():
+    book = PAYLOADS["crypto_orderbooks"]["orderbooks"]["BTC/USD"]
+    many = {"orderbooks": {f"S{i}/USD": book for i in range(8)}}
+    views, notes = build("crypto_orderbooks", many)
+    assert sum(1 for v in views.values() if v["kind"] == "facts") == 6 and "depth-bid" not in views
+    table = views["book-table"]
+    assert {row[columns(table).index("symbol")] for row in table["rows"]} == {f"S{i}/USD" for i in range(8)} and table["total_rows"] == 48
+    assert any("first 6 of 8 symbols" in n and "every price level" in n for n in notes)
+    assert build("crypto_orderbooks")[1] == []
+
+
+def test_rates_for_more_than_six_pairs_keep_every_pair_in_the_table_and_say_so():
+    history = PAYLOADS["forex_rates"]["rates"]["USDJPY"]
+    views, notes = build("forex_rates", {"rates": {f"P{i}": history for i in range(8)}})
+    assert sum(1 for v in views.values() if v["kind"] == "series") == 6 and views["rates-table"]["total_rows"] == 16
+    assert any("first 6 of 8 currency pairs" in n for n in notes)
+    assert build("forex_rates")[1] == [] and build("forex_latest_rates")[1] == []
+    latest, latest_notes = build("forex_latest_rates", {"rates": {f"P{i}": PAYLOADS["forex_latest_rates"]["rates"]["USDJPY"] for i in range(8)}})
+    assert latest["rates-table"]["total_rows"] == 8 and latest_notes == []
+
+
 def test_news_becomes_a_feed_with_clean_summaries_safe_links_and_symbol_counts():
     views, _ = build("news")
     assert list(views) == ["summary", "feed", "symbols"]

@@ -93,7 +93,7 @@ function validDate(value: string): boolean {
 /** A date, or `T` and a time with optional seconds, fraction and `Z` / `+HH:MM` / `+HHMM` offset. */
 function validDateTime(value: string): boolean {
 	const match =
-		/^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,6})?)?(?:Z|[+-](\d{2}):?(\d{2}))?)?$/.exec(
+		/^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?(?:Z|[+-](\d{2}):?(\d{2}))?)?$/.exec(
 			value
 		);
 	if (!match || !validDate(match[1])) return false;
