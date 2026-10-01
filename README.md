@@ -221,7 +221,7 @@ symlinks that leave the data directory are ignored.
 | `GET /api/datasets/{id}/charts?bins=60&value_area=0.7&window=30&return_bins=41` | Chart data computed by the same code as the PNG charts: `volume_profile` (POC, value area), `return_distribution` (histogram, fitted-normal counts, VaR/CVaR stats), `drawdown` (decimated underwater curve, deepest drawdown, recovery), `rolling_volatility`, UTC hour × weekday `activity` grids, and `seasonality`. Also `bars`, `interval_seconds`, and `intraday`. A section that needs more data or intraday bars is `null` and explained under `unavailable` (seasonality blocks are keyed `seasonality.by_weekday` and `seasonality.by_hour`). `bins` 10–200, `value_area` 0.5–0.95, `window` 5–500, `return_bins` 10–101.                                                                                      |
 | `GET /api/charts/correlation?ids=<id>&ids=<id>`                                 | Close-to-close return correlation of 2–20 unique datasets over their shared timestamps: `{labels, matrix, observations, start, end}` (labels as in research; 422 when fewer than 3 returns overlap).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `GET /api/sentiment/fear-greed?days=`                                           | CoinMarketCap's Crypto Fear and Greed Index, read by the server with no API key: `{source, fetched_at, stale, stale_reason, bands, current, snapshots, points, total_points}`. `current` and each snapshot (`yesterday`, `week_ago`, `month_ago`, `year_high`, `year_low`) carry `score` (0–100), `label`, `band` and `time`; a day with no reading is `null`. `points` holds parallel `time`, `score`, `btc_price` and `btc_volume` columns (price and volume are `null` when CoinMarketCap omits them). `days` (1–3650) returns only the most recent history. Cached for 10 minutes; if a refresh fails the last good readings are returned with `stale: true`, and with none cached the route answers 502. See below. |
-| `GET /api/providers` | The data providers this server offers (`id`, `name`, `key_env`, `configured`, `endpoint_count`, `premium_count`, `limits_note`, `plans`, `requests_this_session`). Whether a key is set is reported, never the key. |
+| `GET /api/providers` | The data providers this server offers (`id`, `name`, `key_env`, `secret_env`, `configured`, `endpoint_count`, `premium_count`, `limits_note`, `plans`, `requests_this_session`). Whether a key is set is reported, never the key. |
 | `GET /api/providers/{id}/catalog` | A provider's endpoints with their parameters, premium flags (and, for a provider with subscription tiers, the `plan` that first includes each endpoint and its `request_cost`), docs links and examples. 404 for an unknown provider. |
 | `POST /api/providers/{id}/query` | Body `{"endpoint", "params", "refresh"}`. Fetches one endpoint and returns it as drawable views (`series`, `table`, `facts`, `bars`, `feed`, `heatmap`, `text`). Provider-side problems (`rate_limited`, `premium_required`, `invalid_key`, `not_configured`...) are a 200 with a `status`; a malformed request is a 422. |
 | `POST /api/research/run`                                                        | Body `{"dataset_ids": [1–20 unique ids], "fee_bps": 5, "periods_per_year": 252}`; returns the `tvdata research` JSON (`schema_version` 1). Assets are labelled `<symbol>` or `<symbol>-<timeframe>` in request order. No model endpoint is called. When the dataset has a sealed holdout only bars before it are evaluated, and `metadata.sealed_holdouts` (`[{dataset_id, excluded_bars}]`, present only then) says so. |
@@ -325,7 +325,7 @@ funding, liquidation and regime analysis.
 
 ### Data providers
 
-The Providers page fetches from external data providers through the backend. There are two:
+The Providers page fetches from external data providers through the backend. There are three:
 
 - [Alpha Vantage](https://www.alphavantage.co/documentation/): 128 endpoints (stocks, indices, options,
   FX, crypto, commodities, economic indicators, fundamentals, news sentiment, 50+ technical
@@ -343,12 +343,28 @@ The Providers page fetches from external data providers through the backend. The
   timestamp such as `2020-05-21T00:00:00+0000`. A plan that lacks an endpoint is refused by
   Marketstack (`function_access_restricted`) and reported as `premium_required`. Its free plan allows
   100 requests a month, so repeat requests are cached for five minutes there too.
+- [Alpaca Market Data](https://docs.alpaca.markets/us/docs/getting-started): the 42 request-and-answer
+  endpoints of its Market Data API (US stocks and ETFs, options with the chain and greeks, crypto with the order book,
+  forex, fixed income, news, the most active stocks and top movers, corporate actions). It needs a key ID **and**
+  a secret from a free Alpaca account. Alpaca's plans for individuals, **Basic** (free, 200 calls a
+  minute) and **Algo Trader Plus** ($99 a month, 10,000 calls a minute), differ in the feed, how recent
+  the data may be and the rate limit, not in which endpoints exist, so every endpoint is labelled
+  **Basic** and the tiers are attached to what each plan unlocks. Choices are labelled in the
+  dropdowns (`IEX · Basic`, `SIP, all US exchanges · Algo Trader Plus`, `Indicative · Basic`, `OPRA, real
+  time · Algo Trader Plus`) and the paid ones are marked; the end of a historical range carries the
+  15-minute limit of Basic, and a response says what Alpaca used when you left the feed or the end
+  blank. A request the plan refuses (`subscription does not permit querying recent SIP data`) is
+  reported as `premium_required` with the plan that would allow it. Only market data is used: no
+  orders and no account data, and the Broker API (a different login) is not supported. The logo image
+  and the corporate-actions event stream are left out because they are not a request with an answer.
+  Real-time data and per-minute limits mean results are cached for 30 seconds, not five minutes.
 
-Both share these rules:
+All of them share these rules:
 
-- **The key stays on the server.** Put `ALPHAVANTAGE_API_KEY=your_key` and/or `MARKETSTACK_API_KEY=your_key` in the backend's environment
+- **The key stays on the server.** Put `ALPHAVANTAGE_API_KEY=your_key`, `MARKETSTACK_API_KEY=your_key`
+  and/or `ALPACA_API_KEY_ID=your_key_id` with `ALPACA_API_SECRET_KEY=your_secret` in the backend's environment
   or in a `.env` file where you run `tvdata serve` (or pass `--env-file PATH`), then restart it.
-  `.env.example` shows the format; `.env` is git-ignored. The key is only ever placed in the upstream
+  `.env.example` shows the format; `.env` is git-ignored. The key (for Alpaca, the key ID and the secret, sent as headers) is only ever placed in the upstream
   request: it is never returned, logged, cached or shown in a message, and any text echoing it is
   scrubbed. Without a key the catalog still browses and a query answers `not_configured` without
   contacting the provider.
@@ -360,11 +376,15 @@ Both share these rules:
   turned into views and the status is `premium_required`. A few free endpoints have premium-gated
   *parameters* (for example `outputsize=full`); these carry a `premium_note`.
 - **The catalogs are generated from the documentation** and committed
-  (`tradingview_data/providers/alphavantage_catalog.json`, `marketstack_catalog.json`). Regenerate
-  them when a provider adds endpoints: `python -m tradingview_data.providers.alphavantage_docs` or
-  `python -m tradingview_data.providers.marketstack_docs` (the latter reads Marketstack's published
-  OpenAPI document and the commodity list it links to; the plan each endpoint needs is kept in
-  `OPERATIONS` in that module, because the OpenAPI document does not state it).
+  (`tradingview_data/providers/alphavantage_catalog.json`, `marketstack_catalog.json`,
+  `alpaca_catalog.json`). Regenerate them when a provider adds endpoints:
+  `python -m tradingview_data.providers.alphavantage_docs`,
+  `python -m tradingview_data.providers.marketstack_docs` (it reads Marketstack's published OpenAPI
+  document and the commodity list it links to; the plan each endpoint needs is kept in `OPERATIONS`
+  in that module, because the OpenAPI document does not state it) or
+  `python -m tradingview_data.providers.alpaca_docs` (it reads the OpenAPI definition embedded in each
+  Market Data reference page listed in Alpaca's `llms.txt`; the tier rules are in `alpaca_docs.py`,
+  taken from Alpaca's "Subscription Plans" section).
 - **Times are UTC.** Intraday timestamps are converted from the provider's time zone (US/Eastern) and
   the response says so.
 

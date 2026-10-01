@@ -57,6 +57,7 @@ export const provider = (over: Partial<ProviderSummary> = {}): ProviderSummary =
 	website: 'https://www.alphavantage.co/',
 	docs_url: 'https://www.alphavantage.co/documentation/',
 	key_env: 'ALPHAVANTAGE_API_KEY',
+	secret_env: null,
 	key_url: 'https://www.alphavantage.co/support/#api-key',
 	configured: true,
 	endpoint_count: 5,
@@ -497,3 +498,56 @@ export function response(over: Partial<QueryResponse> = {}): QueryResponse {
 /** A non-ok response: no views, a message. */
 export const failure = (status: QueryResponse['status'], message: string): QueryResponse =>
 	response({ status, message, views: [], raw: null, fetched_at: null });
+
+/** A provider with two plans where no endpoint needs the higher one outright, shaped like Alpaca: a key and a secret, tier-labelled choices. */
+export const ALPACA_LIKE = provider({
+	id: 'alpaca',
+	name: 'Alpaca',
+	key_env: 'ALPACA_API_KEY_ID',
+	secret_env: 'ALPACA_API_SECRET_KEY',
+	configured: false,
+	endpoint_count: 2,
+	premium_count: 0,
+	limits_note: 'The plans differ in the feed, how recent the data may be and the rate limit.',
+	plans: [
+		{ name: 'Basic', summary: 'Free, with 200 API calls a minute. IEX data.' },
+		{ name: 'Algo Trader Plus', summary: '$99 a month, with 10,000 API calls a minute. Adds SIP.' }
+	]
+});
+
+export const ALPACA_LIKE_ENDPOINTS: CatalogEndpoint[] = [
+	endpoint('stock_latest_quotes', {
+		title: 'Stock latest quotes',
+		category: 'stocks',
+		plan: 'Basic',
+		premium_notes: [
+			'Basic gets the IEX feed. Algo Trader Plus adds the SIP feed with every US exchange.'
+		],
+		params: [
+			param({ name: 'symbols', example: 'AAPL' }),
+			param({
+				name: 'feed',
+				required: false,
+				type: 'enum',
+				enum: ['iex', 'sip'],
+				enum_labels: { iex: 'IEX · Basic', sip: 'SIP, all US exchanges · Algo Trader Plus' },
+				premium_values: ['sip'],
+				premium_note: 'The SIP feed needs Algo Trader Plus; Basic gets IEX only.',
+				example: null
+			})
+		],
+		examples: [{ caption: 'AAPL', params: { symbols: 'AAPL' } }]
+	}),
+	endpoint('news', {
+		title: 'News articles',
+		category: 'news',
+		plan: 'Basic',
+		params: [param({ name: 'symbols', required: false, example: null })],
+		examples: []
+	})
+];
+
+export const ALPACA_LIKE_CATEGORIES: CatalogCategory[] = [
+	{ id: 'stocks', title: 'Stocks', summary: '', count: 1, premium_count: 0 },
+	{ id: 'news', title: 'News', summary: '', count: 1, premium_count: 0 }
+];

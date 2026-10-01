@@ -16,7 +16,7 @@
 	import ExternalLink from '$lib/components/providers/ExternalLink.svelte';
 	import PremiumBadge from '$lib/components/providers/PremiumBadge.svelte';
 	import ResultPanel from '$lib/components/providers/ResultPanel.svelte';
-	import { premiumLabel } from '$lib/providers/form';
+	import { premiumLabel, tierLabel } from '$lib/providers/form';
 	import { getApp } from '$lib/state/app.svelte';
 
 	const { providers } = getApp();
@@ -172,8 +172,10 @@
 				<div class="grid gap-2" data-testid="plans">
 					<h3 class="type-subhead">Plans</h3>
 					<p class="max-w-[72ch] type-caption text-pretty text-ink-muted">
-						Each premium endpoint names the cheapest plan that includes it. The provider decides
-						what your key may use: a plan that lacks an endpoint is refused when you fetch.
+						Each premium endpoint names the cheapest plan that includes it, and a choice inside an
+						endpoint that only a higher plan unlocks is marked Premium option. The provider decides
+						what your key may use: a plan that lacks an endpoint or a choice is refused when you
+						fetch.
 					</p>
 					<ul class="grid gap-2 md:grid-cols-2 xl:grid-cols-4" aria-label="Subscription plans">
 						{#each providers.plans as plan (plan.name)}
@@ -188,11 +190,17 @@
 									<span class="type-body-sm font-medium">{plan.name}</span>
 									{#if plan.premium}<PremiumBadge />{/if}
 								</span>
-								<span class="type-caption text-ink-muted tabular-nums"
-									>{plan.count} endpoint{plan.count === 1 ? '' : 's'} start{plan.count === 1
-										? 's'
-										: ''} here</span
-								>
+								{#if plan.count === 0 && plan.premium}
+									<span class="type-caption text-ink-muted" data-testid="plan-unlocks"
+										>No endpoint needs this plan outright; it unlocks premium options.</span
+									>
+								{:else}
+									<span class="type-caption text-ink-muted tabular-nums"
+										>{plan.count} endpoint{plan.count === 1 ? '' : 's'} start{plan.count === 1
+											? 's'
+											: ''} here</span
+									>
+								{/if}
 								<span class="type-caption text-pretty text-ink-muted">{plan.summary}</span>
 							</li>
 						{/each}
@@ -205,10 +213,14 @@
 					role="status"
 					data-testid="key-help"
 				>
-					Set <code class="font-mono text-ink">{provider.key_env}</code> in the backend's
-					environment or
-					<code class="font-mono text-ink">.env</code> file and restart it. The key stays on the
-					server; this page never sees it. You can browse every endpoint without one.
+					Set <code class="font-mono text-ink">{provider.key_env}</code>{#if provider.secret_env}
+						and <code class="font-mono text-ink">{provider.secret_env}</code>{/if} in the backend's environment
+					or
+					<code class="font-mono text-ink">.env</code> file and restart it. {provider.secret_env
+						? 'The key and secret stay'
+						: 'The key stays'} on the server; this page never sees {provider.secret_env
+						? 'them'
+						: 'it'}. You can browse every endpoint without {provider.secret_env ? 'them' : 'one'}.
 					{#if provider.key_url}<ExternalLink href={provider.key_url}>Get a key</ExternalLink>.{/if}
 				</p>
 			{/if}
@@ -266,7 +278,8 @@
 								<div class="flex flex-wrap items-center gap-x-3 gap-y-2">
 									<h2 id="endpoint-title" class="type-headline">{endpoint.title}</h2>
 									{#if endpoint.premium}<PremiumBadge label={premiumLabel(endpoint)} />{:else}<Badge
-											variant="secondary">Free</Badge
+											variant="secondary"
+											data-testid="tier-badge">{tierLabel(endpoint)}</Badge
 										>{/if}
 									{#if endpoint.trending}<Badge variant="secondary">Popular</Badge>{/if}
 								</div>
@@ -307,17 +320,22 @@
 									{/each}
 								</div>
 							{:else if endpoint.params.some((p) => p.premium_note)}
-								<p
-									class="max-w-[68ch] rounded-lg bg-orange-ink/10 p-4 type-body-sm text-pretty"
+								<div
+									class="grid max-w-[68ch] gap-2 rounded-lg bg-orange-ink/10 p-4 type-body-sm text-pretty"
 									role="note"
 									data-testid="premium-options-callout"
 								>
-									<span class="font-medium text-orange-ink"
-										>Free endpoint with premium options.</span
-									>
-									The options marked <span class="text-orange-ink">Premium option</span> below need a
-									paid plan.
-								</p>
+									<p>
+										<span class="font-medium text-orange-ink"
+											>{tierLabel(endpoint)} endpoint with premium options.</span
+										>
+										The options marked <span class="text-orange-ink">Premium option</span> below need
+										a paid plan.
+									</p>
+									{#each endpoint.premium_notes as note (note)}
+										<p class="type-caption text-ink-muted" data-testid="tier-note">{note}</p>
+									{/each}
+								</div>
 							{/if}
 
 							<ParamForm store={providers} />

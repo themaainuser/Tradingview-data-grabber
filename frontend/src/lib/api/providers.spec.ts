@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseCatalog, parseProviders, parseQueryResponse } from './providers';
 import {
 	ALL_VIEWS,
+	ALPACA_LIKE,
 	CATEGORIES,
 	ENDPOINTS,
 	TIERED,
@@ -167,6 +168,22 @@ describe('parseCatalog / parseProviders', () => {
 			parseProviders({ providers: [provider(), provider({ id: 'other', name: 'Other' })] })
 		).toHaveLength(2);
 		expect(() => parseProviders({ providers: [provider(), provider()] })).toThrow(/unique/);
+	});
+
+	it('keeps the secret variable of a provider with two credentials and reads its absence as none', () => {
+		const plain = clone(provider()) as unknown as Record<string, unknown>;
+		delete plain.secret_env;
+		const [alpaca, older, explicit] = parseProviders({
+			providers: [ALPACA_LIKE, plain, { ...provider({ id: 'x', name: 'X' }), secret_env: null }]
+		});
+		expect([alpaca.key_env, alpaca.secret_env]).toEqual([
+			'ALPACA_API_KEY_ID',
+			'ALPACA_API_SECRET_KEY'
+		]);
+		expect([older.secret_env, explicit.secret_env]).toEqual([null, null]);
+		expect(() => parseProviders({ providers: [{ ...provider(), secret_env: 7 }] })).toThrow(
+			/secret_env/
+		);
 	});
 
 	it('keeps plans, the plan of each endpoint, quota costs, bounds and premium choices', () => {

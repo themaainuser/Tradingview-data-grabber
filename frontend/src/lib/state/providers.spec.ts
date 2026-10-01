@@ -3,6 +3,9 @@ import type { ApiClient } from '$lib/api/client';
 import { ApiError } from '$lib/api/errors';
 import { ProvidersStore } from './providers.svelte';
 import {
+	ALPACA_LIKE,
+	ALPACA_LIKE_CATEGORIES,
+	ALPACA_LIKE_ENDPOINTS,
 	TIERED,
 	TIERED_CATEGORIES,
 	TIERED_ENDPOINTS,
@@ -289,6 +292,31 @@ describe('ProvidersStore: a provider with plans', () => {
 		store.setValue('limit', '5000');
 		expect(store.errors.limit).toBe('limit must be at most 1000');
 		expect(store.canFetch).toBe(false);
+		await store.fetch();
+		expect(api.queryProvider).not.toHaveBeenCalled();
+	});
+});
+
+describe('ProvidersStore: a provider with a key and a secret', () => {
+	it('names both variables when fetching is blocked and counts the plans', async () => {
+		const api = {
+			listProviders: vi.fn(async () => [ALPACA_LIKE]),
+			getProviderCatalog: vi.fn(async () => ({
+				...catalog(ALPACA_LIKE, ALPACA_LIKE_ENDPOINTS),
+				categories: ALPACA_LIKE_CATEGORIES
+			})),
+			queryProvider: vi.fn(async () => response())
+		};
+		const store = new ProvidersStore(api as unknown as ApiClient);
+		await open(store, 'alpaca', 'stock_latest_quotes');
+		expect(store.canFetch).toBe(false);
+		expect(store.blockedReason).toBe(
+			'Set ALPACA_API_KEY_ID and ALPACA_API_SECRET_KEY on the backend to fetch.'
+		);
+		expect(store.plans.map((p) => [p.name, p.count, p.premium])).toEqual([
+			['Basic', 2, false],
+			['Algo Trader Plus', 0, true]
+		]);
 		await store.fetch();
 		expect(api.queryProvider).not.toHaveBeenCalled();
 	});

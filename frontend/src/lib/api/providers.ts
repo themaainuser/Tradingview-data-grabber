@@ -44,6 +44,8 @@ export interface ProviderSummary {
 	website: string;
 	docs_url: string;
 	key_env: string;
+	/** A second credential for a provider that signs requests with a key and a secret; null otherwise. */
+	secret_env: string | null;
 	key_url: string | null;
 	configured: boolean;
 	endpoint_count: number;
@@ -263,6 +265,7 @@ export function parseProvider(value: unknown, path = 'provider'): ProviderSummar
 		website: str(o.website, `${path}.website`),
 		docs_url: str(o.docs_url, `${path}.docs_url`),
 		key_env: str(o.key_env, `${path}.key_env`),
+		secret_env: nullableStr(o.secret_env ?? null, `${path}.secret_env`),
 		key_url: nullableStr(o.key_url, `${path}.key_url`),
 		configured: bool(o.configured, `${path}.configured`),
 		endpoint_count: num(o.endpoint_count, `${path}.endpoint_count`),
