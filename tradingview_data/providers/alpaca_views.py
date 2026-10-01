@@ -18,6 +18,7 @@ Built = tuple[list[Optional[dict[str, Any]]], list[str]]
 Handler = Callable[[Any, str], Built]
 
 MAX_CHARTS = 6
+SNAPSHOT_FACTS = 3
 DEPTH_LEVELS = 20
 _TIME = re.compile(r"^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?\s*(Z|[+-]\d{2}:?\d{2})?)?$")
 _OCC = re.compile(r"^(.+?)(\d{2})(\d{2})(\d{2})([CP])(\d{8})$")
@@ -132,6 +133,29 @@ def _slug(symbol: str) -> str:
     return V.slug(symbol) or "symbol"
 
 
+def _drawn(candidates: Any, limit: int) -> tuple[list[dict[str, Any]], int]:
+    """The first ``limit`` views that exist, and how many more existed beyond them. A candidate that
+    is ``None`` (a symbol with too little data to chart, say) takes no slot and is not counted."""
+
+    shown: list[dict[str, Any]] = []
+    extra = 0
+    for view in candidates:
+        if view is None:
+            continue
+        if len(shown) < limit:
+            shown.append(view)
+        else:
+            extra += 1
+    return shown, extra
+
+
+def _covers(table: Optional[dict[str, Any]], claim: str) -> str:
+    """The end of a note that says what the table holds. A table cut at its cap does not hold
+    everything, and ``views.finalize`` already reports the cut, so nothing is claimed then."""
+
+    return "." if table is not None and table.get("truncated") else f"; the table has {claim}."
+
+
 # --- rows ---------------------------------------------------------------------------------------------
 
 
@@ -176,18 +200,19 @@ def _series(view_id: str, title: str, items: list[dict[str, Any]], columns: tupl
 def _history(kind: str, plural: str, columns: tuple[tuple[str, str, str], ...], noun: str) -> Handler:
     def build(payload: Any, label: str) -> Built:
         data = {s: _dicts(v) for s, v in by_symbol(payload, plural).items()}
-        views: list[Optional[dict[str, Any]]] = []
-        notes: list[str] = []
-        for symbol, items in list(data.items())[:MAX_CHARTS]:
-            chart = _series(f"{kind}-{_slug(symbol)}-chart", f"{symbol} {noun}", items, columns)
-            views.append(chart)
-            if chart and chart["total_points"] < len(items):
-                notes.append(f"{symbol}: some {noun} share a second, so the chart shows the last of each second. The table lists all {len(items):,}.")
-        if len(data) > MAX_CHARTS:
-            notes.append(f"Charts are drawn for the first {MAX_CHARTS} of {len(data)} symbols; the table has every row.")
+        charts = [(items, _series(f"{kind}-{_slug(symbol)}-chart", f"{symbol} {noun}", items, columns), symbol) for symbol, items in data.items()]
+        shown, extra = _drawn((chart for _, chart, _ in charts), MAX_CHARTS)
         rows = [_ROWS[kind](symbol, item) for symbol, items in data.items() for item in items]
-        views.append(_table(f"{kind}-table", label, rows))
-        return views, notes
+        table = _table(f"{kind}-table", label, rows)
+        whole = table is not None and not table.get("truncated")
+        notes = [
+            f"{symbol}: some {noun} share a second, so the chart shows the last of each second." + (f" The table lists all {len(items):,}." if whole else "")
+            for items, chart, symbol in charts
+            if chart in shown and chart["total_points"] < len(items)
+        ]
+        if extra:
+            notes.append(f"Charts are drawn for the first {MAX_CHARTS} of {len(shown) + extra} symbols that have enough data to chart{_covers(table, 'every row')}")
+        return [*shown, table], notes
 
     return build
 
@@ -269,13 +294,16 @@ def _snapshot_facts(symbol: str, snap: dict[str, Any]) -> Optional[dict[str, Any
 def _snapshots(payload: Any, label: str) -> Built:
     data = snapshots_of(payload)
     rows = [snapshot_row(symbol, snap) for symbol, snap in data.items()]
-    views: list[Optional[dict[str, Any]]] = [_snapshot_facts(symbol, snap) for symbol, snap in list(data.items())[:3]]
+    facts, extra = _drawn((_snapshot_facts(symbol, snap) for symbol, snap in data.items()), SNAPSHOT_FACTS)
+    views: list[Optional[dict[str, Any]]] = [*facts]
     ranked = [(r["symbol"], r["change_percent"]) for r in rows if r["change_percent"] is not None]
+    table = None
     if len(rows) > 1:
         ranked.sort(key=lambda m: -abs(m[1]))
+        table = _table("snapshots-table", label, rows)
         views.append(V.bars_view("day-change", "Change on the day", [s for s, _ in ranked], [v for _, v in ranked], fmt="percent", sign_colors=True, value_label="Change"))
-        views.append(_table("snapshots-table", label, rows))
-    notes = [f"Facts are shown for the first 3 of {len(data)} symbols; the table has all of them."] if len(data) > 3 else []
+        views.append(table)
+    notes = [f"Facts are shown for the first {SNAPSHOT_FACTS} of {len(facts) + extra} symbols{_covers(table, 'all of them')}"] if extra else []
     return views, notes
 
 
@@ -338,32 +366,37 @@ def _levels(book: dict[str, Any], key: str, descending: bool) -> list[tuple[floa
     return sorted(((p, s or 0.0) for p, s in found if p is not None), reverse=descending)
 
 
+def _book_facts(symbol: str, book: dict[str, Any], bids: list[tuple[float, float]], asks: list[tuple[float, float]]) -> Optional[dict[str, Any]]:
+    best_bid, best_ask = (bids[0][0] if bids else None), (asks[0][0] if asks else None)
+    spread = best_ask - best_bid if best_bid is not None and best_ask is not None else None
+    return _facts(f"book-{_slug(symbol)}", f"{symbol} order book", [(None, [
+        _fact("best_bid", "Best bid", best_bid), _fact("best_ask", "Best ask", best_ask), _fact("spread", "Spread", spread),
+        _fact("spread_percent", "Spread", spread / best_ask * 100 if spread is not None and best_ask else None, "percent"),
+        _fact("bid_depth", "Total bid size", sum(s for _, s in bids) if bids else None), _fact("ask_depth", "Total ask size", sum(s for _, s in asks) if asks else None),
+        _fact("levels", "Price levels", len(bids) + len(asks), "integer"), _fact("time", "As of", stamp(book.get("t"), True), "text"),
+    ])])
+
+
 def _orderbooks(payload: Any, label: str) -> Built:
     books = {s: b for s, b in by_symbol(payload, "orderbooks").items() if isinstance(b, dict)}
-    views: list[Optional[dict[str, Any]]] = []
+    sides = {symbol: (_levels(book, "b", True), _levels(book, "a", False)) for symbol, book in books.items()}
+    facts, extra = _drawn((_book_facts(symbol, books[symbol], *sides[symbol]) for symbol in books), MAX_CHARTS)
+    views: list[Optional[dict[str, Any]]] = [*facts]
+    if len(books) == 1:
+        bids, asks = next(iter(sides.values()))
+        for side, levels in (("Bid", bids), ("Ask", asks)):
+            top = levels[:DEPTH_LEVELS]
+            views.append(V.bars_view(f"depth-{side.lower()}", f"{side} size at the best {len(top)} prices", [f"{p:g}" for p, _ in top], [s for _, s in top], value_label="Size"))
     rows: list[dict[str, Any]] = []
-    for position, (symbol, book) in enumerate(books.items()):
-        bids, asks = _levels(book, "b", True), _levels(book, "a", False)
-        if position < MAX_CHARTS:
-            best_bid, best_ask = (bids[0][0] if bids else None), (asks[0][0] if asks else None)
-            spread = best_ask - best_bid if best_bid is not None and best_ask is not None else None
-            views.append(_facts(f"book-{_slug(symbol)}", f"{symbol} order book", [(None, [
-                _fact("best_bid", "Best bid", best_bid), _fact("best_ask", "Best ask", best_ask), _fact("spread", "Spread", spread),
-                _fact("spread_percent", "Spread", spread / best_ask * 100 if spread is not None and best_ask else None, "percent"),
-                _fact("bid_depth", "Total bid size", sum(s for _, s in bids) if bids else None), _fact("ask_depth", "Total ask size", sum(s for _, s in asks) if asks else None),
-                _fact("levels", "Price levels", len(bids) + len(asks), "integer"), _fact("time", "As of", stamp(book.get("t"), True), "text"),
-            ])]))
-            if len(books) == 1:
-                for side, levels in (("Bid", bids), ("Ask", asks)):
-                    top = levels[:DEPTH_LEVELS]
-                    views.append(V.bars_view(f"depth-{side.lower()}", f"{side} size at the best {len(top)} prices", [f"{p:g}" for p, _ in top], [s for _, s in top], value_label="Size"))
+    for symbol, (bids, asks) in sides.items():
         for side, levels in (("bid", bids), ("ask", asks)):
             total = 0.0
             for price, size in levels:
                 total += size
                 rows.append({"symbol": symbol, "side": side, "price": price, "size": size, "cumulative_size": total})
-    views.append(_table("book-table", label, rows))
-    notes = [f"Facts are shown for the first {MAX_CHARTS} of {len(books)} symbols; the table has every price level of all of them."] if len(books) > MAX_CHARTS else []
+    table = _table("book-table", label, rows)
+    views.append(table)
+    notes = [f"Facts are shown for the first {MAX_CHARTS} of {len(facts) + extra} symbols{_covers(table, 'every price level of all of them')}"] if extra else []
     return views, notes
 
 
@@ -451,17 +484,14 @@ def _corporate_actions(payload: Any, label: str) -> Built:
 
 def _rates(payload: Any, label: str) -> Built:
     data = by_symbol(payload, "rates")
-    views: list[Optional[dict[str, Any]]] = []
-    rows: list[dict[str, Any]] = []
     columns = (("bp", "Bid", "value"), ("mp", "Mid", "value"), ("ap", "Ask", "value"))
-    for pair, value in data.items():
-        items = _dicts(value) if isinstance(value, list) else [value] if isinstance(value, dict) else []
-        if isinstance(value, list) and len(views) < MAX_CHARTS:
-            views.append(_series(f"rates-{_slug(pair)}-chart", f"{pair} rates", items, columns))
-        rows.extend({"pair": pair, "time": stamp(i.get("t"), True), "bid": num(i.get("bp")), "mid": num(i.get("mp")), "ask": num(i.get("ap"))} for i in items)
-    views.append(_table("rates-table", label, rows))
-    notes = [f"Charts are drawn for the first {MAX_CHARTS} of {len(data)} currency pairs; the table has every row."] if len(data) > MAX_CHARTS and any(isinstance(v, list) for v in data.values()) else []
-    return views, notes
+    items = {pair: _dicts(value) if isinstance(value, list) else [value] if isinstance(value, dict) else [] for pair, value in data.items()}
+    charts = (_series(f"rates-{_slug(pair)}-chart", f"{pair} rates", items[pair], columns) if isinstance(value, list) else None for pair, value in data.items())
+    shown, extra = _drawn(charts, MAX_CHARTS)
+    rows = [{"pair": pair, "time": stamp(i.get("t"), True), "bid": num(i.get("bp")), "mid": num(i.get("mp")), "ask": num(i.get("ap"))} for pair, found in items.items() for i in found]
+    table = _table("rates-table", label, rows)
+    notes = [f"Charts are drawn for the first {MAX_CHARTS} of {len(shown) + extra} currency pairs that have enough history to chart{_covers(table, 'every row')}"] if extra else []
+    return [*shown, table], notes
 
 
 def _fixed_income(kind: str) -> Handler:

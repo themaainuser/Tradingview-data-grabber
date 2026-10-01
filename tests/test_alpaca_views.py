@@ -228,6 +228,50 @@ def test_rates_for_more_than_six_pairs_keep_every_pair_in_the_table_and_say_so()
     assert latest["rates-table"]["total_rows"] == 8 and latest_notes == []
 
 
+def test_a_capped_order_book_table_is_not_described_as_holding_every_level():
+    book = {"t": "2026-09-29T08:00:14Z", "a": [{"p": 100 + i, "s": 1.0} for i in range(400)], "b": [{"p": 99 - i * 0.01, "s": 1.0} for i in range(400)]}
+    views, notes = build("crypto_orderbooks", {"orderbooks": {f"S{i}/USD": book for i in range(8)}})
+    table = views["book-table"]
+    assert table["truncated"] and table["total_rows"] == 6400 and len(table["rows"]) == 5000
+    assert any("first 6 of 8 symbols" in n and "every price level" not in n and "the table has" not in n for n in notes)
+    assert any("showing the first 5,000 of 6,400 rows" in n for n in notes)  # finalize reports the cut itself
+
+
+def test_a_pair_with_no_history_does_not_use_up_a_chart_slot_or_inflate_the_count():
+    history = PAYLOADS["forex_rates"]["rates"]["USDJPY"]
+    pairs = {"EMPTY": [], "ONE": history[:1], **{f"P{i}": history for i in range(7)}}
+    views, notes = build("forex_rates", {"rates": pairs})
+    charts = [v for v in views.values() if v["kind"] == "series"]
+    assert len(charts) == 6 and [c["title"] for c in charts][0] == "P0 rates"
+    assert views["rates-table"]["total_rows"] == 15
+    assert notes == ["Charts are drawn for the first 6 of 7 currency pairs that have enough history to chart; the table has every row."]
+    fits = {"EMPTY": [], **{f"P{i}": history for i in range(6)}}
+    assert build("forex_rates", {"rates": fits})[1] == []  # every chart that could be drawn was drawn
+
+
+def test_a_symbol_with_too_little_data_to_chart_does_not_use_up_a_chart_slot():
+    two = DAILY["AAPL"][:2]
+    bars = {"bars": {"LONE": DAILY["AAPL"][:1], **{f"S{i}": two for i in range(7)}}}
+    views, notes = build("stock_bars", bars)
+    assert sum(1 for v in views.values() if v["kind"] == "series") == 6 and views["bar-table"]["total_rows"] == 15
+    assert notes == ["Charts are drawn for the first 6 of 7 symbols that have enough data to chart; the table has every row."]
+
+
+def test_a_capped_history_table_is_not_described_as_listing_every_tick():
+    ticks = [{"t": f"2026-09-29T13:{i // 600:02d}:{(i // 10) % 60:02d}.{(i % 10) * 100:03d}Z", "bp": 1.0 + i / 1e5, "ap": 1.1, "bs": 1, "as": 1} for i in range(6000)]
+    views, notes = build("stock_quotes", {"quotes": {"AAPL": ticks}, "next_page_token": None})
+    assert views["quote-table"]["truncated"] and views["quote-table"]["total_rows"] == 6000
+    assert any("share a second" in n and "table lists all" not in n for n in notes)
+    assert any("showing the first 5,000 of 6,000 rows" in n for n in notes)
+
+
+def test_a_snapshot_with_nothing_to_show_does_not_use_up_a_facts_slot():
+    snaps = {"EMPTY": {}, **{f"S{i}": PAYLOADS["stock_snapshots"]["AAPL"] for i in range(4)}}
+    views, notes = build("stock_snapshots", snaps)
+    assert sum(1 for v in views.values() if v["kind"] == "facts") == 3
+    assert notes == ["Facts are shown for the first 3 of 4 symbols; the table has all of them."]
+
+
 def test_news_becomes_a_feed_with_clean_summaries_safe_links_and_symbol_counts():
     views, _ = build("news")
     assert list(views) == ["summary", "feed", "symbols"]
