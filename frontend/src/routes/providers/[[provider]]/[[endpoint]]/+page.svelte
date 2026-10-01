@@ -16,6 +16,7 @@
 	import ExternalLink from '$lib/components/providers/ExternalLink.svelte';
 	import PremiumBadge from '$lib/components/providers/PremiumBadge.svelte';
 	import ResultPanel from '$lib/components/providers/ResultPanel.svelte';
+	import { premiumLabel } from '$lib/providers/form';
 	import { getApp } from '$lib/state/app.svelte';
 
 	const { providers } = getApp();
@@ -167,6 +168,37 @@
 						: 's'} sent.</span
 				>
 			</p>
+			{#if providers.plans.length > 0}
+				<div class="grid gap-2" data-testid="plans">
+					<h3 class="type-subhead">Plans</h3>
+					<p class="max-w-[72ch] type-caption text-pretty text-ink-muted">
+						Each premium endpoint names the cheapest plan that includes it. The provider decides
+						what your key may use: a plan that lacks an endpoint is refused when you fetch.
+					</p>
+					<ul class="grid gap-2 md:grid-cols-2 xl:grid-cols-4" aria-label="Subscription plans">
+						{#each providers.plans as plan (plan.name)}
+							<li
+								data-plan={plan.name}
+								data-premium={plan.premium ? 'true' : undefined}
+								class="grid content-start gap-1 rounded-lg border-l-2 bg-canvas p-3 {plan.premium
+									? 'border-orange-ink'
+									: 'border-transparent'}"
+							>
+								<span class="flex flex-wrap items-center gap-2">
+									<span class="type-body-sm font-medium">{plan.name}</span>
+									{#if plan.premium}<PremiumBadge />{/if}
+								</span>
+								<span class="type-caption text-ink-muted tabular-nums"
+									>{plan.count} endpoint{plan.count === 1 ? '' : 's'} start{plan.count === 1
+										? 's'
+										: ''} here</span
+								>
+								<span class="type-caption text-pretty text-ink-muted">{plan.summary}</span>
+							</li>
+						{/each}
+					</ul>
+				</div>
+			{/if}
 			{#if !provider.configured}
 				<p
 					class="max-w-[72ch] rounded-lg bg-canvas p-3 type-body-sm text-pretty"
@@ -233,8 +265,8 @@
 							<header class="grid gap-2">
 								<div class="flex flex-wrap items-center gap-x-3 gap-y-2">
 									<h2 id="endpoint-title" class="type-headline">{endpoint.title}</h2>
-									{#if endpoint.premium}<PremiumBadge />{:else}<Badge variant="secondary"
-											>Free</Badge
+									{#if endpoint.premium}<PremiumBadge label={premiumLabel(endpoint)} />{:else}<Badge
+											variant="secondary">Free</Badge
 										>{/if}
 									{#if endpoint.trending}<Badge variant="secondary">Popular</Badge>{/if}
 								</div>
@@ -257,9 +289,18 @@
 									data-testid="premium-callout"
 								>
 									<p class="type-body-sm font-medium text-orange-ink">Premium endpoint</p>
-									<p class="max-w-[68ch] type-body-sm text-pretty">
-										This endpoint needs a paid {provider.name} plan. With a free key the provider refuses
-										it, and nothing is shown in its place. If your key is premium, fetch as normal.
+									<p
+										class="max-w-[68ch] type-body-sm text-pretty"
+										data-testid="premium-callout-text"
+									>
+										{#if endpoint.plan}
+											This endpoint is included from the <strong>{endpoint.plan}</strong> plan. A key
+											on a lower plan is refused by the provider, and nothing is shown in its place. If
+											your plan includes it, fetch as normal.
+										{:else}
+											This endpoint needs a paid {provider.name} plan. With a free key the provider refuses
+											it, and nothing is shown in its place. If your key is premium, fetch as normal.
+										{/if}
 									</p>
 									{#each endpoint.premium_notes as note (note)}
 										<p class="max-w-[68ch] type-caption text-pretty text-ink-muted">{note}</p>

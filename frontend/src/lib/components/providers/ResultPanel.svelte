@@ -9,6 +9,7 @@
 	import ErrorPanel from '$lib/components/app/ErrorPanel.svelte';
 	import { formatBytes } from '$lib/format';
 	import { formatTimestamp } from '$lib/providers/format';
+	import { quotaText } from '$lib/providers/form';
 	import { statusCopy } from '$lib/providers/status';
 	import type { ProvidersStore } from '$lib/state/providers.svelte';
 	import PremiumBadge from './PremiumBadge.svelte';
@@ -100,7 +101,9 @@
 				onclick={() => store.fetchFresh()}
 				disabled={!store.canFetch}
 			>
-				<RefreshCw aria-hidden="true" /> Fetch again (uses a request)
+				<RefreshCw aria-hidden="true" /> Fetch again (uses {store.requestCost === 1
+					? 'a request'
+					: quotaText(store.requestCost)})
 			</Button>
 		</div>
 		<p

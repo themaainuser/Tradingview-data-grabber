@@ -25,6 +25,9 @@ export const param = (over: Partial<CatalogParam> = {}): CatalogParam => ({
 	example: 'IBM',
 	multiple: false,
 	premium_note: null,
+	minimum: null,
+	maximum: null,
+	premium_values: [],
 	managed: false,
 	...over
 });
@@ -39,6 +42,8 @@ export const endpoint = (id: string, over: Partial<CatalogEndpoint> = {}): Catal
 	trending: false,
 	utility: false,
 	premium_notes: [],
+	plan: null,
+	request_cost: 1,
 	doc_url: `https://provider.test/docs#${id.toLowerCase()}`,
 	params: [param()],
 	examples: [{ caption: 'IBM', params: { symbol: 'IBM' } }],
@@ -57,6 +62,7 @@ export const provider = (over: Partial<ProviderSummary> = {}): ProviderSummary =
 	endpoint_count: 5,
 	premium_count: 2,
 	limits_note: 'Free keys allow 25 requests per day.',
+	plans: [],
 	requests_this_session: 0,
 	...over
 });
@@ -155,6 +161,93 @@ export const ENDPOINTS: CatalogEndpoint[] = [
 		premium: true,
 		premium_notes: ['Premium only.']
 	})
+];
+
+/** A provider with subscription tiers, shaped like Marketstack: endpoints name the plan that first includes them. */
+export const TIERED = provider({
+	id: 'tiered',
+	name: 'Tiered Data',
+	key_env: 'TIERED_API_KEY',
+	endpoint_count: 4,
+	premium_count: 3,
+	limits_note: 'Free keys allow 100 requests per month.',
+	plans: [
+		{ name: 'Free', summary: 'End-of-day data.' },
+		{ name: 'Basic', summary: 'Adds intraday data and ETF holdings.' },
+		{ name: 'Professional', summary: 'Adds commodities.' }
+	]
+});
+
+export const TIERED_ENDPOINTS: CatalogEndpoint[] = [
+	endpoint('eod', {
+		title: 'End-of-Day Data',
+		category: 'prices',
+		plan: 'Free',
+		params: [
+			param({ name: 'symbols', example: 'AAPL' }),
+			param({
+				name: 'date_from',
+				required: false,
+				type: 'date',
+				example: null,
+				premium_note: 'Free plans reach back 1 year.'
+			}),
+			param({
+				name: 'limit',
+				required: false,
+				type: 'integer',
+				example: null,
+				default: '100',
+				minimum: 1,
+				maximum: 1000
+			})
+		],
+		examples: [{ caption: 'AAPL', params: { symbols: 'AAPL' } }]
+	}),
+	endpoint('intraday', {
+		title: 'Intraday Data',
+		category: 'prices',
+		premium: true,
+		plan: 'Basic',
+		premium_notes: ['Covers US tickers listed on IEX.'],
+		params: [
+			param({ name: 'symbols', example: 'AAPL' }),
+			param({
+				name: 'interval',
+				required: false,
+				type: 'enum',
+				enum: ['1min', '15min', '1hour'],
+				premium_values: ['1min'],
+				premium_note: 'Intervals below 15min need the Professional plan.',
+				default: '1hour',
+				example: null
+			})
+		],
+		examples: [{ caption: 'AAPL', params: { symbols: 'AAPL' } }]
+	}),
+	endpoint('etfholdings', {
+		title: 'ETF Holdings',
+		category: 'funds',
+		premium: true,
+		plan: 'Basic',
+		request_cost: 20,
+		premium_notes: ['ETF endpoints count as 20 requests against your monthly quota.'],
+		params: [param({ name: 'ticker', example: 'SPY' })],
+		examples: [{ caption: 'SPY', params: { ticker: 'SPY' } }]
+	}),
+	endpoint('commodities', {
+		title: 'Commodity Prices',
+		category: 'funds',
+		premium: true,
+		plan: 'Professional',
+		params: [param({ name: 'commodity_name', example: 'gold' })],
+		examples: [{ caption: 'gold', params: { commodity_name: 'gold' } }]
+	})
+];
+
+export const TIERED_CATEGORIES: CatalogCategory[] = [
+	{ id: 'prices', title: 'Prices', summary: '', count: 2, premium_count: 1 },
+	{ id: 'funds', title: 'Funds', summary: '', count: 2, premium_count: 2 }
 ];
 
 export const CATEGORIES: CatalogCategory[] = [

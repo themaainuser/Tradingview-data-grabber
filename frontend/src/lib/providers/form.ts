@@ -8,12 +8,13 @@ import type {
 	CatalogEndpoint,
 	CatalogParam,
 	ParamValue,
-	ParamValues
+	ParamValues,
+	ProviderPlan
 } from '$lib/api/providers';
 
 export type Access = 'all' | 'free' | 'premium';
 
-const LONG_TEXT = new Set(['SYMBOLS', 'tickers', 'topics', 'CALCULATIONS', 'keywords']);
+const LONG_TEXT = new Set(['SYMBOLS', 'symbols', 'tickers', 'topics', 'CALCULATIONS', 'keywords']);
 
 /** The parameters a person fills in: everything except the ones the server sets. */
 export const visibleParams = (endpoint: CatalogEndpoint): CatalogParam[] =>
@@ -31,6 +32,35 @@ export function describeParam(param: CatalogParam): { text: string; premium: str
 		.replace(/\s{2,}/g, ' ')
 		.trim();
 	return { text: rest, premium: note };
+}
+
+/** What one fetch costs, in words: `one request` or `20 requests`. */
+export const quotaText = (cost: number): string =>
+	cost === 1 ? 'one request' : `${cost} requests`;
+
+/** The words on a premium badge: `Premium · Basic` when the endpoint names its plan. */
+export const premiumLabel = (endpoint: Pick<CatalogEndpoint, 'plan'>): string =>
+	endpoint.plan ? `Premium · ${endpoint.plan}` : 'Premium';
+
+export interface PlanCount extends ProviderPlan {
+	/** Endpoints whose cheapest plan is this one. */
+	count: number;
+	premium: boolean;
+}
+
+/** The provider's plans with how many endpoints each one is the first to include. */
+export function planCounts(
+	plans: readonly ProviderPlan[],
+	endpoints: readonly CatalogEndpoint[]
+): PlanCount[] {
+	return plans.map((plan, index) => {
+		const own = endpoints.filter((e) => e.plan === plan.name);
+		return {
+			...plan,
+			count: own.length,
+			premium: own.length > 0 ? own.some((e) => e.premium) : index > 0
+		};
+	});
 }
 
 const asList = (value: ParamValue | undefined): string[] =>
@@ -62,9 +92,17 @@ function problem(param: CatalogParam, value: string): string | null {
 		case 'boolean':
 			return value === 'true' || value === 'false' ? null : `${param.name} must be true or false`;
 		case 'number':
-			return value !== '' && Number.isFinite(Number(value))
-				? null
-				: `${param.name} must be a number`;
+		case 'integer': {
+			const whole = param.type === 'integer';
+			const n = Number(value);
+			if (value === '' || !Number.isFinite(n) || (whole && !Number.isInteger(n)))
+				return `${param.name} must be ${whole ? 'a whole number' : 'a number'}`;
+			if (param.minimum !== null && n < param.minimum)
+				return `${param.name} must be at least ${param.minimum}`;
+			if (param.maximum !== null && n > param.maximum)
+				return `${param.name} must be at most ${param.maximum}`;
+			return null;
+		}
 		case 'date':
 			return validDate(value) ? null : `${param.name} must be a date in YYYY-MM-DD format`;
 		case 'month':

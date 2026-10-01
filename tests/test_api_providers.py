@@ -11,9 +11,12 @@ from fastapi.testclient import TestClient
 
 from tradingview_data.api import create_app
 from tradingview_data.providers.alphavantage import AlphaVantage
+from tradingview_data.providers.marketstack import Marketstack
 from tradingview_data.providers.base import Provider, ProviderInfo, ProviderRegistry
 
+from marketstack_support import SAMPLES, error
 from providers_support import DAILY, KEY, PLACEHOLDER, FakeHttp, ok
+from tradingview_data.providers.common import HttpResult
 
 
 @pytest.fixture(autouse=True)
@@ -73,9 +76,11 @@ def test_the_provider_list_reports_counts_and_whether_a_key_is_set_but_never_the
     assert api.get("/api/providers").json()["providers"][0]["configured"] is False
 
 
-def test_the_default_registry_serves_alpha_vantage(tmp_path):
-    ids = [p["id"] for p in TestClient(create_app(tmp_path)).get("/api/providers").json()["providers"]]
-    assert ids == ["alphavantage"]
+def test_the_default_registry_serves_alpha_vantage_then_marketstack(tmp_path):
+    listed = TestClient(create_app(tmp_path)).get("/api/providers").json()["providers"]
+    assert [p["id"] for p in listed] == ["alphavantage", "marketstack"]
+    assert [p["key_env"] for p in listed] == ["ALPHAVANTAGE_API_KEY", "MARKETSTACK_API_KEY"]
+    assert [p["plans"] for p in listed][0] == [] and [x["name"] for x in listed[1]["plans"]] == ["Free", "Basic", "Professional", "Business"]
 
 
 def test_two_providers_are_listed_in_order_each_with_its_own_catalog_and_key(tmp_path, monkeypatch):
@@ -102,9 +107,9 @@ def test_the_catalog_has_the_contract_shape(tmp_path):
     body = client(tmp_path, AlphaVantage(http_get=FakeHttp())).get("/api/providers/alphavantage/catalog").json()
     assert set(body) == {"provider", "categories", "endpoints"}
     endpoint = next(e for e in body["endpoints"] if e["id"] == "TIME_SERIES_INTRADAY")
-    assert set(endpoint) == {"id", "title", "category", "description", "summary", "premium", "trending", "utility", "premium_notes", "doc_url", "params", "examples"}
-    assert endpoint["premium"] is True
-    assert set(endpoint["params"][0]) == {"name", "required", "type", "description", "enum", "enum_labels", "suggestions", "default", "example", "multiple", "premium_note", "managed"}
+    assert set(endpoint) == {"id", "title", "category", "description", "summary", "premium", "trending", "utility", "premium_notes", "plan", "request_cost", "doc_url", "params", "examples"}
+    assert endpoint["premium"] is True and endpoint["plan"] is None and endpoint["request_cost"] == 1
+    assert set(endpoint["params"][0]) == {"name", "required", "type", "description", "enum", "enum_labels", "suggestions", "default", "example", "multiple", "premium_note", "minimum", "maximum", "premium_values", "managed"}
 
 
 def test_a_query_returns_the_contract_response(tmp_path, keyed):
@@ -169,3 +174,53 @@ def test_registering_the_same_provider_twice_is_an_error():
     registry.register(FakeProvider())
     with pytest.raises(ValueError, match="already registered"):
         registry.register(FakeProvider())
+
+
+# --- Marketstack ---------------------------------------------------------------------------------------
+
+
+@pytest.fixture
+def ms_keyed(monkeypatch):
+    monkeypatch.setenv("MARKETSTACK_API_KEY", KEY)
+
+
+def test_marketstack_serves_its_catalog_with_plans_and_premium_endpoints(tmp_path, ms_keyed):
+    body = client(tmp_path, Marketstack(http_get=FakeHttp())).get("/api/providers/marketstack/catalog").json()
+    assert set(body) == {"provider", "categories", "endpoints"}
+    assert body["provider"]["endpoint_count"] == 46 and body["provider"]["premium_count"] == 26 and body["provider"]["configured"] is True
+    assert [p["name"] for p in body["provider"]["plans"]] == ["Free", "Basic", "Professional", "Business"]
+    endpoints = {e["id"]: e for e in body["endpoints"]}
+    assert (endpoints["eod"]["plan"], endpoints["eod"]["premium"]) == ("Free", False)
+    assert (endpoints["intraday"]["plan"], endpoints["intraday"]["premium"]) == ("Basic", True)
+    assert (endpoints["commodities"]["plan"], endpoints["companyratings"]["plan"]) == ("Professional", "Business")
+    assert KEY not in json.dumps(body)
+
+
+def test_a_marketstack_query_returns_the_contract_response_and_never_the_key(tmp_path, ms_keyed):
+    http = FakeHttp(ok(SAMPLES["ticker_eod"]))
+    api = client(tmp_path, Marketstack(http_get=http))
+    body = api.post("/api/providers/marketstack/query", json={"endpoint": "ticker_eod", "params": {"symbol": "AAPL", "limit": "3"}}).json()
+    assert set(body) == {"provider", "endpoint", "title", "status", "message", "cached", "fetched_at", "elapsed_ms", "bytes", "params", "views", "raw", "raw_omitted", "notes"}
+    assert body["status"] == "ok" and "series" in [v["kind"] for v in body["views"]] and KEY not in json.dumps(body)
+    assert http.calls[0][0] == "https://api.marketstack.com/v2/tickers/AAPL/eod"
+
+
+def test_marketstack_provider_side_problems_are_http_200_with_a_status(tmp_path, ms_keyed):
+    refusal = HttpResult(403, json.dumps(error("function_access_restricted", 105, "Your plan does not support this API Function.")).encode(), "application/json")
+    response = client(tmp_path, Marketstack(http_get=FakeHttp(refusal))).post("/api/providers/marketstack/query", json={"endpoint": "commodities", "params": {"commodity_name": "gold"}})
+    assert response.status_code == 200 and response.json()["status"] == "premium_required" and response.json()["views"] == []
+
+
+@pytest.mark.parametrize(
+    ("body", "status"),
+    [
+        ({"endpoint": "nope"}, 404),
+        ({"endpoint": "eod", "params": {}}, 422),
+        ({"endpoint": "eod", "params": {"symbols": "AAPL", "access_key": "x"}}, 422),
+        ({"endpoint": "eod", "params": {"symbols": "AAPL", "limit": "5000"}}, 422),
+        ({"endpoint": "exchange_tickers", "params": {"mic": "../etc"}}, 422),
+    ],
+)
+def test_marketstack_errors(tmp_path, body, status):
+    api = client(tmp_path, Marketstack(http_get=FakeHttp()))
+    assert api.post("/api/providers/marketstack/query", json=body).status_code == status

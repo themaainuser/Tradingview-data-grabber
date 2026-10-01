@@ -353,30 +353,4 @@ def build_views(function: str, payload: Any, label: str) -> tuple[list[dict[str,
             _name_generic(built, payload)
     except Exception:  # a shape surprise must cost views, never the whole response
         built, notes = V.analyze(payload, label, V.slug(function)), []
-    kept = V.order_views(built)
-    if not any(v["kind"] == "facts" and v["id"].endswith("summary") for v in kept):
-        chart = next((v for v in kept if v["kind"] == "series"), None)
-        if chart:
-            summary = V.facts_view("summary", "Summary", [(None, V.summary_facts(chart["time"], chart["series"], chart["intraday"]))], subtitle=chart.get("subtitle"))
-            if summary:
-                kept.insert(0, summary)
-    facts = [v for v in kept if v["kind"] == "facts"]
-    if len(facts) > 1:
-        for view in facts:
-            if view["id"].endswith("-facts"):
-                view["title"] = "Details"
-    seen: dict[str, int] = {}
-    for view in kept:
-        count = seen.get(view["id"], 0)
-        seen[view["id"]] = count + 1
-        if count:
-            view["id"] = f"{view['id']}-{count + 1}"
-        if view["kind"] == "series" and view.get("truncated"):
-            notes.append(f"{view['title']}: showing the most recent {len(view['time']):,} of {view['total_points']:,} points.")
-        if view["kind"] == "table" and view.get("truncated"):
-            notes.append(f"{view['title']}: showing the first {len(view['rows']):,} of {view['total_rows']:,} rows.")
-        if view["kind"] == "feed" and view.get("truncated"):
-            notes.append(f"{view['title']}: showing {len(view['items'])} of {view['total_items']} articles.")
-        if view["kind"] == "text" and view.get("truncated"):
-            notes.append(f"{view['title']}: showing {len(view['blocks'])} of {view['total_blocks']} blocks.")
-    return kept, notes
+    return V.finalize(built, notes)

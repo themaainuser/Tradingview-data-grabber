@@ -2,7 +2,14 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ApiClient } from '$lib/api/client';
 import { ApiError } from '$lib/api/errors';
 import { ProvidersStore } from './providers.svelte';
-import { catalog, provider, response } from '$lib/testing/provider-fixtures';
+import {
+	TIERED,
+	TIERED_CATEGORIES,
+	TIERED_ENDPOINTS,
+	catalog,
+	provider,
+	response
+} from '$lib/testing/provider-fixtures';
 
 const deferred = <T>() => {
 	let resolve!: (value: T) => void;
@@ -239,5 +246,50 @@ describe('ProvidersStore: repeated parameters and filters', () => {
 		await store.loadProviders();
 		expect(store.status).toBe('error');
 		expect(store.error?.message).toBe('down');
+	});
+});
+
+describe('ProvidersStore: a provider with plans', () => {
+	function tieredStore() {
+		const api = {
+			listProviders: vi.fn(async () => [TIERED]),
+			getProviderCatalog: vi.fn(async () => ({
+				...catalog(TIERED, TIERED_ENDPOINTS),
+				categories: TIERED_CATEGORIES
+			})),
+			queryProvider: vi.fn(async () => response())
+		};
+		return { api, store: new ProvidersStore(api as unknown as ApiClient) };
+	}
+
+	it('knows what each plan starts with and what one fetch costs', async () => {
+		const { store } = tieredStore();
+		await open(store, 'tiered', 'etfholdings');
+		expect(store.plans.map((p) => [p.name, p.count, p.premium])).toEqual([
+			['Free', 1, false],
+			['Basic', 2, true],
+			['Professional', 1, true]
+		]);
+		expect(store.requestCost).toBe(20);
+		store.select('tiered', 'eod');
+		expect(store.requestCost).toBe(1);
+		store.select('tiered', null);
+		expect(store.requestCost).toBe(1);
+	});
+
+	it('has no plans for a provider without tiers', async () => {
+		const { store } = setup();
+		await open(store);
+		expect(store.plans).toEqual([]);
+	});
+
+	it('blocks a request above the documented limit before anything is sent', async () => {
+		const { api, store } = tieredStore();
+		await open(store, 'tiered', 'eod');
+		store.setValue('limit', '5000');
+		expect(store.errors.limit).toBe('limit must be at most 1000');
+		expect(store.canFetch).toBe(false);
+		await store.fetch();
+		expect(api.queryProvider).not.toHaveBeenCalled();
 	});
 });

@@ -1,0 +1,5307 @@
+{
+ "provider": "marketstack",
+ "source": "https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0",
+ "spec": "https://api.swaggerhub.com/apis/apilayer-863/MarketstackAPIv2/2.0.0/swagger.json",
+ "plans": [
+  "Free",
+  "Basic",
+  "Professional",
+  "Business"
+ ],
+ "categories": [
+  {
+   "id": "exchanges",
+   "title": "Exchanges",
+   "summary": "Look up stock exchanges worldwide by MIC code, with metadata such as operating hours, timezone, and currency."
+  },
+  {
+   "id": "end-of-day-data",
+   "title": "End-of-Day Data",
+   "summary": "Retrieve daily OHLCV prices (open, high, low, close, volume) with adjusted values, scoped by exchange, ticker, or globally."
+  },
+  {
+   "id": "intraday-data",
+   "title": "Intraday Data",
+   "summary": "Access intraday price snapshots at configurable intervals, including bid/ask data, scoped by exchange, ticker, or globally."
+  },
+  {
+   "id": "tickers",
+   "title": "Tickers",
+   "summary": "Search and retrieve ticker symbols, company names, and listing details across all supported exchanges."
+  },
+  {
+   "id": "corporate-actions",
+   "title": "Corporate Actions",
+   "summary": "Look up stock splits and dividend distributions, including ex-dates, record dates, and payment dates."
+  },
+  {
+   "id": "indices",
+   "title": "Indices",
+   "summary": "Retrieve market index listings and metadata for major indices such as S&P 500, Dow Jones, and NASDAQ Composite."
+  },
+  {
+   "id": "bonds-etfs",
+   "title": "Bonds & ETFs",
+   "summary": "Access bond details (coupon, maturity, yield) and ETF holdings with portfolio weights."
+  },
+  {
+   "id": "commodities",
+   "title": "Commodities",
+   "summary": "Retrieve real-time and historical commodity prices for metals, energy, and agricultural products."
+  },
+  {
+   "id": "company-data-sec",
+   "title": "Company Data / SEC",
+   "summary": "Access analyst ratings, company search, and SEC EDGAR filings including XBRL facts, concepts, and frames."
+  },
+  {
+   "id": "reference-data",
+   "title": "Reference Data",
+   "summary": "Look up supported timezones and currencies used across the API."
+  }
+ ],
+ "endpoints": [
+  {
+   "id": "exchanges",
+   "path": "/v2/exchanges",
+   "title": "Stock Exchanges",
+   "category": "exchanges",
+   "description": "Returns a paginated list of all 2,700+ stock exchanges in the Marketstack database, including MIC codes, location, website, and regulatory metadata. Use the search parameter for autocomplete-style lookups. Not all exchanges listed here have EOD or intraday data coverage — check the ticker-level has_eod and has_intraday flags to confirm data availability.",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "search",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Use this parameter to get autocomplete suggestions by specifying a search term.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "exchange",
+   "path": "/v2/exchanges/{mic}",
+   "title": "Stock Exchange by MIC",
+   "category": "exchanges",
+   "description": "Returns detailed information for a single stock exchange identified by its ISO 10383 Market Identifier Code (MIC), such as XNAS for NASDAQ or XNYS for NYSE. The response includes the exchange's full legal name, LEI, operating status, country, and regulatory classification.",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "mic",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "Market Identifier Code (MIC) of the stock exchange.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "XNAS",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: mic=XNAS",
+     "params": {
+      "mic": "XNAS"
+     }
+    }
+   ]
+  },
+  {
+   "id": "exchange_eod",
+   "path": "/v2/exchanges/{mic}/eod",
+   "title": "Exchange End-of-Day Data",
+   "category": "end-of-day-data",
+   "description": "Returns paginated end-of-day price records for all tickers listed on a specific exchange, identified by its MIC code. Use the date_from and date_to parameters to narrow results to a date range, and sort to control ordering (default: newest first). Each record includes open, high, low, close, volume, and split/dividend-adjusted values.",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "mic",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "Market Identifier Code (MIC) of the stock exchange.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "XNAS",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Comma-separated list of one or more stock ticker symbols (required for this endpoint). Example: AAPL,MSFT",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results from a specific start date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "How far back you can go depends on the plan: Free 1 year, Basic 10 years, Professional and Business 15+ years. Older dates need a paid plan.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results up to a specific end date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: mic=XNAS, symbols=AAPL",
+     "params": {
+      "mic": "XNAS",
+      "symbols": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: mic=XNAS, symbols=AAPL",
+     "params": {
+      "mic": "XNAS",
+      "symbols": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "exchange_eod_latest",
+   "path": "/v2/exchanges/{mic}/eod/latest",
+   "title": "Exchange Latest End-of-Day Data",
+   "category": "end-of-day-data",
+   "description": "Returns the most recent end-of-day price records for all tickers listed on a specific exchange, identified by its MIC code. This is a convenience shortcut equivalent to querying /eod without a date range — it always returns data for the last available trading day. Each record includes open, high, low, close, volume, and adjusted values.",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "mic",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "Market Identifier Code (MIC) of the stock exchange.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "XNAS",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Comma-separated list of one or more stock ticker symbols (required for this endpoint). Example: AAPL,MSFT",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: mic=XNAS, symbols=AAPL",
+     "params": {
+      "mic": "XNAS",
+      "symbols": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: mic=XNAS, symbols=AAPL",
+     "params": {
+      "mic": "XNAS",
+      "symbols": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "exchange_eod_date",
+   "path": "/v2/exchanges/{mic}/eod/{date}",
+   "title": "Exchange End-of-Day Data for a Date",
+   "category": "end-of-day-data",
+   "description": "Returns end-of-day price records for all tickers on a specific exchange for a single date, given in YYYY-MM-DD or full ISO-8601 format. Use this when you need a cross-sectional snapshot of an entire exchange on a particular trading day. If the specified date falls on a weekend or market holiday, no data is returned — use the nearest prior trading day instead.",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "mic",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "Market Identifier Code (MIC) of the stock exchange.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "XNAS",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date",
+     "in": "path",
+     "required": true,
+     "type": "date",
+     "description": "Date for which to return end-of-day data (YYYY-MM-DD).",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "How far back you can go depends on the plan: Free 1 year, Basic 10 years, Professional and Business 15+ years. Older dates need a paid plan.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Comma-separated list of one or more stock ticker symbols (required for this endpoint). Example: AAPL,MSFT",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: mic=XNAS, symbols=AAPL",
+     "params": {
+      "mic": "XNAS",
+      "symbols": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: mic=XNAS, symbols=AAPL",
+     "params": {
+      "mic": "XNAS",
+      "symbols": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "exchange_intraday",
+   "path": "/v2/exchanges/{mic}/intraday",
+   "title": "Exchange Intraday Data",
+   "category": "intraday-data",
+   "description": "Returns intraday price data for all symbols on the specified exchange at configurable intervals (1min, 5min, 15min, 30min, 1hour, etc.). Data includes OHLC, bid/ask prices and sizes, volume, and timestamps in ISO 8601 format. Use the after_hours parameter to include pre-market and after-hours trading data. Available on Professional plans and above.",
+   "plan": "Basic",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Covers US tickers listed on IEX. The bid, ask and last fields are null in the response: IEX now requires a market data agreement for them."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "mic",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "Market Identifier Code (MIC) of the stock exchange.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "XNAS",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Comma-separated list of one or more stock ticker symbols (required for this endpoint). Example: AAPL,MSFT",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "interval",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Intraday data interval. Available values: 1min, 5min, 10min, 15min, 30min, 1hour, 3hour, 6hour, 12hour, 24hour. Default: 1hour",
+     "enum": [
+      "1min",
+      "5min",
+      "10min",
+      "15min",
+      "30min",
+      "1hour",
+      "3hour",
+      "6hour",
+      "12hour",
+      "24hour"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1hour",
+     "example": null,
+     "multiple": false,
+     "premium_note": "Intervals below 15min (1min, 5min, 10min) are real-time updates and need the Professional plan or higher.",
+     "premium_values": [
+      "1min",
+      "5min",
+      "10min"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "after_hours",
+     "in": "query",
+     "required": false,
+     "type": "boolean",
+     "description": "Include after-hours data in intraday results.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results from a specific start date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results up to a specific end date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: mic=XNAS, symbols=AAPL",
+     "params": {
+      "mic": "XNAS",
+      "symbols": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: mic=XNAS, symbols=AAPL",
+     "params": {
+      "mic": "XNAS",
+      "symbols": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "exchange_intraday_latest",
+   "path": "/v2/exchanges/{mic}/intraday/latest",
+   "title": "Exchange Latest Intraday Data",
+   "category": "intraday-data",
+   "description": "Returns the most recent intraday price snapshots for all tickers listed on a specific exchange, identified by its MIC code. The response includes open, high, low, close, volume, and bid/ask prices and sizes for the last available trading session. Use the interval parameter to control snapshot granularity (from 1-minute to 24-hour intervals).",
+   "plan": "Basic",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Covers US tickers listed on IEX. The bid, ask and last fields are null in the response: IEX now requires a market data agreement for them."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "mic",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "Market Identifier Code (MIC) of the stock exchange.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "XNAS",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Comma-separated list of one or more stock ticker symbols (required for this endpoint). Example: AAPL,MSFT",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "interval",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Intraday data interval. Available values: 1min, 5min, 10min, 15min, 30min, 1hour, 3hour, 6hour, 12hour, 24hour. Default: 1hour",
+     "enum": [
+      "1min",
+      "5min",
+      "10min",
+      "15min",
+      "30min",
+      "1hour",
+      "3hour",
+      "6hour",
+      "12hour",
+      "24hour"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1hour",
+     "example": null,
+     "multiple": false,
+     "premium_note": "Intervals below 15min (1min, 5min, 10min) are real-time updates and need the Professional plan or higher.",
+     "premium_values": [
+      "1min",
+      "5min",
+      "10min"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "after_hours",
+     "in": "query",
+     "required": false,
+     "type": "boolean",
+     "description": "Include after-hours data in intraday results.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: mic=XNAS, symbols=AAPL",
+     "params": {
+      "mic": "XNAS",
+      "symbols": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: mic=XNAS, symbols=AAPL",
+     "params": {
+      "mic": "XNAS",
+      "symbols": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "exchange_intraday_date",
+   "path": "/v2/exchanges/{mic}/intraday/{date}",
+   "title": "Exchange Intraday Data for a Date",
+   "category": "intraday-data",
+   "description": "Returns intraday price snapshots for all tickers on a specific exchange for a single date, given in YYYY-MM-DD or full ISO-8601 format. Use the interval parameter to set snapshot granularity (from 1-minute to 24-hour intervals). Each record includes open, high, low, close, volume, and bid/ask prices and sizes.",
+   "plan": "Basic",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Covers US tickers listed on IEX. The bid, ask and last fields are null in the response: IEX now requires a market data agreement for them."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "mic",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "Market Identifier Code (MIC) of the stock exchange.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "XNAS",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date",
+     "in": "path",
+     "required": true,
+     "type": "date",
+     "description": "Date for which to return intraday data (YYYY-MM-DD).",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Comma-separated list of one or more stock ticker symbols (required for this endpoint). Example: AAPL,MSFT",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "interval",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Intraday data interval. Available values: 1min, 5min, 10min, 15min, 30min, 1hour, 3hour, 6hour, 12hour, 24hour. Default: 1hour",
+     "enum": [
+      "1min",
+      "5min",
+      "10min",
+      "15min",
+      "30min",
+      "1hour",
+      "3hour",
+      "6hour",
+      "12hour",
+      "24hour"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1hour",
+     "example": null,
+     "multiple": false,
+     "premium_note": "Intervals below 15min (1min, 5min, 10min) are real-time updates and need the Professional plan or higher.",
+     "premium_values": [
+      "1min",
+      "5min",
+      "10min"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "after_hours",
+     "in": "query",
+     "required": false,
+     "type": "boolean",
+     "description": "Include after-hours data in intraday results.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: mic=XNAS, symbols=AAPL",
+     "params": {
+      "mic": "XNAS",
+      "symbols": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: mic=XNAS, symbols=AAPL",
+     "params": {
+      "mic": "XNAS",
+      "symbols": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "exchange_tickers",
+   "path": "/v2/exchanges/{mic}/tickers",
+   "title": "Tickers for an Exchange",
+   "category": "tickers",
+   "description": "Returns a paginated list of all ticker symbols listed on the specified exchange, identified by its MIC code. Use the search parameter to filter results by company name or symbol. Each ticker record includes listing status and flags indicating whether EOD and intraday data are available for that instrument.",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "mic",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "Market Identifier Code (MIC) of the stock exchange.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "XNAS",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "search",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Use this parameter to get autocomplete suggestions by specifying a search term.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: mic=XNAS",
+     "params": {
+      "mic": "XNAS"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: mic=XNAS",
+     "params": {
+      "mic": "XNAS",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ticker",
+   "path": "/v2/tickers/{symbol}",
+   "title": "Ticker by Symbol",
+   "category": "tickers",
+   "description": "Retrieves detailed information for a single ticker symbol, including the company name, exchange listing, and data-availability flags (has_eod, has_intraday). The response includes the ticker's associated stock_exchange object with MIC code, country, and timezone. Use this endpoint to verify a symbol exists and confirm what market data is available for it before querying price endpoints.",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "Stock ticker symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ticker_eod",
+   "path": "/v2/tickers/{symbol}/eod",
+   "title": "Ticker End-of-Day Data",
+   "category": "end-of-day-data",
+   "description": "Returns historical end-of-day OHLCV data for a specific ticker symbol, including both raw and split/dividend-adjusted prices. Data is available from 2000 onwards for most major tickers. Use date_from and date_to to define a date range. Results are sorted by date descending by default and paginated (default: 100 per page, max: 1,000).",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "Stock ticker symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results from a specific start date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "How far back you can go depends on the plan: Free 1 year, Basic 10 years, Professional and Business 15+ years. Older dates need a paid plan.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results up to a specific end date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ticker_eod_latest",
+   "path": "/v2/tickers/{symbol}/eod/latest",
+   "title": "Ticker Latest End-of-Day Data",
+   "category": "end-of-day-data",
+   "description": "Returns the most recent end-of-day price record for a single ticker, identified by its symbol. The response includes open, high, low, close, volume, and split/dividend-adjusted values for the last available trading day. This is the fastest way to get a stock's closing snapshot without specifying a date or paginating through results.",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "Stock ticker symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ticker_eod_date",
+   "path": "/v2/tickers/{symbol}/eod/{date}",
+   "title": "Ticker End-of-Day Data for a Date",
+   "category": "end-of-day-data",
+   "description": "Returns the end-of-day price record for a specific ticker on a specific date, given in YYYY-MM-DD or full ISO-8601 format (e.g. 2020-05-21T00:00:00+0000). The response includes open, high, low, close, volume, and adjusted values for that single trading day. If the specified date falls on a weekend or market holiday, no data is returned — use the nearest prior trading day instead.",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "Stock ticker symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date",
+     "in": "path",
+     "required": true,
+     "type": "date",
+     "description": "Date in YYYY-MM-DD format.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "How far back you can go depends on the plan: Free 1 year, Basic 10 years, Professional and Business 15+ years. Older dates need a paid plan.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ticker_intraday",
+   "path": "/v2/tickers/{symbol}/intraday",
+   "title": "Ticker Intraday Data",
+   "category": "intraday-data",
+   "description": "Returns paginated intraday price snapshots for a single ticker, identified by its symbol. Use date_from, date_to, and interval (from 1-minute to 24-hour) to control the date range and snapshot granularity. Each record includes open, high, low, close, volume, and bid/ask prices and sizes.",
+   "plan": "Basic",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Covers US tickers listed on IEX. The bid, ask and last fields are null in the response: IEX now requires a market data agreement for them."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "Stock ticker symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "interval",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Intraday data interval. Available values: 1min, 5min, 10min, 15min, 30min, 1hour, 3hour, 6hour, 12hour, 24hour. Default: 1hour",
+     "enum": [
+      "1min",
+      "5min",
+      "10min",
+      "15min",
+      "30min",
+      "1hour",
+      "3hour",
+      "6hour",
+      "12hour",
+      "24hour"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1hour",
+     "example": null,
+     "multiple": false,
+     "premium_note": "Intervals below 15min (1min, 5min, 10min) are real-time updates and need the Professional plan or higher.",
+     "premium_values": [
+      "1min",
+      "5min",
+      "10min"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "after_hours",
+     "in": "query",
+     "required": false,
+     "type": "boolean",
+     "description": "Include after-hours data in intraday results.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results from a specific start date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results up to a specific end date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ticker_intraday_latest",
+   "path": "/v2/tickers/{symbol}/intraday/latest",
+   "title": "Ticker Latest Intraday Data",
+   "category": "intraday-data",
+   "description": "Returns the most recent intraday price snapshots for a single ticker, identified by its symbol. This is the fastest way to get a stock's latest trading-session data without specifying a date or paginating through results. Each record includes open, high, low, close, volume, and bid/ask prices and sizes at the configured interval.",
+   "plan": "Basic",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Covers US tickers listed on IEX. The bid, ask and last fields are null in the response: IEX now requires a market data agreement for them."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "Stock ticker symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "interval",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Intraday data interval. Available values: 1min, 5min, 10min, 15min, 30min, 1hour, 3hour, 6hour, 12hour, 24hour. Default: 1hour",
+     "enum": [
+      "1min",
+      "5min",
+      "10min",
+      "15min",
+      "30min",
+      "1hour",
+      "3hour",
+      "6hour",
+      "12hour",
+      "24hour"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1hour",
+     "example": null,
+     "multiple": false,
+     "premium_note": "Intervals below 15min (1min, 5min, 10min) are real-time updates and need the Professional plan or higher.",
+     "premium_values": [
+      "1min",
+      "5min",
+      "10min"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "after_hours",
+     "in": "query",
+     "required": false,
+     "type": "boolean",
+     "description": "Include after-hours data in intraday results.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ticker_intraday_date",
+   "path": "/v2/tickers/{symbol}/intraday/{date}",
+   "title": "Ticker Intraday Data for a Date",
+   "category": "intraday-data",
+   "description": "Returns intraday price snapshots for a single ticker on a specific date, given in YYYY-MM-DD or full ISO-8601 format. Use the interval parameter to set snapshot granularity (from 1-minute to 24-hour intervals). If the specified date falls on a weekend or market holiday, no data is returned — use the nearest prior trading day instead.",
+   "plan": "Basic",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Covers US tickers listed on IEX. The bid, ask and last fields are null in the response: IEX now requires a market data agreement for them."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "Stock ticker symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date",
+     "in": "path",
+     "required": true,
+     "type": "date",
+     "description": "Date in YYYY-MM-DD format.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "interval",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Intraday data interval. Available values: 1min, 5min, 10min, 15min, 30min, 1hour, 3hour, 6hour, 12hour, 24hour. Default: 1hour",
+     "enum": [
+      "1min",
+      "5min",
+      "10min",
+      "15min",
+      "30min",
+      "1hour",
+      "3hour",
+      "6hour",
+      "12hour",
+      "24hour"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1hour",
+     "example": null,
+     "multiple": false,
+     "premium_note": "Intervals below 15min (1min, 5min, 10min) are real-time updates and need the Professional plan or higher.",
+     "premium_values": [
+      "1min",
+      "5min",
+      "10min"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "after_hours",
+     "in": "query",
+     "required": false,
+     "type": "boolean",
+     "description": "Include after-hours data in intraday results.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ticker_splits",
+   "path": "/v2/tickers/{symbol}/splits",
+   "title": "Ticker Stock Splits",
+   "category": "corporate-actions",
+   "description": "Returns a paginated list of historical stock split events for a single ticker, identified by its symbol. Each record includes the split date, split factor (e.g. 4-for-1), and the original and adjusted share counts. Use date_from and date_to to narrow results to a specific date range.",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "Stock ticker symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results from a specific start date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results up to a specific end date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ticker_dividends",
+   "path": "/v2/tickers/{symbol}/dividends",
+   "title": "Ticker Stock Dividends",
+   "category": "corporate-actions",
+   "description": "Returns a paginated list of historical dividend distributions for a single ticker, identified by its symbol. Each record includes the dividend amount, ex-date, record date, pay date, and declaration date. Use date_from and date_to to filter results to a specific date range.",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "Stock ticker symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results from a specific start date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results up to a specific end date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "eod",
+   "path": "/v2/eod",
+   "title": "End-of-Day Data",
+   "category": "end-of-day-data",
+   "description": "You can use the API's eod endpoint in order to obtain end-of-day data for one or multiple stock tickers. A single or multiple comma-separated ticker symbols are passed to the API using the symbols parameter. Note: The EOD data has access to over 500,000 tickers from more major world-known exchanges. The full list of supported tickers and exchanges can be seen here: Download A daily updated list of all tickers accessible via Marketstack is available for download: Download Ticker List The V2 EOD endpoint supports data from 30+ stock exchanges, including NASDAQ, PINK, SHG, NYSE, NYSE ARCA, OTCQB, and BATS To retrieve end-of-day data for individual tickers, you can also use the Tickers Endpoint. Ticker Symbol Formatting: When querying ticker symbols that include a period (.), replace the period with a hyphen (-) in the intraday endpoint. Example:BRK.B → BRK-B The LSE’s/XLON official currency is GBP, however many stocks can be and are quoted in pence (GBX) by convention. It improves readability and pricing precision. If LSE equity price looks “too big” → it’s probably pence. Convert using GBP = GBX / 100 Adjusted Prices: “ Adjusted ” prices represent stock values that have been modified to accurately reflect the impact of corporate actions such as splits and dividends. These adjustments are applied following the CRSP Calculations methodology established by the Center for Research in Security Prices (CRSP).",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Comma-separated list of one or more stock ticker symbols (required for this endpoint). Example: AAPL,MSFT",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "exchange",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filter results by stock exchange, identified by its MIC. Example: XNAS",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "XNAS",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results from a specific start date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "How far back you can go depends on the plan: Free 1 year, Basic 10 years, Professional and Business 15+ years. Older dates need a paid plan.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results up to a specific end date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "eod_latest",
+   "path": "/v2/eod/latest",
+   "title": "Latest End-of-Day Data",
+   "category": "end-of-day-data",
+   "description": "Returns the most recent end-of-day price records across all exchanges and tickers for the last available trading day. Use the symbols parameter to filter results to specific tickers (comma-separated). Each record includes open, high, low, close, volume, and split/dividend-adjusted values.",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Comma-separated list of one or more stock ticker symbols (required for this endpoint). Example: AAPL,MSFT",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "exchange",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filter results by stock exchange, identified by its MIC. Example: XNAS",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "XNAS",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "eod_date",
+   "path": "/v2/eod/{date}",
+   "title": "End-of-Day Data for a Specific Date",
+   "category": "end-of-day-data",
+   "description": "Returns end-of-day price records across all exchanges and tickers for a specific date, given in YYYY-MM-DD or full ISO-8601 format. This is the global scope variant — use the exchange- or ticker-scoped endpoints if you need data for a single instrument or market. Results are paginated; use limit (default: 100, max: 1,000) and offset to page through large result sets.",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "date",
+     "in": "path",
+     "required": true,
+     "type": "date",
+     "description": "Date in YYYY-MM-DD format.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "How far back you can go depends on the plan: Free 1 year, Basic 10 years, Professional and Business 15+ years. Older dates need a paid plan.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Comma-separated list of one or more stock ticker symbols (required for this endpoint). Example: AAPL,MSFT",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "exchange",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filter results by stock exchange, identified by its MIC. Example: XNAS",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "XNAS",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "intraday",
+   "path": "/v2/intraday",
+   "title": "Intraday Data",
+   "category": "intraday-data",
+   "description": "In additional to daily end-of-day stock prices, the Marketstack API also supports intraday data with data intervals as short as one minute. Intraday prices are available for all US stock tickers included in the IEX (Investors Exchange) stock exchange. To access intraday market data, use the API’s Intraday Endpoint and specify your desired stock ticker symbols. Notes: A daily updated list of all tickers accessible via Marketstack is available for download: Download Ticker List You can also request intraday data for individual ticker symbols using the Tickers Endpoint. Ticker Symbol Formatting: When querying ticker symbols that include a period (.), replace the period with a hyphen (-) when using the Intraday Endpoint. Example: BRK.B → BRK-B IMPORTANT NOTE: In the case of Intraday, Marketstack provides derived data that calculates a real-time reference price for each asset. While this is not a substitute for the TOPS Feed, we believe it will fulfill the needs of 95% of our customer base. We’re doing so because as of February 1st, 2025, the IEX Exchange has changed its market data policies. To receive the FULL TOPS Feed, you must now have a market data agreement signed with the IEX Exchange. This means that the parameters bidPrice, bidSize, askPrice, askSize, lastPrice, lastSize, mid, and last will all return NULL in the API response for intraday since IEX entitlement is required for them. If you still need to have access to TOPS Feed, please contact our customer support team before signing any contract with them. For using our derived data, there is no need to have a market data agreement signed with the IEX exchange, and there is no additional cost to the IEX Exchange.",
+   "plan": "Basic",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Covers US tickers listed on IEX. The bid, ask and last fields are null in the response: IEX now requires a market data agreement for them."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Comma-separated list of one or more stock ticker symbols (required for this endpoint). Example: AAPL,MSFT",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "exchange",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filter results by stock exchange, identified by its MIC. Example: XNAS",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "XNAS",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "interval",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Intraday data interval. Available values: 1min, 5min, 10min, 15min, 30min, 1hour, 3hour, 6hour, 12hour, 24hour. Default: 1hour",
+     "enum": [
+      "1min",
+      "5min",
+      "10min",
+      "15min",
+      "30min",
+      "1hour",
+      "3hour",
+      "6hour",
+      "12hour",
+      "24hour"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1hour",
+     "example": null,
+     "multiple": false,
+     "premium_note": "Intervals below 15min (1min, 5min, 10min) are real-time updates and need the Professional plan or higher.",
+     "premium_values": [
+      "1min",
+      "5min",
+      "10min"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "after_hours",
+     "in": "query",
+     "required": false,
+     "type": "boolean",
+     "description": "Include after-hours data in intraday results.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results from a specific start date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results up to a specific end date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "intraday_latest",
+   "path": "/v2/intraday/latest",
+   "title": "Latest Intraday Data",
+   "category": "intraday-data",
+   "description": "Returns the most recent intraday bar for the requested symbols. Real-Time Updates: Please note that data frequency intervals below 15 minutes (15min) are only supported if you are subscribed to the Professional Plan or higher. US equity markets close at 4:00 PM EST, with trades at or after this time considered after-hours (retrievable with after_hours=true), though IEX after-hours data may be sparse, and note that intraday closing prices differ from official EOD closes, which are set via an auction process Investopedia",
+   "plan": "Basic",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Covers US tickers listed on IEX. The bid, ask and last fields are null in the response: IEX now requires a market data agreement for them."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Comma-separated list of one or more stock ticker symbols (required for this endpoint). Example: AAPL,MSFT",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "exchange",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filter results by stock exchange, identified by its MIC. Example: XNAS",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "XNAS",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "interval",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Intraday data interval. Available values: 1min, 5min, 10min, 15min, 30min, 1hour, 3hour, 6hour, 12hour, 24hour. Default: 1hour",
+     "enum": [
+      "1min",
+      "5min",
+      "10min",
+      "15min",
+      "30min",
+      "1hour",
+      "3hour",
+      "6hour",
+      "12hour",
+      "24hour"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1hour",
+     "example": null,
+     "multiple": false,
+     "premium_note": "Intervals below 15min (1min, 5min, 10min) are real-time updates and need the Professional plan or higher.",
+     "premium_values": [
+      "1min",
+      "5min",
+      "10min"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "after_hours",
+     "in": "query",
+     "required": false,
+     "type": "boolean",
+     "description": "Include after-hours data in intraday results.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "intraday_date",
+   "path": "/v2/intraday/{date}",
+   "title": "Intraday Data for a Specific Date",
+   "category": "intraday-data",
+   "description": "Returns intraday price snapshots across all exchanges and tickers for a specific date, given in YYYY-MM-DD or full ISO-8601 format. Use the symbols parameter to narrow results to specific tickers and interval to set snapshot granularity. Results are paginated; use limit (default: 100, max: 1,000) and offset to page through large result sets.",
+   "plan": "Basic",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Covers US tickers listed on IEX. The bid, ask and last fields are null in the response: IEX now requires a market data agreement for them."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "date",
+     "in": "path",
+     "required": true,
+     "type": "date",
+     "description": "Date in YYYY-MM-DD format.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Comma-separated list of one or more stock ticker symbols (required for this endpoint). Example: AAPL,MSFT",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "exchange",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filter results by stock exchange, identified by its MIC. Example: XNAS",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "XNAS",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "interval",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Intraday data interval. Available values: 1min, 5min, 10min, 15min, 30min, 1hour, 3hour, 6hour, 12hour, 24hour. Default: 1hour",
+     "enum": [
+      "1min",
+      "5min",
+      "10min",
+      "15min",
+      "30min",
+      "1hour",
+      "3hour",
+      "6hour",
+      "12hour",
+      "24hour"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1hour",
+     "example": null,
+     "multiple": false,
+     "premium_note": "Intervals below 15min (1min, 5min, 10min) are real-time updates and need the Professional plan or higher.",
+     "premium_values": [
+      "1min",
+      "5min",
+      "10min"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "after_hours",
+     "in": "query",
+     "required": false,
+     "type": "boolean",
+     "description": "Include after-hours data in intraday results.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "timezones",
+   "path": "/v2/timezones",
+   "title": "Supported Timezones",
+   "category": "reference-data",
+   "description": "Returns a paginated list of all timezones supported by the Marketstack API, including their GMT offset and common abbreviation. Use this endpoint to identify the correct timezone string when filtering date-based queries. Timezone values returned here can be used with date parameters across EOD and intraday endpoints.",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": true,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "currencies",
+   "path": "/v2/currencies",
+   "title": "Supported Currencies",
+   "category": "reference-data",
+   "description": "Returns a paginated list of all currencies supported by the Marketstack API, including the currency code, name, and symbol. Use this endpoint to identify which currencies are available when interpreting price data from different exchanges. Each exchange's native trading currency is referenced in its metadata.",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": true,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "splits",
+   "path": "/v2/splits",
+   "title": "Stock Splits",
+   "category": "corporate-actions",
+   "description": "Returns stock split history for one or more ticker symbols. Each record includes the split ratio (e.g., '4-for-1'), the numeric split factor, and the effective date. Data covers symbols listed on NASDAQ, NYSE, NYSE ARCA, PINK, SHG, OTCQB, and BATS. Use date_from/date_to to filter by date range. You can also retrieve split information for individual ticker symbols using the Tickers Endpoint.",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Comma-separated list of one or more stock ticker symbols. Example: AAPL,MSFT",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results from a specific start date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results up to a specific end date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "dividends",
+   "path": "/v2/dividends",
+   "title": "Stock Dividends",
+   "category": "corporate-actions",
+   "description": "Returns dividend payment history for one or more ticker symbols. Each record includes the dividend amount (in the stock's trading currency), the ex-dividend date, payment date, record date, declaration date, and distribution frequency (e.g., 'quarterly'). Data covers symbols on NASDAQ, NYSE, NYSE ARCA, PINK, SHG, OTCQB, and BATS. Dividend information for individual ticker symbols can also be retrieved using the Tickers Endpoint.",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Comma-separated list of one or more stock ticker symbols. Example: AAPL,MSFT",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort order of the results by date.",
+     "enum": [
+      "DESC",
+      "ASC"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "DESC",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results from a specific start date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results up to a specific end date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "tickerslist",
+   "path": "/v2/tickerslist",
+   "title": "List Tickers",
+   "category": "tickers",
+   "description": "Returns a paginated list of all ticker symbols available in the Marketstack database, across all supported exchanges. Use the search parameter to filter by company name or symbol for autocomplete-style lookups. Each record includes the ticker's exchange, listing status, and flags indicating whether EOD and intraday data are available.",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "search",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Use this parameter to get autocomplete suggestions by specifying a search term.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "exchange",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filter results by stock exchange, identified by its MIC. Example: XNAS",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "XNAS",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "tickerinfo",
+   "path": "/v2/tickerinfo",
+   "title": "Ticker Information",
+   "category": "tickers",
+   "description": "Returns extended company and listing information for a single ticker, including sector, industry, description, and key financial identifiers. This endpoint provides richer detail than the standard ticker lookup — use it when you need company metadata beyond the basic symbol and exchange. Pass the ticker symbol as a query parameter.",
+   "plan": "Business",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "ticker",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Stock ticker symbol. Example: AAPL",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: ticker=AAPL",
+     "params": {
+      "ticker": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "companyratings",
+   "path": "/v2/companyratings",
+   "title": "Company Analyst Ratings",
+   "category": "company-data-sec",
+   "description": "Returns analyst buy/sell/hold ratings and consensus price targets for a company, with over 15 years of historical data available. Use this endpoint to track rating trends and analyst performance over time. Note that this endpoint is rate-limited to 1 API call per minute.",
+   "plan": "Business",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Limited to 1 request per minute, on every plan."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "ticker",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Stock ticker symbol. Example: AAPL",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results from a specific start date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results up to a specific end date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "rated",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Filter response on buy, sell, or hold.",
+     "enum": [
+      "buy",
+      "sell",
+      "hold"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: ticker=AAPL",
+     "params": {
+      "ticker": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "indexlist",
+   "path": "/v2/indexlist",
+   "title": "List Market Indices",
+   "category": "indices",
+   "description": "Returns a paginated list of all market indices available in the Marketstack database, including major benchmarks like the S&P 500, Dow Jones, and NASDAQ Composite. Each record includes the index name, symbol, exchange, and current value.",
+   "plan": "Basic",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "indexinfo",
+   "path": "/v2/indexinfo",
+   "title": "Market Index Information",
+   "category": "indices",
+   "description": "Returns detailed information for a single market index, including its name, symbol, exchange, component count, and current value. Pass the index symbol as a query parameter to retrieve its metadata. Use this endpoint to look up index details before querying related ticker or EOD data.",
+   "plan": "Basic",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "index",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Market index identifier.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "bondlist",
+   "path": "/v2/bondlist",
+   "title": "List Bonds",
+   "category": "bonds-etfs",
+   "description": "Returns a paginated list of bonds available in the Marketstack database, organized by country of issuance. Each record includes the bond name, symbol, coupon rate, maturity date, and yield.",
+   "plan": "Basic",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    },
+    {
+     "name": "country",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filter bonds by country.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "bond",
+   "path": "/v2/bond",
+   "title": "Bond Information",
+   "category": "bonds-etfs",
+   "description": "Returns detailed information for a specific government bond, including coupon rate, maturity date, yield, and issuing country. The data focuses on treasury notes issued by leading countries worldwide, primarily 10-year benchmarks. Pass the bond symbol or country as a query parameter to retrieve its current and historical details.",
+   "plan": "Basic",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "country",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Filter bonds by country.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "etflist",
+   "path": "/v2/etflist",
+   "title": "List ETFs",
+   "category": "bonds-etfs",
+   "description": "Returns a paginated list of all exchange-traded funds (ETFs) available in the Marketstack database. Each record includes the ETF name, symbol, and exchange. Note that ETF API endpoints apply a call-count multiplier of 20 toward your usage quota.",
+   "plan": "Basic",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "ETF endpoints count as 20 requests against your monthly quota."
+   ],
+   "request_cost": 20,
+   "params": [
+    {
+     "name": "date_from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results from a specific start date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results up to a specific end date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    },
+    {
+     "name": "ticker",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "ETF ticker symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "status",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filter by ETF status.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "etfholdings",
+   "path": "/v2/etfholdings",
+   "title": "ETF Holdings",
+   "category": "bonds-etfs",
+   "description": "Returns the holdings breakdown for a specific ETF, identified by its ticker symbol, including each constituent's name, weight, and share count. Use date_from and date_to to retrieve holdings for a specific date range and track portfolio composition changes over time. Note that ETF API endpoints apply a call-count multiplier of 20 toward your usage quota.",
+   "plan": "Basic",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "ETF endpoints count as 20 requests against your monthly quota."
+   ],
+   "request_cost": 20,
+   "params": [
+    {
+     "name": "date_from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results from a specific start date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results up to a specific end date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    },
+    {
+     "name": "ticker",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "ETF ticker symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: ticker=AAPL",
+     "params": {
+      "ticker": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: ticker=AAPL",
+     "params": {
+      "ticker": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stockprice",
+   "path": "/v2/stockprice",
+   "title": "Real-Time Stock Price",
+   "category": "commodities",
+   "description": "Returns real-time price data for a stock across major exchanges worldwide, including NYSE, NASDAQ, LSE, and others. Pass the ticker symbol as a query parameter to get the current bid, ask, last trade price, and volume. Use this endpoint when you need a live snapshot rather than end-of-day or interval-based intraday data.",
+   "plan": "Professional",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "ticker",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Stock ticker symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "exchange",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Stock exchange MIC.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "XNAS",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: ticker=AAPL",
+     "params": {
+      "ticker": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "commodities",
+   "path": "/v2/commodities",
+   "title": "Commodity Prices",
+   "category": "commodities",
+   "description": "Get commodity prices of 70+ world-known commodities of energy, metals, industrial, agricultural, and livestock areas. Note: Rate limit for 1 API call per minute is enforced on this endpoint. See the full list of available commodities in the file presented here: Download Historical end-of-day data (eod) is available for up to 15 years back, while intraday data (intraday) always only offers the last 10,000 entries for each of the intervals available. Example: For a 1-minute interval, historical intraday data is available for up to 10,000 minutes back.",
+   "plan": "Professional",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Limited to 1 request per minute, on every plan."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "commodity_name",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Name of the commodity for which to retrieve the price. Example: aluminum",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [
+      "aluminum",
+      "barley",
+      "beef",
+      "bitumen",
+      "brent",
+      "butter",
+      "canola",
+      "cheese",
+      "coal",
+      "cobalt",
+      "cocoa",
+      "coffee",
+      "copper",
+      "corn",
+      "cotton",
+      "crude oil",
+      "di-ammonium",
+      "eggs ch",
+      "eggs us",
+      "ethanol",
+      "feeder cattle",
+      "gallium",
+      "gasoline",
+      "germanium",
+      "gold",
+      "heating oil",
+      "hrc steel",
+      "indium",
+      "iron ore",
+      "iron ore cny",
+      "kraft pulp",
+      "lead",
+      "lean hogs",
+      "lithium",
+      "live cattle",
+      "lumber",
+      "magnesium",
+      "manganese",
+      "methanol",
+      "milk",
+      "molybdenum",
+      "naphtha",
+      "natural gas",
+      "neodymium",
+      "nickel",
+      "oat",
+      "orange juice",
+      "palladium",
+      "palm oil",
+      "platinum",
+      "polyethylene",
+      "polypropylene",
+      "polyvinyl",
+      "potatoes",
+      "poultry",
+      "propane",
+      "rapeseed",
+      "rhodium",
+      "rice",
+      "rubber",
+      "salmon",
+      "silver",
+      "soda ash",
+      "soybeans",
+      "steel",
+      "sugar",
+      "sunflower oil",
+      "tea",
+      "tellurium",
+      "tin",
+      "titanium",
+      "ttf gas",
+      "uk gas",
+      "uranium",
+      "urea",
+      "wheat",
+      "wool",
+      "zinc"
+     ],
+     "default": null,
+     "example": "aluminum",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: commodity_name=aluminum",
+     "params": {
+      "commodity_name": "aluminum"
+     }
+    }
+   ]
+  },
+  {
+   "id": "commoditieshistory",
+   "path": "/v2/commoditieshistory",
+   "title": "Commodity Price History",
+   "category": "commodities",
+   "description": "If you are looking for past commodity prices, you can use the Historical Commodity Prices endpoint, where you can choose specific dates and search by individual commodities. Additionally, the API offers options for daily data from the previous five years or monthly intervals using the frequency parameter. Note: A rate limit of 1 API call per minute is enforced on this endpoint. The recommended historical date range for a single API call is 1 year when requesting daily data. While larger ranges (up to 1.5 years) may work, retrieving data one year at a time ensures consistency. Historical data for Commodities is available for up to 15 years in the past, though coverage varies by commodity type like Metals: Typically over 13 years of historical data, with some having as few as 2 years. Energy: Generally 15 years of coverage, though a few have up to 10 years. Industrial: Usually 15 years, with some limited to 10 years. Livestock and Agricultural: Coverage ranges from 9 to 15 years.",
+   "plan": "Professional",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Limited to 1 request per minute, on every plan."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "date_from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results from a specific start date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date_to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter results up to a specific end date. [Format: YYYY-MM-DD]",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "commodity_name",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Name of the commodity.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [
+      "aluminum",
+      "barley",
+      "beef",
+      "bitumen",
+      "brent",
+      "butter",
+      "canola",
+      "cheese",
+      "coal",
+      "cobalt",
+      "cocoa",
+      "coffee",
+      "copper",
+      "corn",
+      "cotton",
+      "crude oil",
+      "di-ammonium",
+      "eggs ch",
+      "eggs us",
+      "ethanol",
+      "feeder cattle",
+      "gallium",
+      "gasoline",
+      "germanium",
+      "gold",
+      "heating oil",
+      "hrc steel",
+      "indium",
+      "iron ore",
+      "iron ore cny",
+      "kraft pulp",
+      "lead",
+      "lean hogs",
+      "lithium",
+      "live cattle",
+      "lumber",
+      "magnesium",
+      "manganese",
+      "methanol",
+      "milk",
+      "molybdenum",
+      "naphtha",
+      "natural gas",
+      "neodymium",
+      "nickel",
+      "oat",
+      "orange juice",
+      "palladium",
+      "palm oil",
+      "platinum",
+      "polyethylene",
+      "polypropylene",
+      "polyvinyl",
+      "potatoes",
+      "poultry",
+      "propane",
+      "rapeseed",
+      "rhodium",
+      "rice",
+      "rubber",
+      "salmon",
+      "silver",
+      "soda ash",
+      "soybeans",
+      "steel",
+      "sugar",
+      "sunflower oil",
+      "tea",
+      "tellurium",
+      "tin",
+      "titanium",
+      "ttf gas",
+      "uk gas",
+      "uranium",
+      "urea",
+      "wheat",
+      "wool",
+      "zinc"
+     ],
+     "default": null,
+     "example": "aluminum",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "frequency",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Data frequency. Accepted values include: day, daily, weekly, monthly, quarterly, yearly. Defaults to day.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [
+      "day",
+      "daily",
+      "weekly",
+      "monthly",
+      "quarterly",
+      "yearly"
+     ],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: commodity_name=aluminum",
+     "params": {
+      "commodity_name": "aluminum"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_name",
+   "path": "/v2/company_name",
+   "title": "Search Company by Name",
+   "category": "company-data-sec",
+   "description": "Find Company Name by CIK code, which will provide a company name with a search by the CIK Code. The CIK code must be entered with all 10 digits, including leading zeros if any. Since the CIK code is a unique code for every company, we also have CIK code validation, meaning if the CIK code is not entered in the correct format with all of the digits, we return an error for invalid CIK format. This API endpoint returns data only in case we have an exact match in the CIK code.",
+   "plan": "Business",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    },
+    {
+     "name": "cik_code",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "SEC Central Index Key (CIK) code. Must be the exact 10-digit CIK including leading zeros.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "0001045810",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: cik_code=0001045810",
+     "params": {
+      "cik_code": "0001045810"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: cik_code=0001045810",
+     "params": {
+      "cik_code": "0001045810",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "cik_code",
+   "path": "/v2/cik_code",
+   "title": "Company by CIK Code",
+   "category": "company-data-sec",
+   "description": "Endpoint provides CIK code information with a search by company name or part of the company name. For example, if you search for “APP” in the response, the endpoint will provide information on the CIK code for all of the companies that we have in the database that have “APP” (“app”) in their name. If you enter “Example LLC”, then the API will give a response with all companies having “Example LLC” in the name, Example LLC Florida, Example LLC., Example LLC International, etc.",
+   "plan": "Business",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    },
+    {
+     "name": "company_name",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Company name (minimum 3 letters) used to search for the CIK code.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "NVIDIA",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: company_name=NVIDIA",
+     "params": {
+      "company_name": "NVIDIA"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: company_name=NVIDIA",
+     "params": {
+      "company_name": "NVIDIA",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_facts",
+   "path": "/v2/company_facts",
+   "title": "Company Facts",
+   "category": "company-data-sec",
+   "description": "Returns the full set of XBRL financial facts reported by a company to the SEC, identified by its CIK code. Facts span all standard taxonomies (US-GAAP, IFRS, DEI) and include historical values across filing periods. Use this endpoint for detailed fundamental analysis or to build custom financial models from raw SEC EDGAR data.",
+   "plan": "Business",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    },
+    {
+     "name": "cik_code",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "SEC Central Index Key (CIK) code.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "0001045810",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: cik_code=0001045810",
+     "params": {
+      "cik_code": "0001045810"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: cik_code=0001045810",
+     "params": {
+      "cik_code": "0001045810",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "concept_accounts_payable",
+   "path": "/v2/concept/accounts_payable",
+   "title": "Accounts Payable Concept",
+   "category": "company-data-sec",
+   "description": "Returns all SEC disclosure values for a specific XBRL concept (taxonomy and tag) reported by a single company, identified by its CIK code. Facts are grouped by unit of measure (e.g. USD, CAD), with each entry including the filing period, form type, and reported value. Use this endpoint to track a single financial metric across all of a company historical filings.",
+   "plan": "Business",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    },
+    {
+     "name": "cik_code",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "SEC Central Index Key (CIK) code.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "0001045810",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: cik_code=0001045810",
+     "params": {
+      "cik_code": "0001045810"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: cik_code=0001045810",
+     "params": {
+      "cik_code": "0001045810",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "submissions",
+   "path": "/v2/submissions",
+   "title": "SEC Submissions",
+   "category": "company-data-sec",
+   "description": "Returns SEC filing submissions for a specific company, identified by CIK code or company name. Each record includes the filing type (10-K, 10-Q, 8-K, etc.), filing date, acceptance date, and accession number. Use this endpoint to track a company's regulatory filing history and identify specific documents for further analysis.",
+   "plan": "Business",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "cik_code",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "SEC CIK code.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "0001045810",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "accession_number",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filing accession number.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "cik_code_name",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Company name.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "filing_from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filing date from (YYYY-MM-DD).",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "filing_to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filing date to (YYYY-MM-DD).",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "report_from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Report date from (YYYY-MM-DD).",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "report_to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Report date to (YYYY-MM-DD).",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "frames_accounts_payable",
+   "path": "/v2/frames/accounts_payable/{unit}",
+   "title": "Accounts Payable Frames",
+   "category": "company-data-sec",
+   "description": "The frames API aggregates one fact for each reporting entity that is the last filed that most closely fits the calendrical period requested. This API supports annual, quarterly, and instantaneous data. This API endpoint is made for the US-GAAP taxonomy and the Accounts Payable Current type of the taxonomy. Where the units of measure specified in the API contain a numerator and a denominator, these are separated by “-per-” such as “USD-per-shares”. Note that the default unit in XBRL is “pure”. The period format is CY#### for annual data (duration 365 days +/- 30 days), CY####Q# for quarterly data (duration 91 days +/- 30 days), and CY####Q#I for instantaneous data. Because company financial calendars can start and end on any month or day and even change in length from quarter to quarter according to the day of the week, the frame data is assembled by the dates that best align with a calendar quarter or year. Data users should be mindful of the different reporting start and end dates for facts contained in a frame.",
+   "plan": "Business",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "unit",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "Unit of measure for the frame.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "USD",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify a limit of results to return. Default value is 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "offset",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Specify an offset for pagination. Default offset value is 0.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "0",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    },
+    {
+     "name": "frame",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Reporting frame. Example: CY2023Q1I.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "CY2023Q1I",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: unit=USD, frame=CY2023Q1I",
+     "params": {
+      "unit": "USD",
+      "frame": "CY2023Q1I"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: unit=USD, frame=CY2023Q1I",
+     "params": {
+      "unit": "USD",
+      "frame": "CY2023Q1I",
+      "limit": "10"
+     }
+    }
+   ]
+  }
+ ],
+ "warnings": []
+}

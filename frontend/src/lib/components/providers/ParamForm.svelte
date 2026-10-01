@@ -7,7 +7,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import * as Select from '$lib/components/ui/select';
 	import type { CatalogParam } from '$lib/api/providers';
-	import { describeParam, visibleParams } from '$lib/providers/form';
+	import { describeParam, quotaText, visibleParams } from '$lib/providers/form';
 	import type { ProvidersStore } from '$lib/state/providers.svelte';
 	import PremiumBadge from './PremiumBadge.svelte';
 
@@ -158,6 +158,9 @@
 											{#if choiceLabel(p, value) !== value}
 												<span class="ml-auto type-caption text-ink-muted">{value}</span>
 											{/if}
+											{#if p.premium_values.includes(value)}
+												<PremiumBadge label="Premium" class="ml-auto" />
+											{/if}
 										</Select.Item>
 									{/each}
 								</Select.Content>
@@ -166,7 +169,11 @@
 							<Input
 								{id}
 								type={p.type === 'date' ? 'date' : p.type === 'month' ? 'month' : 'text'}
-								inputmode={p.type === 'number' ? 'decimal' : undefined}
+								inputmode={p.type === 'integer'
+									? 'numeric'
+									: p.type === 'number'
+										? 'decimal'
+										: undefined}
 								value={single(p.name)}
 								oninput={(e) => store.setValue(p.name, e.currentTarget.value)}
 								placeholder={placeholder(p)}
@@ -213,7 +220,7 @@
 				{#if store.blockedReason}
 					{store.blockedReason}
 				{:else}
-					Uses one request from your {store.provider?.name} quota.
+					Uses {quotaText(store.requestCost)} from your {store.provider?.name} quota.
 				{/if}
 			</p>
 		</div>

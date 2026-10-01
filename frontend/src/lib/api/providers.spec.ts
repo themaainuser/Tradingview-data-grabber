@@ -4,6 +4,9 @@ import {
 	ALL_VIEWS,
 	CATEGORIES,
 	ENDPOINTS,
+	TIERED,
+	TIERED_CATEGORIES,
+	TIERED_ENDPOINTS,
 	catalog,
 	endpoint,
 	failure,
@@ -164,5 +167,46 @@ describe('parseCatalog / parseProviders', () => {
 			parseProviders({ providers: [provider(), provider({ id: 'other', name: 'Other' })] })
 		).toHaveLength(2);
 		expect(() => parseProviders({ providers: [provider(), provider()] })).toThrow(/unique/);
+	});
+
+	it('keeps plans, the plan of each endpoint, quota costs, bounds and premium choices', () => {
+		const tiered = clone({ ...catalog(TIERED, TIERED_ENDPOINTS), categories: TIERED_CATEGORIES });
+		const parsed = parseCatalog(tiered);
+		const find = (id: string) => parsed.endpoints.find((e) => e.id === id)!;
+		expect(parsed.provider.plans.map((p) => p.name)).toEqual(['Free', 'Basic', 'Professional']);
+		expect(parsed.endpoints.map((e) => [e.id, e.plan, e.request_cost])).toEqual([
+			['eod', 'Free', 1],
+			['intraday', 'Basic', 1],
+			['etfholdings', 'Basic', 20],
+			['commodities', 'Professional', 1]
+		]);
+		const limit = find('eod').params.find((p) => p.name === 'limit')!;
+		expect([limit.type, limit.minimum, limit.maximum]).toEqual(['integer', 1, 1000]);
+		expect(find('intraday').params.find((p) => p.name === 'interval')?.premium_values).toEqual([
+			'1min'
+		]);
+		expect(parseCatalog(clone(catalog())).endpoints[0].plan).toBeNull();
+	});
+
+	it('rejects a premium choice that is not one of the choices', () => {
+		const bad = clone({ ...catalog(TIERED, TIERED_ENDPOINTS), categories: TIERED_CATEGORIES });
+		bad.endpoints[1].params[1].premium_values = ['2min'];
+		expect(() => parseCatalog(bad)).toThrow(/premium_values/);
+	});
+
+	it('rejects a quota cost that is not a whole number of at least 1', () => {
+		for (const cost of [0, 1.5, -2]) {
+			const bad = clone({ ...catalog(TIERED, TIERED_ENDPOINTS), categories: TIERED_CATEGORIES });
+			bad.endpoints[0].request_cost = cost;
+			expect(() => parseCatalog(bad)).toThrow(/request_cost/);
+		}
+	});
+
+	it('rejects a provider whose plans are not a list of named plans', () => {
+		const bad = clone(provider()) as unknown as Record<string, unknown>;
+		bad.plans = [{ name: 'Free' }];
+		expect(() => parseProviders({ providers: [bad] })).toThrow(/plans/);
+		delete bad.plans;
+		expect(() => parseProviders({ providers: [bad] })).toThrow(/plans/);
 	});
 });

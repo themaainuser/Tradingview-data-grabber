@@ -4,11 +4,21 @@ import {
 	buildPayload,
 	categoryCounts,
 	filterEndpoints,
+	planCounts,
+	premiumLabel,
+	quotaText,
 	seedValues,
 	validateParams,
 	valuesFromExample
 } from './form';
-import { CATEGORIES, ENDPOINTS, endpoint, param } from '$lib/testing/provider-fixtures';
+import {
+	CATEGORIES,
+	ENDPOINTS,
+	TIERED,
+	TIERED_ENDPOINTS,
+	endpoint,
+	param
+} from '$lib/testing/provider-fixtures';
 
 const by = (id: string) => ENDPOINTS.find((e) => e.id === id)!;
 
@@ -183,5 +193,70 @@ describe('filters', () => {
 			['indicators', 0, 0],
 			['options', 1, 1]
 		]);
+	});
+});
+
+describe('tiered providers', () => {
+	const tiered = (id: string) => TIERED_ENDPOINTS.find((e) => e.id === id)!;
+
+	it('checks whole numbers against the documented bounds, with the same words as the backend', () => {
+		const eod = tiered('eod');
+		const errors = (limit: string) => validateParams(eod, { symbols: 'AAPL', limit }).limit;
+		expect(errors('100')).toBeUndefined();
+		expect(errors('1')).toBeUndefined();
+		expect(errors('1000')).toBeUndefined();
+		expect(errors('0')).toBe('limit must be at least 1');
+		expect(errors('1001')).toBe('limit must be at most 1000');
+		expect(errors('1.5')).toBe('limit must be a whole number');
+		expect(errors('abc')).toBe('limit must be a whole number');
+	});
+
+	it('leaves a number without bounds unbounded', () => {
+		const loose = endpoint('X', {
+			params: [param({ name: 'n', type: 'number', minimum: null, maximum: null })]
+		});
+		expect(validateParams(loose, { n: '-12.5' })).toEqual({});
+		expect(validateParams(loose, { n: 'x' })).toEqual({ n: 'n must be a number' });
+	});
+
+	it('allows a long list of symbols but not an unbounded one', () => {
+		const eod = tiered('eod');
+		expect(validateParams(eod, { symbols: Array(300).fill('AAPL').join(',') })).toEqual({});
+		expect(validateParams(eod, { symbols: 'A'.repeat(2001) }).symbols).toMatch(/too long/);
+	});
+
+	it('words the cost of a request and the premium badge', () => {
+		expect(quotaText(1)).toBe('one request');
+		expect(quotaText(20)).toBe('20 requests');
+		expect(premiumLabel(tiered('intraday'))).toBe('Premium · Basic');
+		expect(premiumLabel(endpoint('X'))).toBe('Premium');
+	});
+
+	it('counts the endpoints each plan is the first to include and marks the paid plans', () => {
+		expect(planCounts(TIERED.plans, TIERED_ENDPOINTS)).toEqual([
+			{ name: 'Free', summary: 'End-of-day data.', count: 1, premium: false },
+			{ name: 'Basic', summary: 'Adds intraday data and ETF holdings.', count: 2, premium: true },
+			{ name: 'Professional', summary: 'Adds commodities.', count: 1, premium: true }
+		]);
+		expect(planCounts([], TIERED_ENDPOINTS)).toEqual([]);
+		const lone = planCounts(
+			[
+				{ name: 'A', summary: '' },
+				{ name: 'B', summary: '' }
+			],
+			[]
+		);
+		expect(lone.map((p) => [p.count, p.premium])).toEqual([
+			[0, false],
+			[0, true]
+		]);
+	});
+
+	it('filters tiered endpoints by access like any others', () => {
+		const all = { search: '', category: 'all', access: 'all' as const };
+		expect(accessCounts(TIERED_ENDPOINTS, all)).toEqual({ all: 4, free: 1, premium: 3 });
+		expect(
+			filterEndpoints(TIERED_ENDPOINTS, { ...all, access: 'premium' }).map((e) => e.id)
+		).toEqual(['intraday', 'etfholdings', 'commodities']);
 	});
 });

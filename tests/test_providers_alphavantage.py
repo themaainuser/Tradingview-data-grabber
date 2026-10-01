@@ -9,6 +9,7 @@ import pytest
 import requests
 
 from tradingview_data.providers import alphavantage as av
+from tradingview_data.providers import common
 from tradingview_data.providers.alphavantage import AlphaVantage, classify, default_http_get
 
 from providers_support import DAILY, KEY, PLACEHOLDER, FakeHttp, ok, text
@@ -103,7 +104,7 @@ def test_the_default_transport_never_follows_redirects_streams_and_identifies_it
 
 
 def test_the_default_transport_refuses_an_oversized_body(monkeypatch):
-    monkeypatch.setattr(av, "MAX_BODY_BYTES", 10)
+    monkeypatch.setattr(common, "MAX_BODY_BYTES", 10)
 
     class Response:
         status_code = 200

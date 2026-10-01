@@ -15,7 +15,7 @@ export function statusCopy(status: Exclude<QueryStatus, 'ok'>, keyEnv: string): 
 			return {
 				title: 'Premium access required',
 				advice:
-					'This key is not entitled to this endpoint or option. The provider answers with sample data in this case; it is not shown here, because it is not real data.',
+					'This key is not entitled to this endpoint or option, so nothing is drawn in its place. Some providers answer with made-up sample data instead of refusing; that is not shown either, because it is not real data.',
 				tone: 'premium'
 			};
 		case 'rate_limited':

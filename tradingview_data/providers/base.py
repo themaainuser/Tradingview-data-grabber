@@ -8,10 +8,18 @@ query results to the view types in ``views.py``. The API and the frontend need n
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any, Mapping, Optional, Union
 
 Params = Mapping[str, Union[str, list[str]]]
+
+
+@dataclass(frozen=True)
+class Plan:
+    """One subscription tier. A provider with tiers lists them cheapest first."""
+
+    name: str
+    summary: str
 
 
 @dataclass(frozen=True)
@@ -24,6 +32,7 @@ class ProviderInfo:
     key_env: str
     key_url: Optional[str]
     limits_note: str
+    plans: tuple[Plan, ...] = ()
 
 
 class Provider(ABC):
@@ -63,6 +72,7 @@ class Provider(ABC):
             "endpoint_count": len(endpoints),
             "premium_count": sum(1 for endpoint in endpoints if endpoint["premium"]),
             "limits_note": self.info.limits_note,
+            "plans": [asdict(plan) for plan in self.info.plans],
             "requests_this_session": self.requests_this_session,
         }
 
