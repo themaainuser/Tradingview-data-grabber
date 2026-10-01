@@ -188,6 +188,14 @@ describe('parseCatalog / parseProviders', () => {
 		expect(parseCatalog(clone(catalog())).endpoints[0].plan).toBeNull();
 	});
 
+	it('accepts a datetime parameter and still rejects an unknown type', () => {
+		const tiered = clone({ ...catalog(TIERED, TIERED_ENDPOINTS), categories: TIERED_CATEGORIES });
+		const date = parseCatalog(tiered).endpoints[0].params.find((p) => p.name === 'date');
+		expect(date?.type).toBe('datetime');
+		(tiered.endpoints[0].params[1] as { type: string }).type = 'timestamp';
+		expect(() => parseCatalog(tiered)).toThrow(/type/);
+	});
+
 	it('rejects a premium choice that is not one of the choices', () => {
 		const bad = clone({ ...catalog(TIERED, TIERED_ENDPOINTS), categories: TIERED_CATEGORIES });
 		bad.endpoints[1].params[1].premium_values = ['2min'];

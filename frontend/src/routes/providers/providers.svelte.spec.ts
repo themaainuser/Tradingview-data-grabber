@@ -432,6 +432,30 @@ describe('Providers page: a provider with plans', () => {
 		expect(queries(b as never)).toHaveLength(1);
 	});
 
+	it('takes an ISO-8601 timestamp for a datetime field and sends it as typed', async () => {
+		route.page.params = { provider: 'tiered', endpoint: 'eod' };
+		const b = tiered();
+		await mount();
+		const date = page.getByLabelText('date', { exact: true });
+		await date.fill('2020-05-21T00:00:00+0000');
+		expect(document.querySelector('[data-testid="field-error"]')).toBeNull();
+		await expect.element(fetchButton()).toBeEnabled();
+		await fetchButton().click();
+		await vi.waitFor(() => expect(queries(b as never)).toHaveLength(1));
+		const body = JSON.parse(String(queries(b as never)[0][1]?.body));
+		expect(body.params).toEqual({ symbols: 'AAPL', date: '2020-05-21T00:00:00+0000' });
+	});
+
+	it('explains a malformed timestamp beside the field and keeps Fetch off', async () => {
+		route.page.params = { provider: 'tiered', endpoint: 'eod' };
+		const b = tiered();
+		await mount();
+		await page.getByLabelText('date', { exact: true }).fill('2020-05-21T25:00:00');
+		await expect.element(page.getByTestId('field-error')).toHaveTextContent('ISO-8601 timestamp');
+		await expect.element(fetchButton()).toBeDisabled();
+		expect(queries(b as never)).toHaveLength(0);
+	});
+
 	it('stops an out-of-range limit before any request is sent', async () => {
 		route.page.params = { provider: 'tiered', endpoint: 'eod' };
 		const b = tiered();

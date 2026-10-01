@@ -211,6 +211,46 @@ describe('tiered providers', () => {
 		expect(errors('abc')).toBe('limit must be a whole number');
 	});
 
+	it('accepts a date or an ISO-8601 timestamp for a datetime and says what is expected otherwise', () => {
+		const eod = tiered('eod');
+		const problem = (date: string) => validateParams(eod, { symbols: 'AAPL', date }).date;
+		for (const ok of [
+			'2026-09-29',
+			'2020-05-21T00:00:00+0000',
+			'2020-05-21T00:00:00+00:00',
+			'2020-05-21T09:30:15.123456-04:00',
+			'2020-05-21T00:00:00Z',
+			'2020-05-21T09:30',
+			'2024-02-29'
+		])
+			expect(problem(ok), ok).toBeUndefined();
+		for (const bad of [
+			'2020-13-01',
+			'2023-02-29',
+			'2020-05-21T24:00:00',
+			'2020-05-21T10:61',
+			'2020-05-21T10:00:60',
+			'2020-05-21T10:00:00+2500',
+			'2020-05-21 10:00:00',
+			'20200521',
+			'2020-05-21T',
+			'2020-05-21/../x',
+			'x'
+		])
+			expect(problem(bad), bad).toBe(
+				'date must be a date (YYYY-MM-DD) or an ISO-8601 timestamp such as 2020-05-21T00:00:00+0000'
+			);
+		expect(validateParams(eod, { symbols: 'AAPL', date: '' })).toEqual({});
+	});
+
+	it('keeps date_from a plain date', () => {
+		const errors = validateParams(tiered('eod'), {
+			symbols: 'AAPL',
+			date_from: '2020-05-21T00:00:00+0000'
+		});
+		expect(errors.date_from).toBe('date_from must be a date in YYYY-MM-DD format');
+	});
+
 	it('leaves a number without bounds unbounded', () => {
 		const loose = endpoint('X', {
 			params: [param({ name: 'n', type: 'number', minimum: null, maximum: null })]

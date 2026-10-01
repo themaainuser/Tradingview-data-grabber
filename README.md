@@ -339,7 +339,8 @@ The Providers page fetches from external data providers through the backend. The
   [marketstack.com/pricing](https://marketstack.com/pricing)). Some free endpoints have premium
   *options*: intraday intervals below 15 minutes need Professional (`1min`, `5min`, `10min` are marked
   in the dropdown), and history beyond one year needs a paid plan. ETF endpoints cost 20 requests of
-  the monthly quota and the form says so before you fetch. A plan that lacks an endpoint is refused by
+  the monthly quota and the form says so before you fetch. The endpoints that take a date in the path accept `YYYY-MM-DD` or a full ISO-8601
+  timestamp such as `2020-05-21T00:00:00+0000`. A plan that lacks an endpoint is refused by
   Marketstack (`function_access_restricted`) and reported as `premium_required`. Its free plan allows
   100 requests a month, so repeat requests are cached for five minutes there too.
 
@@ -352,7 +353,7 @@ Both share these rules:
   scrubbed. Without a key the catalog still browses and a query answers `not_configured` without
   contacting the provider.
 - **Nothing is fetched automatically.** Only an explicit query reaches the provider. Alpha Vantage
-  free keys allow 25 requests a day, so successful results are cached for five minutes (repeat
+  free keys allow 25 requests a day, so successful results are cached for five minutes per API key (repeat
   requests are free; `refresh` spends one), and errors are never cached.
 - **Premium endpoints are flagged** in the catalog, and a key that is not entitled is detected even
   though Alpha Vantage answers HTTP 200 with an *artificial sample payload*: that data is never

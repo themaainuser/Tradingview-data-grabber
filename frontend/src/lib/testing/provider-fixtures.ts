@@ -186,6 +186,14 @@ export const TIERED_ENDPOINTS: CatalogEndpoint[] = [
 		params: [
 			param({ name: 'symbols', example: 'AAPL' }),
 			param({
+				name: 'date',
+				required: false,
+				type: 'datetime',
+				example: null,
+				description:
+					'The day to return. Also accepts a full ISO-8601 timestamp, for example 2020-05-21T00:00:00+0000.'
+			}),
+			param({
 				name: 'date_from',
 				required: false,
 				type: 'date',
