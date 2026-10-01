@@ -33,6 +33,15 @@ import {
 	parseVerdictReport,
 	parseVerdictState
 } from './verdict';
+import {
+	parseCatalog,
+	parseProviders,
+	parseQueryResponse,
+	type Catalog,
+	type ProviderSummary,
+	type QueryResponse,
+	type ParamValues
+} from './providers';
 
 export interface ApiClientOptions {
 	baseUrl?: string;
@@ -207,6 +216,32 @@ export function createApiClient(options: ApiClientOptions = {}) {
 			const params = new URLSearchParams();
 			for (const id of ids) params.append('ids', id);
 			return parseCorrelation(await request(`/api/charts/correlation?${params}`, {}, opts, true));
+		},
+
+		async listProviders(opts: RequestOptions = {}): Promise<ProviderSummary[]> {
+			return parseProviders(await request('/api/providers', {}, opts, true));
+		},
+
+		async getProviderCatalog(providerId: string, opts: RequestOptions = {}): Promise<Catalog> {
+			return parseCatalog(
+				await request(`/api/providers/${encodeURIComponent(providerId)}/catalog`, {}, opts, true)
+			);
+		},
+
+		/**
+		 * Fetches one provider endpoint. Never retried: a retry would spend the provider's daily quota
+		 * a second time, and provider-side problems come back as a status, not an HTTP error.
+		 */
+		async queryProvider(
+			providerId: string,
+			body: { endpoint: string; params: ParamValues; refresh?: boolean },
+			opts: RequestOptions = {}
+		): Promise<QueryResponse> {
+			const json = await post(`/api/providers/${encodeURIComponent(providerId)}/query`, body, {
+				timeoutMs: 120_000,
+				...opts
+			});
+			return parseQueryResponse(json);
 		},
 
 		async getVerdictState(datasetId: string, opts: RequestOptions = {}): Promise<VerdictState> {

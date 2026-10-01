@@ -3,6 +3,7 @@ import { createApiClient, type ApiClient } from '$lib/api/client';
 import { ChartsStore } from './charts.svelte';
 import { DatasetsStore } from './datasets.svelte';
 import type { ExplorerStore } from './explorer.svelte';
+import { ProvidersStore } from './providers.svelte';
 import { ResearchStore } from './research.svelte';
 import { SavedFilters } from './saved-filters.svelte';
 import { SentimentStore } from './sentiment.svelte';
@@ -25,6 +26,7 @@ export class AppState {
 	readonly research: ResearchStore;
 	readonly sentiment: SentimentStore;
 	readonly verdict: VerdictStore;
+	readonly providers: ProvidersStore;
 	readonly explorerFilters = new SavedFilters('explorer');
 	/** Created here but wired to the browser by `theme.attach()` in the root layout. */
 	readonly theme = new ThemeStore();
@@ -37,6 +39,7 @@ export class AppState {
 		this.research = new ResearchStore(api);
 		this.sentiment = new SentimentStore(api);
 		this.verdict = new VerdictStore(api);
+		this.providers = new ProvidersStore(api);
 	}
 }
 

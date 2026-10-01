@@ -221,6 +221,9 @@ symlinks that leave the data directory are ignored.
 | `GET /api/datasets/{id}/charts?bins=60&value_area=0.7&window=30&return_bins=41` | Chart data computed by the same code as the PNG charts: `volume_profile` (POC, value area), `return_distribution` (histogram, fitted-normal counts, VaR/CVaR stats), `drawdown` (decimated underwater curve, deepest drawdown, recovery), `rolling_volatility`, UTC hour × weekday `activity` grids, and `seasonality`. Also `bars`, `interval_seconds`, and `intraday`. A section that needs more data or intraday bars is `null` and explained under `unavailable` (seasonality blocks are keyed `seasonality.by_weekday` and `seasonality.by_hour`). `bins` 10–200, `value_area` 0.5–0.95, `window` 5–500, `return_bins` 10–101.                                                                                      |
 | `GET /api/charts/correlation?ids=<id>&ids=<id>`                                 | Close-to-close return correlation of 2–20 unique datasets over their shared timestamps: `{labels, matrix, observations, start, end}` (labels as in research; 422 when fewer than 3 returns overlap).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `GET /api/sentiment/fear-greed?days=`                                           | CoinMarketCap's Crypto Fear and Greed Index, read by the server with no API key: `{source, fetched_at, stale, stale_reason, bands, current, snapshots, points, total_points}`. `current` and each snapshot (`yesterday`, `week_ago`, `month_ago`, `year_high`, `year_low`) carry `score` (0–100), `label`, `band` and `time`; a day with no reading is `null`. `points` holds parallel `time`, `score`, `btc_price` and `btc_volume` columns (price and volume are `null` when CoinMarketCap omits them). `days` (1–3650) returns only the most recent history. Cached for 10 minutes; if a refresh fails the last good readings are returned with `stale: true`, and with none cached the route answers 502. See below. |
+| `GET /api/providers` | The data providers this server offers (`id`, `name`, `key_env`, `configured`, `endpoint_count`, `premium_count`, `limits_note`, `requests_this_session`). Whether a key is set is reported, never the key. |
+| `GET /api/providers/{id}/catalog` | A provider's endpoints with their parameters, premium flags, docs links and the docs' own examples. 404 for an unknown provider. |
+| `POST /api/providers/{id}/query` | Body `{"endpoint", "params", "refresh"}`. Fetches one endpoint and returns it as drawable views (`series`, `table`, `facts`, `bars`, `feed`, `heatmap`, `text`). Provider-side problems (`rate_limited`, `premium_required`, `invalid_key`, `not_configured`...) are a 200 with a `status`; a malformed request is a 422. |
 | `POST /api/research/run`                                                        | Body `{"dataset_ids": [1–20 unique ids], "fee_bps": 5, "periods_per_year": 252}`; returns the `tvdata research` JSON (`schema_version` 1). Assets are labelled `<symbol>` or `<symbol>-<timeframe>` in request order. No model endpoint is called. When the dataset has a sealed holdout only bars before it are evaluated, and `metadata.sealed_holdouts` (`[{dataset_id, excluded_bars}]`, present only then) says so. |
 | `POST /api/verdict/run`                                                         | Body `{"dataset_id", "min_trades": 30, "costs": {"fee_bps_per_side": 10, "spread_bps": 1, "slippage_k": 0.1}, "periods_per_year": null}`. Judges the 16-rule grid on the research window (sealing the default holdout first if needed), appends the run to the ledger and returns the report: one verdict label, per-rule trade gate and evidence, statistics, uncertainty and integrity checks. Never ranks rules. |
 | `GET /api/verdict/{id}`                                                         | Seal, ledger counts, latest completed report, freeze, stored holdout result and the defaults (with the basis of each cost default). Never writes. |
@@ -319,6 +322,38 @@ holdout included; only the Research page and the verdict engine stop at the seal
 
 **Out of scope for v1:** combinatorial purged cross-validation, purging and embargo, intrabar stop logic,
 funding, liquidation and regime analysis.
+
+### Data providers
+
+The Providers page fetches from external data providers through the backend. The first is
+[Alpha Vantage](https://www.alphavantage.co/documentation/): 128 endpoints (stocks, indices, options,
+FX, crypto, commodities, economic indicators, fundamentals, news sentiment, 50+ technical indicators),
+11 of which are **premium**.
+
+- **The key stays on the server.** Put `ALPHAVANTAGE_API_KEY=your_key` in the backend's environment
+  or in a `.env` file where you run `tvdata serve` (or pass `--env-file PATH`), then restart it.
+  `.env.example` shows the format; `.env` is git-ignored. The key is only ever placed in the upstream
+  request: it is never returned, logged, cached or shown in a message, and any text echoing it is
+  scrubbed. Without a key the catalog still browses and a query answers `not_configured` without
+  contacting the provider.
+- **Nothing is fetched automatically.** Only an explicit query reaches the provider. Alpha Vantage
+  free keys allow 25 requests a day, so successful results are cached for five minutes (repeat
+  requests are free; `refresh` spends one), and errors are never cached.
+- **Premium endpoints are flagged** in the catalog, and a key that is not entitled is detected even
+  though Alpha Vantage answers HTTP 200 with an *artificial sample payload*: that data is never
+  turned into views and the status is `premium_required`. A few free endpoints have premium-gated
+  *parameters* (for example `outputsize=full`); these carry a `premium_note`.
+- **The catalog is generated from the documentation** and committed
+  (`tradingview_data/providers/alphavantage_catalog.json`). Regenerate it when Alpha Vantage adds
+  endpoints: `python -m tradingview_data.providers.alphavantage_docs`.
+- **Times are UTC.** Intraday timestamps are converted from the provider's time zone (US/Eastern) and
+  the response says so.
+
+To add a provider: (1) write a module with a `Provider` subclass (`tradingview_data/providers/base.py`):
+`info`, `configured()`, `catalog()` and `query()`; (2) have `query` return the response shape above,
+building views with `providers/views.py`; (3) classify provider-side failures into the status values
+rather than raising; (4) never put the key in a response; (5) register it in
+`providers/registry.py`; (6) add its tests. It then appears in the dropdown with no frontend change.
 
 ### Fear & Greed source
 

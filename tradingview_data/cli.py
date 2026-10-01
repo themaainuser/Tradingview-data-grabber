@@ -196,6 +196,11 @@ def _run_serve(args: argparse.Namespace) -> int:
         return 2
     if args.static_dir and not Path(args.static_dir).is_dir():
         print(f"warning: static directory {args.static_dir} not found; serving the API only", file=sys.stderr)
+    from .env import load_env_file
+
+    loaded = [name for path in (Path(".env"), *([Path(args.env_file)] if args.env_file else [])) for name in load_env_file(path)]
+    if loaded:
+        print(f"Loaded {len(loaded)} variable{'s' if len(loaded) != 1 else ''} from the env file: {', '.join(loaded)}", flush=True)
     app = create_app(args.data_dir, args.static_dir, args.cors_origin, state_dir=args.state_dir)
     uvicorn.run(app, host=args.host, port=args.port)
     return 0
@@ -300,6 +305,7 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--host", default="127.0.0.1", help="interface to bind (default: 127.0.0.1)")
     serve.add_argument("--port", type=int, default=8000, help="port to listen on (default: 8000)")
     serve.add_argument("--static-dir", help="built frontend directory to host at / (e.g. frontend/build)")
+    serve.add_argument("--env-file", help="read provider API keys (for example ALPHAVANTAGE_API_KEY) from this file; ./.env is always read if present")
     serve.add_argument(
         "--state-dir",
         help="directory for the verdict ledger (default: <data-dir>/.tvdata-verdict); keep it to keep the holdout sealed",
