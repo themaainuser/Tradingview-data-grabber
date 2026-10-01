@@ -272,6 +272,58 @@ def test_a_snapshot_with_nothing_to_show_does_not_use_up_a_facts_slot():
     assert notes == ["Facts are shown for the first 3 of 4 symbols; the table has all of them."]
 
 
+def test_charts_beyond_the_sixth_are_never_built_for_history_or_rates(monkeypatch):
+    built = []
+    real = A._series
+
+    def counting(view_id, *args):
+        built.append(view_id)
+        return real(view_id, *args)
+
+    monkeypatch.setattr(A, "_series", counting)
+    big = {"bars": {f"S{i}": DAILY["AAPL"] for i in range(100)}}
+    views, notes = build("stock_bars", big)
+    assert len(built) == 6 and sum(1 for v in views.values() if v["kind"] == "series") == 6 and views["bar-table"]["total_rows"] == 300
+    assert notes == ["Charts are drawn for the first 6 of 100 symbols that have enough data to chart; the table has every row."]
+    built.clear()
+    history = PAYLOADS["forex_rates"]["rates"]["USDJPY"]
+    views, notes = build("forex_rates", {"rates": {f"P{i}": history for i in range(100)}})
+    assert len(built) == 6 and views["rates-table"]["total_rows"] == 200
+    assert notes == ["Charts are drawn for the first 6 of 100 currency pairs that have enough history to chart; the table has every row."]
+
+
+COLUMNS = (("c", "Close", "close"), ("v", "Volume", "volume"))
+
+
+@pytest.mark.parametrize(
+    "items",
+    [
+        [],
+        [bar("2026-09-25T04:00:00Z", 1.0)],
+        [bar("2026-09-25T04:00:00Z", 1.0), bar("2026-09-25T04:00:00Z", 2.0)],  # one moment twice
+        [bar("2026-09-25T04:00:00Z", 1.0), bar("2026-09-28T04:00:00Z", 2.0)],
+        [{"t": "2026-09-25T04:00:00Z"}, {"t": "2026-09-28T04:00:00Z"}],  # two moments, nothing to plot
+        [{"t": "2026-09-25T04:00:00Z"}, {"t": "2026-09-28T04:00:00Z", "c": 2.0}],  # a value on one of them is enough
+        [{"t": "2026-09-25T04:00:00Z", "c": "n/a"}, {"t": "2026-09-28T04:00:00Z", "c": None}],
+        [{"t": "yesterday", "c": 1.0}, {"t": None, "c": 2.0}, {"c": 3.0}],  # values without usable times
+        [{"t": "yesterday", "c": 1.0}, bar("2026-09-25T04:00:00Z", 2.0), {"t": "2026-09-28T04:00:00Z"}],
+        [{"t": "2026-09-25T04:00:00Z", "v": 5}, {"t": "2026-09-26T04:00:00Z", "v": 6}],  # the other column counts too
+    ],
+)
+def test_the_cheap_check_agrees_with_actually_building_the_chart(items):
+    assert A._chartable(items, COLUMNS) == (A._series("id", "title", items, COLUMNS) is not None)
+
+
+def test_the_cheap_check_stops_reading_once_a_chart_is_certain(monkeypatch):
+    seen = []
+    real = A.moment
+    monkeypatch.setattr(A, "moment", lambda value: (seen.append(value), real(value))[1])
+    days = [bar(f"2026-01-{day:02d}T04:00:00Z", float(day)) for day in range(1, 29)] * 100
+    assert A._chartable(days, COLUMNS) is True and len(seen) == 2
+    seen.clear()
+    assert A._chartable([bar("2026-01-01T04:00:00Z", 1.0)] * 5000, COLUMNS) is False and len(seen) == 5000  # undecidable until every one is read
+
+
 def test_news_becomes_a_feed_with_clean_summaries_safe_links_and_symbol_counts():
     views, _ = build("news")
     assert list(views) == ["summary", "feed", "symbols"]

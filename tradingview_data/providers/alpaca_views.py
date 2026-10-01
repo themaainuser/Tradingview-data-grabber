@@ -135,7 +135,8 @@ def _slug(symbol: str) -> str:
 
 def _drawn(candidates: Any, limit: int) -> tuple[list[dict[str, Any]], int]:
     """The first ``limit`` views that exist, and how many more existed beyond them. A candidate that
-    is ``None`` (a symbol with too little data to chart, say) takes no slot and is not counted."""
+    is ``None`` (a snapshot with nothing to show, say) takes no slot and is not counted. For the small,
+    fixed-size facts views only: charts are chosen with :func:`_chartable` before any is built."""
 
     shown: list[dict[str, Any]] = []
     extra = 0
@@ -197,22 +198,41 @@ def _series(view_id: str, title: str, items: list[dict[str, Any]], columns: tupl
     return V.series_view(view_id, title, times, built, intraday=_intraday(times))
 
 
+def _chartable(items: list[dict[str, Any]], columns: tuple[tuple[str, str, str], ...]) -> bool:
+    """True exactly when :func:`_series` would draw a chart for ``items``: two distinct timestamps and
+    a value to plot. It stops at the first items that prove it, so a long history is not parsed (or a
+    chart built) just to learn whether it will be drawn."""
+
+    times: set[int] = set()
+    has_value = False
+    for item in items:
+        stamp_ = moment(item.get("t"))
+        if stamp_ is None:
+            continue
+        times.add(stamp_)
+        has_value = has_value or any(num(item.get(key)) is not None for key, _, _ in columns)
+        if len(times) >= 2 and has_value:
+            return True
+    return False
+
+
 def _history(kind: str, plural: str, columns: tuple[tuple[str, str, str], ...], noun: str) -> Handler:
     def build(payload: Any, label: str) -> Built:
         data = {s: _dicts(v) for s, v in by_symbol(payload, plural).items()}
-        charts = [(items, _series(f"{kind}-{_slug(symbol)}-chart", f"{symbol} {noun}", items, columns), symbol) for symbol, items in data.items()]
-        shown, extra = _drawn((chart for _, chart, _ in charts), MAX_CHARTS)
+        drawable = [symbol for symbol, items in data.items() if _chartable(items, columns)]
+        shown = drawable[:MAX_CHARTS]  # only these are built: a chart nobody sees is not worth its parsing
+        charts = {symbol: _series(f"{kind}-{_slug(symbol)}-chart", f"{symbol} {noun}", data[symbol], columns) for symbol in shown}
         rows = [_ROWS[kind](symbol, item) for symbol, items in data.items() for item in items]
         table = _table(f"{kind}-table", label, rows)
         whole = table is not None and not table.get("truncated")
         notes = [
-            f"{symbol}: some {noun} share a second, so the chart shows the last of each second." + (f" The table lists all {len(items):,}." if whole else "")
-            for items, chart, symbol in charts
-            if chart in shown and chart["total_points"] < len(items)
+            f"{symbol}: some {noun} share a second, so the chart shows the last of each second." + (f" The table lists all {len(data[symbol]):,}." if whole else "")
+            for symbol, chart in charts.items()
+            if chart and chart["total_points"] < len(data[symbol])
         ]
-        if extra:
-            notes.append(f"Charts are drawn for the first {MAX_CHARTS} of {len(shown) + extra} symbols that have enough data to chart{_covers(table, 'every row')}")
-        return [*shown, table], notes
+        if len(drawable) > len(shown):
+            notes.append(f"Charts are drawn for the first {MAX_CHARTS} of {len(drawable)} symbols that have enough data to chart{_covers(table, 'every row')}")
+        return [*charts.values(), table], notes
 
     return build
 
@@ -486,12 +506,13 @@ def _rates(payload: Any, label: str) -> Built:
     data = by_symbol(payload, "rates")
     columns = (("bp", "Bid", "value"), ("mp", "Mid", "value"), ("ap", "Ask", "value"))
     items = {pair: _dicts(value) if isinstance(value, list) else [value] if isinstance(value, dict) else [] for pair, value in data.items()}
-    charts = (_series(f"rates-{_slug(pair)}-chart", f"{pair} rates", items[pair], columns) if isinstance(value, list) else None for pair, value in data.items())
-    shown, extra = _drawn(charts, MAX_CHARTS)
+    drawable = [pair for pair, value in data.items() if isinstance(value, list) and _chartable(items[pair], columns)]
+    shown = drawable[:MAX_CHARTS]
+    charts = [_series(f"rates-{_slug(pair)}-chart", f"{pair} rates", items[pair], columns) for pair in shown]
     rows = [{"pair": pair, "time": stamp(i.get("t"), True), "bid": num(i.get("bp")), "mid": num(i.get("mp")), "ask": num(i.get("ap"))} for pair, found in items.items() for i in found]
     table = _table("rates-table", label, rows)
-    notes = [f"Charts are drawn for the first {MAX_CHARTS} of {len(shown) + extra} currency pairs that have enough history to chart{_covers(table, 'every row')}"] if extra else []
-    return [*shown, table], notes
+    notes = [f"Charts are drawn for the first {MAX_CHARTS} of {len(drawable)} currency pairs that have enough history to chart{_covers(table, 'every row')}"] if len(drawable) > len(shown) else []
+    return [*charts, table], notes
 
 
 def _fixed_income(kind: str) -> Handler:
