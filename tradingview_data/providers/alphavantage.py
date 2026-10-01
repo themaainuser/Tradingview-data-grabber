@@ -12,31 +12,25 @@ from __future__ import annotations
 import csv
 import io
 import json
-import math
 import os
 import re
 import threading
 import time
-from collections import OrderedDict
-from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional
 
 import requests
 
-from .. import __version__
-from . import views as V
+from . import common
 from .alphavantage_views import build_views
 from .base import Params, Provider, ProviderInfo
+from .common import HttpGet, HttpResult, ResponseCache, default_http_get, first_sentence, key_fingerprint, scrub
 
 QUERY_URL = "https://www.alphavantage.co/query"
 CATALOG_PATH = Path(__file__).with_name("alphavantage_catalog.json")
-MAX_BODY_BYTES = 25 * 1024 * 1024
 RAW_LIMIT_BYTES = 400 * 1024
 CACHE_TTL_SECONDS = 300.0
 CACHE_ENTRIES = 32
-USER_AGENT = f"tradingview-data-grabber/{__version__} (research dashboard)"
 _LONG_TEXT = {"SYMBOLS", "tickers", "topics", "CALCULATIONS", "keywords"}
 _FORBIDDEN = {"apikey", "function"}
 _PREMIUM_PLACEHOLDER = re.compile(r"premium endpoint|ARTIFICIAL", re.I)
@@ -55,34 +49,6 @@ INFO = ProviderInfo(
 )
 
 
-@dataclass(frozen=True)
-class HttpResult:
-    status: int
-    body: bytes
-    content_type: str
-
-
-HttpGet = Callable[[str, list[tuple[str, str]]], HttpResult]
-
-
-def default_http_get(url: str, params: list[tuple[str, str]]) -> HttpResult:
-    """One GET: no redirects, bounded time and size. Raises ``requests`` exceptions or ``ValueError`` (too large)."""
-
-    with requests.get(url, params=params, headers={"User-Agent": USER_AGENT, "Accept": "application/json, text/csv"}, timeout=(5, 60), allow_redirects=False, stream=True) as response:
-        chunks, size = [], 0
-        for chunk in response.iter_content(chunk_size=65536):
-            size += len(chunk)
-            if size > MAX_BODY_BYTES:
-                raise ValueError("response too large")
-            chunks.append(chunk)
-        return HttpResult(response.status_code, b"".join(chunks), response.headers.get("content-type", ""))
-
-
-def _first_sentence(text: str, limit: int = 200) -> str:
-    sentence = re.split(r"(?<=[.!?])\s", text.strip(), maxsplit=1)[0]
-    return sentence if len(sentence) <= limit else sentence[: limit - 1].rstrip() + "\u2026"
-
-
 def build_catalog(raw: dict[str, Any]) -> dict[str, Any]:
     """The contract's catalog from the generated JSON: summaries, doc links, managed parameters, counts."""
 
@@ -90,7 +56,7 @@ def build_catalog(raw: dict[str, Any]) -> dict[str, Any]:
     for item in raw["endpoints"]:
         params = []
         for p in item["params"]:
-            params.append({**{k: p.get(k) for k in ("name", "required", "type", "description", "enum", "enum_labels", "suggestions", "default", "example", "multiple", "premium_note")}, "managed": p["name"] == "datatype"})
+            params.append({**{k: p.get(k) for k in ("name", "required", "type", "description", "enum", "enum_labels", "suggestions", "default", "example", "multiple", "premium_note", "minimum", "maximum")}, "premium_values": p.get("premium_values") or [], "managed": p["name"] == "datatype"})
         examples = [
             {"caption": e["caption"], "params": {k: v for k, v in e["params"].items() if k not in ("function", "datatype")}}
             for e in item["examples"]
@@ -101,11 +67,13 @@ def build_catalog(raw: dict[str, Any]) -> dict[str, Any]:
                 "title": item["title"],
                 "category": item["category"],
                 "description": item["description"],
-                "summary": _first_sentence(item["description"]) if item["description"] else item["title"],
+                "summary": first_sentence(item["description"]) if item["description"] else item["title"],
                 "premium": item["premium"],
                 "trending": item["trending"],
                 "utility": item["utility"],
                 "premium_notes": item["premium_notes"],
+                "plan": item.get("plan"),
+                "request_cost": item.get("request_cost", 1),
                 "doc_url": f"{raw['source']}#{item['anchor']}",
                 "params": params,
                 "examples": examples,
@@ -125,64 +93,7 @@ def build_catalog(raw: dict[str, Any]) -> dict[str, Any]:
 
 
 def validate_params(endpoint: dict[str, Any], params: Params) -> dict[str, Any]:
-    """Checks ``params`` against the endpoint's documented parameters and returns the cleaned values.
-
-    Raises ``ValueError`` with a plain message. Empty optional values are dropped. Enums are strict
-    only where the documentation states the accepted values; repeated parameters (for example a date
-    range) are free text because the provider also accepts relative values such as ``6month``.
-    """
-
-    known = {p["name"]: p for p in endpoint["params"]}
-    clean: dict[str, Any] = {}
-    for name, value in params.items():
-        if name.lower() in _FORBIDDEN:
-            raise ValueError(f"{name} is set by the server and cannot be passed")
-        spec = known.get(name)
-        if spec is None or spec["managed"]:
-            raise ValueError(f"Unknown parameter {name!r} for {endpoint['id']}")
-        multiple = bool(spec["multiple"])
-        if isinstance(value, list) and not multiple:
-            raise ValueError(f"{name} takes a single value")
-        values = [str(v).strip() for v in (value if isinstance(value, list) else [value])]
-        values = [v for v in values if v]
-        if not values:
-            continue
-        limit = 2000 if name in _LONG_TEXT else 200
-        for v in values:
-            if len(v) > limit:
-                raise ValueError(f"{name} is too long (limit {limit} characters)")
-            if not multiple:
-                _check_type(name, spec, v)
-        clean[name] = values if multiple else values[0]
-    for name, spec in known.items():
-        if spec["required"] and not spec["managed"] and name not in clean:
-            raise ValueError(f"{name} is required")
-    return clean
-
-
-def _check_type(name: str, spec: dict[str, Any], value: str) -> None:
-    kind = spec["type"]
-    if kind == "enum" and value not in spec["enum"]:
-        raise ValueError(f"{name} must be one of: {', '.join(spec['enum'])}")
-    if kind == "boolean" and value not in ("true", "false"):
-        raise ValueError(f"{name} must be true or false")
-    if kind == "number":
-        try:
-            ok = math.isfinite(float(value))
-        except ValueError:
-            ok = False
-        if not ok:
-            raise ValueError(f"{name} must be a number")
-    if kind == "date":
-        try:
-            datetime.strptime(value, "%Y-%m-%d")
-        except ValueError:
-            raise ValueError(f"{name} must be a date in YYYY-MM-DD format") from None
-    if kind == "month":
-        try:
-            datetime.strptime(value, "%Y-%m")
-        except ValueError:
-            raise ValueError(f"{name} must be a month in YYYY-MM format") from None
+    return common.validate_params(endpoint, params, forbidden=_FORBIDDEN, long_text=_LONG_TEXT)
 
 
 def classify(payload: Any) -> tuple[str, Optional[str]]:
@@ -228,11 +139,9 @@ class AlphaVantage(Provider):
     def __init__(self, http_get: Optional[HttpGet] = None, clock: Callable[[], float] = time.time, ttl_seconds: float = CACHE_TTL_SECONDS, catalog_path: Path = CATALOG_PATH) -> None:
         self._http_get = http_get or default_http_get
         self._clock = clock
-        self._ttl = ttl_seconds
         self._catalog_path = catalog_path
         self._catalog: Optional[dict[str, Any]] = None
-        self._cache: OrderedDict[str, tuple[float, dict[str, Any]]] = OrderedDict()
-        self._locks: dict[str, threading.Lock] = {}
+        self._cache = ResponseCache(clock, ttl_seconds, CACHE_ENTRIES)
         self._guard = threading.Lock()
         self.requests_this_session = 0
 
@@ -266,34 +175,16 @@ class AlphaVantage(Provider):
         key = self._key()
         if not key:
             return self._response(endpoint, sent, "not_configured", f"No API key is set. Add {self.info.key_env} to the backend's environment or .env file and restart it.")
-        cache_key = json.dumps([endpoint_id, sent], sort_keys=True)
-        if not refresh and (hit := self._cached(cache_key)) is not None:
+        cache_key = json.dumps([key_fingerprint(key), endpoint_id, sent], sort_keys=True)
+        if not refresh and (hit := self._cache.get(cache_key)) is not None:
             return hit
-        with self._lock_for(cache_key):
-            if not refresh and (hit := self._cached(cache_key)) is not None:
+        with self._cache.lock(cache_key):
+            if not refresh and (hit := self._cache.get(cache_key)) is not None:
                 return hit  # another thread fetched the same thing while this one waited
             response = self._fetch(endpoint, sent, key)
             if response["status"] in ("ok", "empty"):
-                self._store(cache_key, response)
+                self._cache.put(cache_key, response)
             return response
-
-    def _lock_for(self, cache_key: str) -> threading.Lock:
-        with self._guard:
-            return self._locks.setdefault(cache_key, threading.Lock())
-
-    def _cached(self, cache_key: str) -> Optional[dict[str, Any]]:
-        with self._guard:
-            entry = self._cache.get(cache_key)
-            if entry is None or self._clock() - entry[0] >= self._ttl:
-                self._cache.pop(cache_key, None)
-                return None
-            return {**entry[1], "cached": True}
-
-    def _store(self, cache_key: str, response: dict[str, Any]) -> None:
-        with self._guard:
-            self._cache[cache_key] = (self._clock(), response)
-            while len(self._cache) > CACHE_ENTRIES:
-                self._cache.popitem(last=False)
 
     def _fetch(self, endpoint: dict[str, Any], sent: dict[str, Any], key: str) -> dict[str, Any]:
         query: list[tuple[str, str]] = []
@@ -360,14 +251,4 @@ class AlphaVantage(Provider):
             "raw_omitted": omitted,
             "notes": notes or [],
         }
-        return _scrub(response, key)
-
-
-def _scrub(response: dict[str, Any], key: str) -> dict[str, Any]:
-    """Removes the API key from anything that could echo it. Keys under 8 characters (the public
-    ``demo`` key) are not scrubbed: they would garble ordinary words and protect nothing."""
-
-    if len(key) < 8:
-        return response
-    text = json.dumps(response)
-    return json.loads(text.replace(key, "***")) if key in text else response
+        return scrub(response, key)

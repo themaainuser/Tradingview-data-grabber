@@ -5,7 +5,7 @@
 	import * as Select from '$lib/components/ui/select';
 	import * as ToggleGroup from '$lib/components/ui/toggle-group';
 	import type { ProvidersStore } from '$lib/state/providers.svelte';
-	import type { Access } from '$lib/providers/form';
+	import { premiumLabel, type Access } from '$lib/providers/form';
 	import PremiumBadge from './PremiumBadge.svelte';
 
 	interface Props {
@@ -116,7 +116,7 @@
 					>
 						<span class="flex flex-wrap items-center gap-x-2 gap-y-1">
 							<span class="min-w-0 type-body-sm font-medium">{e.title}</span>
-							{#if e.premium}<PremiumBadge />{/if}
+							{#if e.premium}<PremiumBadge label={premiumLabel(e)} />{/if}
 						</span>
 						{#if e.id !== e.title}
 							<span class="font-mono type-micro text-ink-muted">{e.id}</span>

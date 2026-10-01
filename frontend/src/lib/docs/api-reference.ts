@@ -439,7 +439,7 @@ export const API_ENDPOINTS: readonly Endpoint[] = [
 			"The external data providers the backend offers, in the order of the Providers page's dropdown. Reports whether each provider's API key is set in the backend's environment, and never the key itself.",
 		params: [],
 		returns:
-			'{ providers: [{ id, name, description, website, docs_url, key_env, key_url, configured, endpoint_count, premium_count, limits_note, requests_this_session }] }',
+			'{ providers: [{ id, name, description, website, docs_url, key_env, key_url, configured, endpoint_count, premium_count, limits_note, plans: [{ name, summary }], requests_this_session }] }',
 		errors: [],
 		usedBy: 'Providers'
 	},
@@ -448,7 +448,7 @@ export const API_ENDPOINTS: readonly Endpoint[] = [
 		method: 'GET',
 		path: '/api/providers/{provider_id}/catalog',
 		summary:
-			"A provider's endpoints with their parameters, which endpoints and options are premium, links to its documentation and the examples it documents. Needs no API key and contacts no one: the catalog is built from the provider's documentation when the catalog file is updated.",
+			"A provider's endpoints with their parameters, which endpoints and options are premium (for a provider with subscription tiers, also the plan that first includes each endpoint, the premium choices of a parameter, and how many requests one fetch costs), links to its documentation and the examples it documents. Needs no API key and contacts no one: the catalog is built from the provider's documentation when the catalog file is updated.",
 		params: [
 			{
 				name: 'provider_id',

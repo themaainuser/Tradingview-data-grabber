@@ -8,12 +8,13 @@ import type {
 	CatalogEndpoint,
 	CatalogParam,
 	ParamValue,
-	ParamValues
+	ParamValues,
+	ProviderPlan
 } from '$lib/api/providers';
 
 export type Access = 'all' | 'free' | 'premium';
 
-const LONG_TEXT = new Set(['SYMBOLS', 'tickers', 'topics', 'CALCULATIONS', 'keywords']);
+const LONG_TEXT = new Set(['SYMBOLS', 'symbols', 'tickers', 'topics', 'CALCULATIONS', 'keywords']);
 
 /** The parameters a person fills in: everything except the ones the server sets. */
 export const visibleParams = (endpoint: CatalogEndpoint): CatalogParam[] =>
@@ -33,6 +34,35 @@ export function describeParam(param: CatalogParam): { text: string; premium: str
 	return { text: rest, premium: note };
 }
 
+/** What one fetch costs, in words: `one request` or `20 requests`. */
+export const quotaText = (cost: number): string =>
+	cost === 1 ? 'one request' : `${cost} requests`;
+
+/** The words on a premium badge: `Premium · Basic` when the endpoint names its plan. */
+export const premiumLabel = (endpoint: Pick<CatalogEndpoint, 'plan'>): string =>
+	endpoint.plan ? `Premium · ${endpoint.plan}` : 'Premium';
+
+export interface PlanCount extends ProviderPlan {
+	/** Endpoints whose cheapest plan is this one. */
+	count: number;
+	premium: boolean;
+}
+
+/** The provider's plans with how many endpoints each one is the first to include. */
+export function planCounts(
+	plans: readonly ProviderPlan[],
+	endpoints: readonly CatalogEndpoint[]
+): PlanCount[] {
+	return plans.map((plan, index) => {
+		const own = endpoints.filter((e) => e.plan === plan.name);
+		return {
+			...plan,
+			count: own.length,
+			premium: own.length > 0 ? own.some((e) => e.premium) : index > 0
+		};
+	});
+}
+
 const asList = (value: ParamValue | undefined): string[] =>
 	value === undefined ? [] : Array.isArray(value) ? value : [value];
 
@@ -43,6 +73,17 @@ function validDate(value: string): boolean {
 	if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
 	const moment = new Date(`${value}T00:00:00Z`);
 	return !Number.isNaN(moment.getTime()) && moment.toISOString().slice(0, 10) === value;
+}
+
+/** A date, or `T` and a time with optional seconds, fraction and `Z` / `+HH:MM` / `+HHMM` offset. */
+function validDateTime(value: string): boolean {
+	const match =
+		/^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,6})?)?(?:Z|[+-](\d{2}):?(\d{2}))?)?$/.exec(
+			value
+		);
+	if (!match || !validDate(match[1])) return false;
+	const [hour, minute, second, zoneHour, zoneMinute] = match.slice(2).map((g) => Number(g ?? 0));
+	return hour <= 23 && minute <= 59 && second <= 59 && zoneHour <= 23 && zoneMinute <= 59;
 }
 
 function validMonth(value: string): boolean {
@@ -62,11 +103,23 @@ function problem(param: CatalogParam, value: string): string | null {
 		case 'boolean':
 			return value === 'true' || value === 'false' ? null : `${param.name} must be true or false`;
 		case 'number':
-			return value !== '' && Number.isFinite(Number(value))
-				? null
-				: `${param.name} must be a number`;
+		case 'integer': {
+			const whole = param.type === 'integer';
+			const n = Number(value);
+			if (value === '' || !Number.isFinite(n) || (whole && !Number.isInteger(n)))
+				return `${param.name} must be ${whole ? 'a whole number' : 'a number'}`;
+			if (param.minimum !== null && n < param.minimum)
+				return `${param.name} must be at least ${param.minimum}`;
+			if (param.maximum !== null && n > param.maximum)
+				return `${param.name} must be at most ${param.maximum}`;
+			return null;
+		}
 		case 'date':
 			return validDate(value) ? null : `${param.name} must be a date in YYYY-MM-DD format`;
+		case 'datetime':
+			return validDateTime(value)
+				? null
+				: `${param.name} must be a date (YYYY-MM-DD) or an ISO-8601 timestamp such as 2020-05-21T00:00:00+0000`;
 		case 'month':
 			return validMonth(value) ? null : `${param.name} must be a month in YYYY-MM format`;
 		default:

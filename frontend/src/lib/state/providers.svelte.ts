@@ -13,6 +13,7 @@ import {
 	buildPayload,
 	categoryCounts,
 	filterEndpoints,
+	planCounts,
 	seedValues,
 	validateParams,
 	valuesFromExample,
@@ -83,6 +84,10 @@ export class ProvidersStore {
 		this.endpoint ? validateParams(this.endpoint, this.values) : {}
 	);
 	configured = $derived(this.provider?.configured ?? false);
+	requestCost = $derived(this.endpoint?.request_cost ?? 1);
+	plans = $derived(
+		this.provider && this.catalog ? planCounts(this.provider.plans, this.catalog.endpoints) : []
+	);
 	loading = $derived(this.queryStatus === 'loading');
 	canFetch = $derived(
 		!!this.endpoint && this.configured && Object.keys(this.errors).length === 0 && !this.loading

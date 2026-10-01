@@ -9,6 +9,7 @@ import pytest
 import requests
 
 from tradingview_data.providers import alphavantage as av
+from tradingview_data.providers import common
 from tradingview_data.providers.alphavantage import AlphaVantage, classify, default_http_get
 
 from providers_support import DAILY, KEY, PLACEHOLDER, FakeHttp, ok, text
@@ -103,7 +104,7 @@ def test_the_default_transport_never_follows_redirects_streams_and_identifies_it
 
 
 def test_the_default_transport_refuses_an_oversized_body(monkeypatch):
-    monkeypatch.setattr(av, "MAX_BODY_BYTES", 10)
+    monkeypatch.setattr(common, "MAX_BODY_BYTES", 10)
 
     class Response:
         status_code = 200
@@ -253,6 +254,16 @@ def test_an_identical_second_call_is_served_from_cache_and_refresh_bypasses_it(k
     assert (first["cached"], second["cached"]) == (False, True) and len(http.calls) == 1
     assert pv.query(*DAILY_ARGS, refresh=True)["cached"] is False and len(http.calls) == 2
     assert pv.requests_this_session == 2
+
+
+def test_a_cached_answer_is_never_served_to_a_different_key_and_the_key_is_not_in_the_cache(keyed, monkeypatch):
+    pv, http = provider(ok(DAILY), ok(DAILY))
+    pv.query(*DAILY_ARGS)
+    assert all(KEY not in k for k in pv._cache._items)
+    monkeypatch.setenv("ALPHAVANTAGE_API_KEY", "another-key-0123456789")
+    assert pv.query(*DAILY_ARGS)["cached"] is False and len(http.calls) == 2
+    monkeypatch.setenv("ALPHAVANTAGE_API_KEY", KEY)
+    assert pv.query(*DAILY_ARGS)["cached"] is True and len(http.calls) == 2
 
 
 def test_different_parameters_are_cached_separately(keyed):

@@ -32,6 +32,11 @@ const STATUSES: readonly QueryStatus[] = [
 export type ParamValue = string | string[];
 export type ParamValues = Record<string, ParamValue>;
 
+export interface ProviderPlan {
+	name: string;
+	summary: string;
+}
+
 export interface ProviderSummary {
 	id: string;
 	name: string;
@@ -44,10 +49,13 @@ export interface ProviderSummary {
 	endpoint_count: number;
 	premium_count: number;
 	limits_note: string;
+	/** Subscription tiers, cheapest first; empty for a provider that only distinguishes free from premium. */
+	plans: ProviderPlan[];
 	requests_this_session: number;
 }
 
-export type ParamType = 'text' | 'number' | 'date' | 'month' | 'boolean' | 'enum';
+export type ParamType =
+	'text' | 'number' | 'integer' | 'date' | 'datetime' | 'month' | 'boolean' | 'enum';
 
 export interface CatalogParam {
 	name: string;
@@ -63,6 +71,11 @@ export interface CatalogParam {
 	example: string | null;
 	multiple: boolean;
 	premium_note: string | null;
+	/** Bounds of a number or integer; null when the documentation states none. */
+	minimum: number | null;
+	maximum: number | null;
+	/** The choices (a subset of `enum`) that need a paid plan. */
+	premium_values: string[];
 	/** Set by the server (for example the response format); never shown. */
 	managed: boolean;
 }
@@ -77,6 +90,10 @@ export interface CatalogEndpoint {
 	trending: boolean;
 	utility: boolean;
 	premium_notes: string[];
+	/** The cheapest plan that includes this endpoint; null when the provider has no tiers. */
+	plan: string | null;
+	/** How many requests one fetch counts against the quota. */
+	request_cost: number;
 	doc_url: string;
 	params: CatalogParam[];
 	examples: { caption: string; params: ParamValues }[];
@@ -251,6 +268,13 @@ export function parseProvider(value: unknown, path = 'provider'): ProviderSummar
 		endpoint_count: num(o.endpoint_count, `${path}.endpoint_count`),
 		premium_count: num(o.premium_count, `${path}.premium_count`),
 		limits_note: str(o.limits_note, `${path}.limits_note`),
+		plans: arr(o.plans, `${path}.plans`).map((raw, i) => {
+			const plan = obj(raw, `${path}.plans[${i}]`);
+			return {
+				name: str(plan.name, `${path}.plans[${i}].name`),
+				summary: str(plan.summary, `${path}.plans[${i}].summary`)
+			};
+		}),
 		requests_this_session: num(o.requests_this_session, `${path}.requests_this_session`)
 	};
 }
@@ -264,7 +288,16 @@ export function parseProviders(json: unknown): ProviderSummary[] {
 	return providers;
 }
 
-const PARAM_TYPES: readonly ParamType[] = ['text', 'number', 'date', 'month', 'boolean', 'enum'];
+const PARAM_TYPES: readonly ParamType[] = [
+	'text',
+	'number',
+	'integer',
+	'date',
+	'datetime',
+	'month',
+	'boolean',
+	'enum'
+];
 
 function catalogParam(value: unknown, path: string): CatalogParam {
 	const o = obj(value, path);
@@ -275,18 +308,25 @@ function catalogParam(value: unknown, path: string): CatalogParam {
 	for (const [key, label] of Object.entries(obj(o.enum_labels ?? {}, `${path}.enum_labels`))) {
 		labels[key] = str(label, `${path}.enum_labels.${key}`);
 	}
+	const choices = strings(o.enum, `${path}.enum`);
+	const premiumValues = strings(o.premium_values, `${path}.premium_values`);
+	if (!premiumValues.every((v) => choices.includes(v)))
+		fail(`${path}.premium_values`, 'a subset of the parameter choices');
 	return {
 		name: str(o.name, `${path}.name`),
 		required: bool(o.required, `${path}.required`),
 		type: type as ParamType,
 		description: str(o.description, `${path}.description`),
-		enum: strings(o.enum, `${path}.enum`),
+		enum: choices,
 		enum_labels: labels,
 		suggestions: strings(o.suggestions, `${path}.suggestions`),
 		default: nullableStr(o.default, `${path}.default`),
 		example: nullableStr(o.example, `${path}.example`),
 		multiple: bool(o.multiple, `${path}.multiple`),
 		premium_note: nullableStr(o.premium_note, `${path}.premium_note`),
+		minimum: nullableNum(o.minimum, `${path}.minimum`),
+		maximum: nullableNum(o.maximum, `${path}.maximum`),
+		premium_values: premiumValues,
 		managed: bool(o.managed, `${path}.managed`)
 	};
 }
@@ -296,6 +336,9 @@ export function parseCatalog(json: unknown): Catalog {
 	const endpoints = arr(o.endpoints, 'endpoints').map((raw, i): CatalogEndpoint => {
 		const p = `endpoints[${i}]`;
 		const e = obj(raw, p);
+		const cost = num(e.request_cost, `${p}.request_cost`);
+		if (!Number.isInteger(cost) || cost < 1)
+			fail(`${p}.request_cost`, 'a whole number of at least 1');
 		return {
 			id: str(e.id, `${p}.id`),
 			title: str(e.title, `${p}.title`),
@@ -306,6 +349,8 @@ export function parseCatalog(json: unknown): Catalog {
 			trending: bool(e.trending, `${p}.trending`),
 			utility: bool(e.utility, `${p}.utility`),
 			premium_notes: strings(e.premium_notes, `${p}.premium_notes`),
+			plan: nullableStr(e.plan, `${p}.plan`),
+			request_cost: cost,
 			doc_url: str(e.doc_url, `${p}.doc_url`),
 			params: arr(e.params, `${p}.params`).map((x, j) => catalogParam(x, `${p}.params[${j}]`)),
 			examples: arr(e.examples, `${p}.examples`).map((x, j) => {

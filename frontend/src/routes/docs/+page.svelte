@@ -600,7 +600,7 @@ tvdata serve --data-dir data --static-dir frontend/build`;
 			<DocSection
 				id="providers"
 				title="Providers"
-				lead="Data from outside services, fetched by your backend. Alpha Vantage first, with room for more."
+				lead="Data from outside services, fetched by your backend. Alpha Vantage and Marketstack, with room for more."
 			>
 				<p>
 					The <a
@@ -615,7 +615,8 @@ tvdata serve --data-dir data --static-dir frontend/build`;
 				<h3>Your API key</h3>
 				<ul>
 					<li>
-						Set <code>ALPHAVANTAGE_API_KEY</code> in the backend's environment, or in a
+						Set <code>ALPHAVANTAGE_API_KEY</code> and/or <code>MARKETSTACK_API_KEY</code> in the
+						backend's environment, or in a
 						<code>.env</code> file in the folder you run <code>tvdata serve</code> from (or pass
 						<code>--env-file</code>), and restart the backend. <code>.env.example</code> shows the format.
 					</li>
@@ -632,20 +633,35 @@ tvdata serve --data-dir data --static-dir frontend/build`;
 						can be filtered with the Free and Premium buttons. A free key is refused by them.
 					</li>
 					<li>
+						Marketstack has subscription tiers, so its premium badge names the cheapest plan that
+						includes the endpoint (<strong>Premium · Basic</strong>,
+						<strong>Premium · Professional</strong>
+						or <strong>Premium · Business</strong>), and the provider card lists the plans with what
+						each one adds. Which plan your key has is for Marketstack to decide: a plan that lacks
+						an endpoint is refused when you fetch, and this page says so and draws nothing.
+					</li>
+					<li>
+						Some choices are premium on their own. Intraday intervals below 15 minutes are marked
+						<strong>Premium</strong> in the interval dropdown, and a note explains the history limit of
+						each plan.
+					</li>
+					<li>
 						Some free endpoints have premium options (for example the full history of a daily
 						series). These are marked <strong>Premium option</strong> beside the parameter.
 					</li>
 					<li>
-						When a key is not entitled, Alpha Vantage answers with made-up sample data. This page
-						detects that, shows the provider's own message and draws nothing.
+						When a key is not entitled, Alpha Vantage answers with made-up sample data and
+						Marketstack with an error. This page detects both, shows the provider's own message and
+						draws nothing.
 					</li>
 				</ul>
 				<h3>Limits and honesty</h3>
 				<ul>
 					<li>
 						Nothing is requested until you press Fetch data; opening a provider or an endpoint is
-						free. Free Alpha Vantage keys allow 25 requests a day, so identical requests are served
-						from a five minute cache and only Fetch again spends a request.
+						free. Free Alpha Vantage keys allow 25 requests a day and free Marketstack keys 100 a
+						month (ETF endpoints cost 20 each, which the form tells you), so identical requests are
+						served from a five minute cache and only Fetch again spends a request.
 					</li>
 					<li>
 						Rate limits, a rejected key, an unreachable provider and an empty answer each get their

@@ -4,7 +4,16 @@ import { page } from 'vitest/browser';
 import { goto } from '$app/navigation';
 import InApp from '$lib/testing/InApp.svelte';
 import { json, stubBackend } from '$lib/testing/backend';
-import { ALL_VIEWS, catalog, failure, provider, response } from '$lib/testing/provider-fixtures';
+import {
+	ALL_VIEWS,
+	TIERED,
+	TIERED_CATEGORIES,
+	TIERED_ENDPOINTS,
+	catalog,
+	failure,
+	provider,
+	response
+} from '$lib/testing/provider-fixtures';
 import Providers from './[[provider]]/[[endpoint]]/+page.svelte';
 
 const route = vi.hoisted(() => ({
@@ -333,5 +342,129 @@ describe('Providers page: narrow screens', () => {
 		await fetchButton().click();
 		await expect.element(page.getByTestId('result-meta')).toBeVisible();
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth + 1);
+	});
+});
+
+describe('Providers page: a provider with plans', () => {
+	function tiered() {
+		return stubBackend({
+			'/api/datasets': () => json({ datasets: [] }),
+			'/api/providers/tiered/catalog': () =>
+				json({ ...catalog(TIERED, TIERED_ENDPOINTS), categories: TIERED_CATEGORIES }),
+			'/api/providers/tiered/query': () => json(response()),
+			'/api/providers': () => json({ providers: [TIERED] })
+		});
+	}
+
+	beforeEach(() => {
+		route.page.params = { provider: 'tiered', endpoint: undefined };
+	});
+
+	it('lays out the plans, what each one starts with, and marks the paid ones', async () => {
+		tiered();
+		await mount();
+		await expect.element(page.getByTestId('plans')).toBeVisible();
+		const cards = [...document.querySelectorAll<HTMLElement>('[data-testid="plans"] li')];
+		expect(cards.map((c) => c.dataset.plan)).toEqual(['Free', 'Basic', 'Professional']);
+		expect(cards.map((c) => c.dataset.premium)).toEqual([undefined, 'true', 'true']);
+		expect(cards[1].textContent).toContain('2 endpoints start here');
+		expect(cards[0].textContent).toContain('1 endpoint starts here');
+		expect(cards[1].querySelector('[data-testid="premium-badge"]')?.textContent).toContain(
+			'Premium'
+		);
+		expect(cards[0].querySelector('[data-testid="premium-badge"]')).toBeNull();
+	});
+
+	it('shows no plans for a provider that has none', async () => {
+		route.page.params = { provider: 'alphavantage', endpoint: undefined };
+		backend();
+		await mount();
+		await expect.element(page.getByTestId('endpoint-count')).toHaveTextContent('5 endpoints');
+		expect(document.querySelector('[data-testid="plans"]')).toBeNull();
+	});
+
+	it('names the plan on every premium badge in the list and not on free endpoints', async () => {
+		tiered();
+		await mount();
+		await expect.element(page.getByTestId('endpoint-count')).toHaveTextContent('4 endpoints');
+		const rows = [...document.querySelectorAll<HTMLElement>('ul[aria-label="Endpoints"] button')];
+		const labels = rows.map(
+			(r) => r.querySelector('[data-testid="premium-badge"]')?.textContent?.trim() ?? null
+		);
+		expect(labels).toEqual([null, 'Premium · Basic', 'Premium · Basic', 'Premium · Professional']);
+	});
+
+	it('says which plan includes the open endpoint', async () => {
+		route.page.params = { provider: 'tiered', endpoint: 'commodities' };
+		tiered();
+		await mount();
+		await expect
+			.element(page.getByTestId('premium-callout-text'))
+			.toHaveTextContent('included from the Professional plan');
+		await expect
+			.element(page.getByTestId('endpoint-detail'))
+			.toHaveTextContent('Premium · Professional');
+	});
+
+	it('marks the premium choices of a parameter and says what a fetch costs', async () => {
+		route.page.params = { provider: 'tiered', endpoint: 'intraday' };
+		tiered();
+		await mount();
+		await expect
+			.element(page.getByTestId('premium-note'))
+			.toHaveTextContent('below 15min need the Professional plan');
+		await page.getByLabelText('interval').click();
+		const options = [...document.querySelectorAll<HTMLElement>('[role="option"]')];
+		const marked = options.filter((o) => o.querySelector('[data-testid="premium-badge"]'));
+		expect(marked.map((o) => o.textContent?.trim())).toEqual([expect.stringContaining('1min')]);
+		await expect.element(page.getByTestId('fetch-help')).toHaveTextContent('Uses one request');
+	});
+
+	it('warns that an ETF-style endpoint costs several requests, before and after fetching', async () => {
+		route.page.params = { provider: 'tiered', endpoint: 'etfholdings' };
+		const b = tiered();
+		await mount();
+		await expect.element(page.getByTestId('fetch-help')).toHaveTextContent('Uses 20 requests');
+		await fetchButton().click();
+		await expect
+			.element(page.getByRole('button', { name: /Fetch again \(uses 20 requests\)/ }))
+			.toBeVisible();
+		expect(queries(b as never)).toHaveLength(1);
+	});
+
+	it('takes an ISO-8601 timestamp for a datetime field and sends it as typed', async () => {
+		route.page.params = { provider: 'tiered', endpoint: 'eod' };
+		const b = tiered();
+		await mount();
+		const date = page.getByLabelText('date', { exact: true });
+		await date.fill('2020-05-21T00:00:00+0000');
+		expect(document.querySelector('[data-testid="field-error"]')).toBeNull();
+		await expect.element(fetchButton()).toBeEnabled();
+		await fetchButton().click();
+		await vi.waitFor(() => expect(queries(b as never)).toHaveLength(1));
+		const body = JSON.parse(String(queries(b as never)[0][1]?.body));
+		expect(body.params).toEqual({ symbols: 'AAPL', date: '2020-05-21T00:00:00+0000' });
+	});
+
+	it('explains a malformed timestamp beside the field and keeps Fetch off', async () => {
+		route.page.params = { provider: 'tiered', endpoint: 'eod' };
+		const b = tiered();
+		await mount();
+		await page.getByLabelText('date', { exact: true }).fill('2020-05-21T25:00:00');
+		await expect.element(page.getByTestId('field-error')).toHaveTextContent('ISO-8601 timestamp');
+		await expect.element(fetchButton()).toBeDisabled();
+		expect(queries(b as never)).toHaveLength(0);
+	});
+
+	it('stops an out-of-range limit before any request is sent', async () => {
+		route.page.params = { provider: 'tiered', endpoint: 'eod' };
+		const b = tiered();
+		await mount();
+		await page.getByLabelText('limit').fill('5000');
+		await expect
+			.element(page.getByTestId('field-error'))
+			.toHaveTextContent('limit must be at most 1000');
+		await expect.element(fetchButton()).toBeDisabled();
+		expect(queries(b as never)).toHaveLength(0);
 	});
 });
