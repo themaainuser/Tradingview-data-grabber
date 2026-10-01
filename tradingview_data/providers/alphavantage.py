@@ -24,7 +24,7 @@ import requests
 from . import common
 from .alphavantage_views import build_views
 from .base import Params, Provider, ProviderInfo
-from .common import HttpGet, HttpResult, ResponseCache, default_http_get, first_sentence, scrub
+from .common import HttpGet, HttpResult, ResponseCache, default_http_get, first_sentence, key_fingerprint, scrub
 
 QUERY_URL = "https://www.alphavantage.co/query"
 CATALOG_PATH = Path(__file__).with_name("alphavantage_catalog.json")
@@ -175,7 +175,7 @@ class AlphaVantage(Provider):
         key = self._key()
         if not key:
             return self._response(endpoint, sent, "not_configured", f"No API key is set. Add {self.info.key_env} to the backend's environment or .env file and restart it.")
-        cache_key = json.dumps([endpoint_id, sent], sort_keys=True)
+        cache_key = json.dumps([key_fingerprint(key), endpoint_id, sent], sort_keys=True)
         if not refresh and (hit := self._cache.get(cache_key)) is not None:
             return hit
         with self._cache.lock(cache_key):

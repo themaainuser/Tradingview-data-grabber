@@ -25,7 +25,7 @@ from urllib.parse import quote
 import requests
 
 from .base import Params, Plan, Provider, ProviderInfo
-from .common import HttpGet, HttpResult, ResponseCache, default_http_get, first_sentence, scrub, validate_params as _validate
+from .common import HttpGet, HttpResult, ResponseCache, default_http_get, first_sentence, key_fingerprint, scrub, validate_params as _validate
 from .marketstack_views import build_views
 
 BASE_URL = "https://api.marketstack.com"
@@ -215,7 +215,7 @@ class Marketstack(Provider):
         key = self._key()
         if not key:
             return self._response(endpoint, sent, "not_configured", f"No API key is set. Add {self.info.key_env} to the backend's environment or .env file and restart it.")
-        cache_key = json.dumps([endpoint_id, sent], sort_keys=True)
+        cache_key = json.dumps([key_fingerprint(key), endpoint_id, sent], sort_keys=True)
         if not refresh and (hit := self._cache.get(cache_key)) is not None:
             return hit
         with self._cache.lock(cache_key):

@@ -54,7 +54,8 @@ export interface ProviderSummary {
 	requests_this_session: number;
 }
 
-export type ParamType = 'text' | 'number' | 'integer' | 'date' | 'month' | 'boolean' | 'enum';
+export type ParamType =
+	'text' | 'number' | 'integer' | 'date' | 'datetime' | 'month' | 'boolean' | 'enum';
 
 export interface CatalogParam {
 	name: string;
@@ -292,6 +293,7 @@ const PARAM_TYPES: readonly ParamType[] = [
 	'number',
 	'integer',
 	'date',
+	'datetime',
 	'month',
 	'boolean',
 	'enum'

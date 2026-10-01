@@ -75,6 +75,17 @@ function validDate(value: string): boolean {
 	return !Number.isNaN(moment.getTime()) && moment.toISOString().slice(0, 10) === value;
 }
 
+/** A date, or `T` and a time with optional seconds, fraction and `Z` / `+HH:MM` / `+HHMM` offset. */
+function validDateTime(value: string): boolean {
+	const match =
+		/^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,6})?)?(?:Z|[+-](\d{2}):?(\d{2}))?)?$/.exec(
+			value
+		);
+	if (!match || !validDate(match[1])) return false;
+	const [hour, minute, second, zoneHour, zoneMinute] = match.slice(2).map((g) => Number(g ?? 0));
+	return hour <= 23 && minute <= 59 && second <= 59 && zoneHour <= 23 && zoneMinute <= 59;
+}
+
 function validMonth(value: string): boolean {
 	const match = /^(\d{4})-(\d{2})$/.exec(value);
 	return !!match && Number(match[2]) >= 1 && Number(match[2]) <= 12;
@@ -105,6 +116,10 @@ function problem(param: CatalogParam, value: string): string | null {
 		}
 		case 'date':
 			return validDate(value) ? null : `${param.name} must be a date in YYYY-MM-DD format`;
+		case 'datetime':
+			return validDateTime(value)
+				? null
+				: `${param.name} must be a date (YYYY-MM-DD) or an ISO-8601 timestamp such as 2020-05-21T00:00:00+0000`;
 		case 'month':
 			return validMonth(value) ? null : `${param.name} must be a month in YYYY-MM format`;
 		default:

@@ -6,6 +6,7 @@ names to :func:`validate_params`, and their own clock and TTL to :class:`Respons
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import re
@@ -52,6 +53,13 @@ def first_sentence(text: str, limit: int = 200) -> str:
     return sentence if len(sentence) <= limit else sentence[: limit - 1].rstrip() + "\u2026"
 
 
+def key_fingerprint(key: str) -> str:
+    """A short digest that scopes cached responses to the key that fetched them, so a different key
+    (or the same account on another plan) never reads them. The key itself is never part of a cache key."""
+
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
+
+
 def scrub(response: dict[str, Any], key: str) -> dict[str, Any]:
     """Removes the API key from anything that could echo it. Keys under 8 characters (the public
     ``demo`` key) are not scrubbed: they would garble ordinary words and protect nothing."""
@@ -65,6 +73,7 @@ def scrub(response: dict[str, Any], key: str) -> dict[str, Any]:
 # --- parameters ------------------------------------------------------------------------------------
 
 _PATH_VALUE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._\-^=]{0,63}$")
+_ISO_MOMENT = re.compile(r"^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,6})?)?(?:Z|[+-](\d{2}):?(\d{2}))?)?$")
 
 
 def validate_params(endpoint: dict[str, Any], params: Params, *, forbidden: Collection[str] = (), long_text: Collection[str] = ()) -> dict[str, Any]:
@@ -74,7 +83,8 @@ def validate_params(endpoint: dict[str, Any], params: Params, *, forbidden: Coll
     only where the documentation states the accepted values; repeated parameters (for example a date
     range) are free text because the provider also accepts relative values such as ``6month``.
     ``forbidden`` names are set by the server. A parameter the catalog marks ``in: path`` ends up in
-    the URL path, so its value is restricted to characters that cannot change the path.
+    the URL path, so its value is restricted to characters that cannot change the path (a
+    ``datetime`` is held to the strict ISO-8601 grammar instead, which has no such characters).
     """
 
     known = {p["name"]: p for p in endpoint["params"]}
@@ -98,7 +108,7 @@ def validate_params(endpoint: dict[str, Any], params: Params, *, forbidden: Coll
                 raise ValueError(f"{name} is too long (limit {limit} characters)")
             if not multiple:
                 check_type(name, spec, v)
-            if spec.get("in") == "path" and not _PATH_VALUE.match(v):
+            if spec.get("in") == "path" and not (spec["type"] == "datetime" and not multiple) and not _PATH_VALUE.match(v):
                 raise ValueError(f"{name} may contain only letters, digits and . _ - ^ =")
         clean[name] = values if multiple else values[0]
     for name, spec in known.items():
@@ -131,11 +141,28 @@ def check_type(name: str, spec: dict[str, Any], value: str) -> None:
             datetime.strptime(value, "%Y-%m-%d")
         except ValueError:
             raise ValueError(f"{name} must be a date in YYYY-MM-DD format") from None
+    if kind == "datetime" and not valid_moment(value):
+        raise ValueError(f"{name} must be a date (YYYY-MM-DD) or an ISO-8601 timestamp such as 2020-05-21T00:00:00+0000")
     if kind == "month":
         try:
             datetime.strptime(value, "%Y-%m")
         except ValueError:
             raise ValueError(f"{name} must be a month in YYYY-MM format") from None
+
+
+def valid_moment(value: str) -> bool:
+    """A calendar date, optionally followed by ``T`` and a time (seconds, fraction and ``Z`` or a
+    ``+HH:MM`` / ``+HHMM`` offset are optional): ``2020-05-21`` or ``2020-05-21T00:00:00+0000``."""
+
+    match = _ISO_MOMENT.match(value)
+    if not match:
+        return False
+    try:
+        datetime.strptime(match.group(1), "%Y-%m-%d")
+    except ValueError:
+        return False
+    hour, minute, second, zone_hour, zone_minute = (int(g) if g is not None else 0 for g in match.groups()[1:])
+    return hour <= 23 and minute <= 59 and second <= 59 and zone_hour <= 23 and zone_minute <= 59
 
 
 # --- cache ---------------------------------------------------------------------------------------------

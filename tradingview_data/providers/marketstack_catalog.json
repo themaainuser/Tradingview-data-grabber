@@ -476,13 +476,13 @@
      "name": "date",
      "in": "path",
      "required": true,
-     "type": "date",
-     "description": "Date for which to return end-of-day data (YYYY-MM-DD).",
+     "type": "datetime",
+     "description": "Date for which to return end-of-day data (YYYY-MM-DD). Also accepts a full ISO-8601 timestamp, for example 2020-05-21T00:00:00+0000.",
      "enum": [],
      "enum_labels": {},
      "suggestions": [],
      "default": null,
-     "example": null,
+     "example": "2026-09-30",
      "multiple": false,
      "premium_note": "How far back you can go depends on the plan: Free 1 year, Basic 10 years, Professional and Business 15+ years. Older dates need a paid plan.",
      "premium_values": [],
@@ -563,16 +563,18 @@
    ],
    "examples": [
     {
-     "caption": "Required parameters only: mic=XNAS, symbols=AAPL",
+     "caption": "Required parameters only: mic=XNAS, date=2026-09-30, symbols=AAPL",
      "params": {
       "mic": "XNAS",
+      "date": "2026-09-30",
       "symbols": "AAPL"
      }
     },
     {
-     "caption": "The same with a limit of 10 rows: mic=XNAS, symbols=AAPL",
+     "caption": "The same with a limit of 10 rows: mic=XNAS, date=2026-09-30, symbols=AAPL",
      "params": {
       "mic": "XNAS",
+      "date": "2026-09-30",
       "symbols": "AAPL",
       "limit": "10"
      }
@@ -991,13 +993,13 @@
      "name": "date",
      "in": "path",
      "required": true,
-     "type": "date",
-     "description": "Date for which to return intraday data (YYYY-MM-DD).",
+     "type": "datetime",
+     "description": "Date for which to return intraday data (YYYY-MM-DD). Also accepts a full ISO-8601 timestamp, for example 2020-05-21T00:00:00+0000.",
      "enum": [],
      "enum_labels": {},
      "suggestions": [],
      "default": null,
-     "example": null,
+     "example": "2026-09-30",
      "multiple": false,
      "premium_note": null,
      "premium_values": [],
@@ -1127,16 +1129,18 @@
    ],
    "examples": [
     {
-     "caption": "Required parameters only: mic=XNAS, symbols=AAPL",
+     "caption": "Required parameters only: mic=XNAS, date=2026-09-30, symbols=AAPL",
      "params": {
       "mic": "XNAS",
+      "date": "2026-09-30",
       "symbols": "AAPL"
      }
     },
     {
-     "caption": "The same with a limit of 10 rows: mic=XNAS, symbols=AAPL",
+     "caption": "The same with a limit of 10 rows: mic=XNAS, date=2026-09-30, symbols=AAPL",
      "params": {
       "mic": "XNAS",
+      "date": "2026-09-30",
       "symbols": "AAPL",
       "limit": "10"
      }
@@ -1551,13 +1555,13 @@
      "name": "date",
      "in": "path",
      "required": true,
-     "type": "date",
-     "description": "Date in YYYY-MM-DD format.",
+     "type": "datetime",
+     "description": "Date in YYYY-MM-DD format. Also accepts a full ISO-8601 timestamp, for example 2020-05-21T00:00:00+0000.",
      "enum": [],
      "enum_labels": {},
      "suggestions": [],
      "default": null,
-     "example": null,
+     "example": "2026-09-30",
      "multiple": false,
      "premium_note": "How far back you can go depends on the plan: Free 1 year, Basic 10 years, Professional and Business 15+ years. Older dates need a paid plan.",
      "premium_values": [],
@@ -1621,15 +1625,17 @@
    ],
    "examples": [
     {
-     "caption": "Required parameters only: symbol=AAPL",
+     "caption": "Required parameters only: symbol=AAPL, date=2026-09-30",
      "params": {
-      "symbol": "AAPL"
+      "symbol": "AAPL",
+      "date": "2026-09-30"
      }
     },
     {
-     "caption": "The same with a limit of 10 rows: symbol=AAPL",
+     "caption": "The same with a limit of 10 rows: symbol=AAPL, date=2026-09-30",
      "params": {
       "symbol": "AAPL",
+      "date": "2026-09-30",
       "limit": "10"
      }
     }
@@ -2009,13 +2015,13 @@
      "name": "date",
      "in": "path",
      "required": true,
-     "type": "date",
-     "description": "Date in YYYY-MM-DD format.",
+     "type": "datetime",
+     "description": "Date in YYYY-MM-DD format. Also accepts a full ISO-8601 timestamp, for example 2020-05-21T00:00:00+0000.",
      "enum": [],
      "enum_labels": {},
      "suggestions": [],
      "default": null,
-     "example": null,
+     "example": "2026-09-30",
      "multiple": false,
      "premium_note": null,
      "premium_values": [],
@@ -2128,15 +2134,17 @@
    ],
    "examples": [
     {
-     "caption": "Required parameters only: symbol=AAPL",
+     "caption": "Required parameters only: symbol=AAPL, date=2026-09-30",
      "params": {
-      "symbol": "AAPL"
+      "symbol": "AAPL",
+      "date": "2026-09-30"
      }
     },
     {
-     "caption": "The same with a limit of 10 rows: symbol=AAPL",
+     "caption": "The same with a limit of 10 rows: symbol=AAPL, date=2026-09-30",
      "params": {
       "symbol": "AAPL",
+      "date": "2026-09-30",
       "limit": "10"
      }
     }
@@ -2699,13 +2707,13 @@
      "name": "date",
      "in": "path",
      "required": true,
-     "type": "date",
-     "description": "Date in YYYY-MM-DD format.",
+     "type": "datetime",
+     "description": "Date in YYYY-MM-DD format. Also accepts a full ISO-8601 timestamp, for example 2020-05-21T00:00:00+0000.",
      "enum": [],
      "enum_labels": {},
      "suggestions": [],
      "default": null,
-     "example": null,
+     "example": "2026-09-30",
      "multiple": false,
      "premium_note": "How far back you can go depends on the plan: Free 1 year, Basic 10 years, Professional and Business 15+ years. Older dates need a paid plan.",
      "premium_values": [],
@@ -2803,14 +2811,16 @@
    ],
    "examples": [
     {
-     "caption": "Required parameters only: symbols=AAPL",
+     "caption": "Required parameters only: date=2026-09-30, symbols=AAPL",
      "params": {
+      "date": "2026-09-30",
       "symbols": "AAPL"
      }
     },
     {
-     "caption": "The same with a limit of 10 rows: symbols=AAPL",
+     "caption": "The same with a limit of 10 rows: date=2026-09-30, symbols=AAPL",
      "params": {
+      "date": "2026-09-30",
       "symbols": "AAPL",
       "limit": "10"
      }
@@ -3208,13 +3218,13 @@
      "name": "date",
      "in": "path",
      "required": true,
-     "type": "date",
-     "description": "Date in YYYY-MM-DD format.",
+     "type": "datetime",
+     "description": "Date in YYYY-MM-DD format. Also accepts a full ISO-8601 timestamp, for example 2020-05-21T00:00:00+0000.",
      "enum": [],
      "enum_labels": {},
      "suggestions": [],
      "default": null,
-     "example": null,
+     "example": "2026-09-30",
      "multiple": false,
      "premium_note": null,
      "premium_values": [],
@@ -3361,14 +3371,16 @@
    ],
    "examples": [
     {
-     "caption": "Required parameters only: symbols=AAPL",
+     "caption": "Required parameters only: date=2026-09-30, symbols=AAPL",
      "params": {
+      "date": "2026-09-30",
       "symbols": "AAPL"
      }
     },
     {
-     "caption": "The same with a limit of 10 rows: symbols=AAPL",
+     "caption": "The same with a limit of 10 rows: date=2026-09-30, symbols=AAPL",
      "params": {
+      "date": "2026-09-30",
       "symbols": "AAPL",
       "limit": "10"
      }

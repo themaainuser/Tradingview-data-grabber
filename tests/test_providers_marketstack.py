@@ -7,12 +7,13 @@ import json
 import re
 import threading
 import zipfile
+from datetime import date
 
 import pytest
 import requests
 
 from tradingview_data.providers import marketstack_docs as docs
-from tradingview_data.providers.common import HttpResult
+from tradingview_data.providers.common import HttpResult, validate_params, valid_moment
 from tradingview_data.providers.marketstack import INFO, Marketstack, classify_error, has_data
 
 from marketstack_support import EOD_ROWS, SAMPLES, error
@@ -115,7 +116,7 @@ def test_limits_quota_costs_and_suggestions_come_through():
 def test_every_required_parameter_is_text_a_choice_or_has_an_example_and_the_path_ones_come_first():
     for e in Marketstack(http_get=FakeHttp()).catalog()["endpoints"]:
         for p in e["params"]:
-            assert p["type"] in ("text", "integer", "number", "date", "month", "boolean", "enum")
+            assert p["type"] in ("text", "integer", "number", "date", "datetime", "month", "boolean", "enum")
         for ex in e["examples"]:
             assert set(ex["params"]) <= {p["name"] for p in e["params"]}
     raw = Marketstack(http_get=FakeHttp())._load()
@@ -448,3 +449,131 @@ def test_commodity_names_are_read_from_the_workbook_without_the_header(tmp_path)
     path = tmp_path / "c.xlsx"
     path.write_bytes(buffer.getvalue())
     assert docs.commodity_names(path) == ["aluminum", "crude oil"]
+
+
+# --- dates: the documented ISO-8601 form ----------------------------------------------------------------
+
+
+DATED = ["exchange_eod_date", "exchange_intraday_date", "ticker_eod_date", "ticker_intraday_date", "eod_date", "intraday_date"]
+
+
+def test_the_endpoints_that_document_iso_8601_take_a_datetime_in_their_path_and_say_so():
+    raw = Marketstack(http_get=FakeHttp())._load()
+    documented = sorted(e["id"] for e in raw["endpoints"] if "ISO-8601" in e["description"])
+    assert documented == sorted(DATED)
+    for e in raw["endpoints"]:
+        path_dates = [p for p in e["params"] if p["name"] == "date" and p["in"] == "path"]
+        assert [p["type"] for p in path_dates] == (["datetime"] if e["id"] in DATED else [])
+        assert all("ISO-8601" in p["description"] for p in path_dates)
+        for p in e["params"]:
+            if p["name"] in ("date_from", "date_to"):
+                assert p["type"] == "date"  # the spec documents only YYYY-MM-DD for these
+
+
+@pytest.mark.parametrize(
+    ("given", "path_tail"),
+    [
+        ("2026-09-29", "2026-09-29"),
+        ("2020-05-21T00:00:00+0000", "2020-05-21T00%3A00%3A00%2B0000"),
+        ("2020-05-21T00:00:00+00:00", "2020-05-21T00%3A00%3A00%2B00%3A00"),
+        ("2020-05-21T09:30:15.123456-04:00", "2020-05-21T09%3A30%3A15.123456-04%3A00"),
+        ("2020-05-21T00:00:00Z", "2020-05-21T00%3A00%3A00Z"),
+        ("2020-05-21T09:30", "2020-05-21T09%3A30"),
+    ],
+)
+def test_a_documented_iso_8601_date_reaches_marketstack_encoded_in_the_path(keyed, given, path_tail):
+    pv, http = provider(ok(SAMPLES["eod_date"]))
+    response = pv.query("eod_date", {"symbols": "AAPL", "date": given})
+    assert response["status"] == "ok"
+    assert http.calls[0][0] == "https://api.marketstack.com/v2/eod/" + path_tail and http.calls[0][1] == [("symbols", "AAPL"), ("access_key", KEY)]
+
+
+@pytest.mark.parametrize(
+    "given",
+    ["2020-13-01", "2020-02-30", "2020-05-21T24:00:00", "2020-05-21T10:61", "2020-05-21T10:00:60", "2020-05-21T10:00:00+2500", "2020-05-21T10:00:00+0060", "2020-05-21 10:00:00", "20200521", "2020-05-21T", "2020-05-21T10:00:00 +0000", "2020-05-21/../x", "2020-05-21T10:00:00%2f", "2020-05-21?x=1", "2020-05-21#", "x"],
+)
+def test_a_malformed_date_or_one_that_could_change_the_path_is_refused_before_any_request(keyed, given):
+    pv, http = provider(ok({}))
+    with pytest.raises(ValueError, match="ISO-8601 timestamp"):
+        pv.query("eod_date", {"symbols": "AAPL", "date": given})
+    assert http.calls == []
+
+
+def test_a_range_filter_still_takes_only_a_plain_date(keyed):
+    pv, http = provider(ok({}))
+    with pytest.raises(ValueError, match="date_from must be a date in YYYY-MM-DD format"):
+        pv.query("eod", {"symbols": "AAPL", "date_from": "2020-05-21T00:00:00+0000"})
+    assert http.calls == []
+
+
+def test_valid_moment_checks_the_calendar_and_the_clock():
+    assert valid_moment("2024-02-29") and not valid_moment("2023-02-29")
+    assert valid_moment("2020-05-21T23:59:59") and not valid_moment("2020-05-21T23:59:60")
+    assert valid_moment("2020-05-21T00:00:00-23:59") and not valid_moment("2020-05-21T00:00:00-24:00")
+
+
+# --- examples are complete requests ---------------------------------------------------------------------
+
+
+def test_every_example_is_a_complete_valid_request_so_choosing_one_leaves_fetch_usable():
+    raw = Marketstack(http_get=FakeHttp())._load()
+    for item in raw["endpoints"]:
+        endpoint = {**item, "params": [{**p, "managed": False} for p in item["params"]]}
+        required = [p for p in item["params"] if p["required"]]
+        for example in item["examples"]:
+            assert {p["name"] for p in required} <= set(example["params"]), (item["id"], example["caption"])
+            validate_params(endpoint, example["params"])
+        if not item["examples"] and required:
+            assert any(not p["example"] for p in required), item["id"]  # no example only where the docs give no value
+
+
+def test_the_dated_endpoints_have_examples_with_a_date_and_the_caption_shows_it():
+    endpoints = {e["id"]: e for e in Marketstack(http_get=FakeHttp()).catalog()["endpoints"]}
+    for endpoint_id in DATED:
+        for example in endpoints[endpoint_id]["examples"]:
+            assert "date" in example["params"] and f"date={example['params']['date']}" in example["caption"]
+        assert len(endpoints[endpoint_id]["examples"]) == 2
+
+
+def test_endpoints_whose_required_values_the_documentation_does_not_give_offer_no_example():
+    endpoints = {e["id"]: e for e in Marketstack(http_get=FakeHttp()).catalog()["endpoints"]}
+    assert endpoints["indexinfo"]["examples"] == [] and endpoints["bond"]["examples"] == []
+
+
+@pytest.mark.parametrize(("today", "expected"), [(date(2026, 10, 1), "2026-09-30"), (date(2026, 10, 5), "2026-10-02"), (date(2026, 10, 4), "2026-10-02"), (date(2026, 10, 3), "2026-10-02"), (date(2026, 10, 6), "2026-10-05")])
+def test_the_sample_day_is_the_latest_weekday_before_today(today, expected):
+    assert docs.sample_day(today) == expected
+
+
+def test_the_generator_gives_a_date_endpoint_a_datetime_and_a_sample_day_only_when_iso_is_documented():
+    def spec(description):
+        return {
+            "tags": [{"name": "End-of-Day Data"}],
+            "paths": {"/v2/eod/{date}": {"get": {"tags": ["End-of-Day Data"], "summary": "S", "description": description, "parameters": [{"name": "symbols", "in": "query", "required": True, "schema": {"type": "string"}}, {"name": "date", "in": "path", "required": True, "description": "Date in YYYY-MM-DD format.", "schema": {"type": "string"}}]}}},
+        }
+
+    iso = docs.build_catalog(spec("Given in YYYY-MM-DD or full ISO-8601 format."), today=date(2026, 10, 5))["endpoints"][0]
+    plain = docs.build_catalog(spec("Given as YYYY-MM-DD."), today=date(2026, 10, 5))["endpoints"][0]
+    date_param = next(p for p in iso["params"] if p["name"] == "date")
+    assert (date_param["type"], date_param["example"]) == ("datetime", "2026-10-02") and docs.ISO_NOTE in date_param["description"]
+    assert iso["examples"][0]["params"] == {"date": "2026-10-02", "symbols": "AAPL"}
+    assert next(p for p in plain["params"] if p["name"] == "date")["type"] == "date"
+
+
+# --- cached answers belong to the key that fetched them -------------------------------------------------
+
+
+def test_a_cached_answer_is_never_served_to_a_different_key(keyed, monkeypatch):
+    pv, http = provider(ok(SAMPLES["eod"]), ok(SAMPLES["eod"]))
+    assert pv.query(*EOD_ARGS)["cached"] is False
+    monkeypatch.setenv("MARKETSTACK_API_KEY", "another-key-0123456789")
+    other = pv.query(*EOD_ARGS)
+    assert other["cached"] is False and len(http.calls) == 2 and http.calls[1][1][-1] == ("access_key", "another-key-0123456789")
+    monkeypatch.setenv("MARKETSTACK_API_KEY", KEY)
+    assert pv.query(*EOD_ARGS)["cached"] is True and len(http.calls) == 2  # the first key's answer is still its own
+
+
+def test_the_key_is_never_part_of_a_cache_key(keyed):
+    pv, _ = provider(ok(SAMPLES["eod"]))
+    pv.query(*EOD_ARGS)
+    assert pv._cache._items and all(KEY not in k for k in pv._cache._items)

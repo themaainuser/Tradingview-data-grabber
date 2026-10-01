@@ -18,6 +18,7 @@ import json
 import re
 import sys
 import zipfile
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Optional
 
@@ -115,6 +116,17 @@ _PARAM_EXAMPLES = {
     "unit": "USD",
 }
 _UTILITY_TAGS = {"Reference Data"}
+ISO_NOTE = "Also accepts a full ISO-8601 timestamp, for example 2020-05-21T00:00:00+0000."
+
+
+def sample_day(today: date) -> str:
+    """The latest weekday before ``today``: a day the exchanges were normally open, for the examples
+    of the endpoints that take a date in their path (a weekend or holiday returns no rows)."""
+
+    day = today - timedelta(days=1)
+    while day.weekday() >= 5:
+        day -= timedelta(days=1)
+    return day.isoformat()
 
 
 def clean_text(text: str) -> str:
@@ -179,12 +191,15 @@ def commodity_names(xlsx: Path) -> list[str]:
     return names
 
 
-def _param(spec: dict[str, Any], raw: dict[str, Any], endpoint_id: str, commodities: list[str]) -> dict[str, Any]:
+def _param(spec: dict[str, Any], raw: dict[str, Any], endpoint_id: str, commodities: list[str], accepts_iso: bool, day: str) -> dict[str, Any]:
     p = _resolve(spec, raw)
     schema = p.get("schema", {})
     name = p["name"]
     description = clean_text(p.get("description", ""))
     kind = _param_type(p)
+    if kind == "date" and p["in"] == "path" and accepts_iso:
+        # The endpoint's own description says "YYYY-MM-DD or full ISO-8601 format".
+        kind, description = "datetime", f"{description} {ISO_NOTE}"
     param: dict[str, Any] = {
         "name": name,
         "in": p["in"],
@@ -195,7 +210,7 @@ def _param(spec: dict[str, Any], raw: dict[str, Any], endpoint_id: str, commodit
         "enum_labels": {},
         "suggestions": [],
         "default": str(schema["default"]) if "default" in schema else None,
-        "example": _PARAM_EXAMPLES.get(name),
+        "example": day if kind == "datetime" else _PARAM_EXAMPLES.get(name),
         "multiple": False,
         "premium_note": None,
         "premium_values": [],
@@ -216,9 +231,13 @@ def _param(spec: dict[str, Any], raw: dict[str, Any], endpoint_id: str, commodit
 
 
 def _examples(params: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    known = {p["name"]: p["example"] for p in params if p["required"] and p["example"]}
-    if not known:
+    """Examples are complete requests: none is offered unless every required parameter has a value
+    the documentation (or the sample day) supplies, so choosing one always leaves Fetch usable."""
+
+    required = [p for p in params if p["required"]]
+    if not required or any(not p["example"] for p in required):
         return []
+    known = {p["name"]: p["example"] for p in required}
     label = ", ".join(f"{k}={v}" for k, v in known.items())
     examples = [{"caption": f"Required parameters only: {label}", "params": dict(known)}]
     if any(p["name"] == "limit" for p in params):
@@ -226,8 +245,9 @@ def _examples(params: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return examples
 
 
-def build_catalog(spec: dict[str, Any], commodities: Optional[list[str]] = None) -> dict[str, Any]:
+def build_catalog(spec: dict[str, Any], commodities: Optional[list[str]] = None, today: Optional[date] = None) -> dict[str, Any]:
     warnings: list[str] = []
+    day = sample_day(today or date.today())
     commodities = commodities or []
     tags = spec.get("tags", [])
     categories = [{"id": _slug(t["name"]), "title": t["name"], "summary": clean_text(t.get("description", ""))} for t in tags]
@@ -240,7 +260,8 @@ def build_catalog(spec: dict[str, Any], commodities: Optional[list[str]] = None)
         endpoint_id, plan = OPERATIONS[path]
         op = methods["get"]
         tag = op["tags"][0]
-        params = [_param(spec, p, endpoint_id, commodities) for p in op["parameters"]]
+        accepts_iso = "ISO-8601" in op["description"]
+        params = [_param(spec, p, endpoint_id, commodities, accepts_iso, day) for p in op["parameters"]]
         params = [p for p in params if p["name"] != "access_key"]
         params.sort(key=lambda p: p["in"] != "path")  # stable: path parameters first, as in the URL
         endpoints.append(
