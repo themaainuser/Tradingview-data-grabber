@@ -482,7 +482,7 @@
      "enum_labels": {},
      "suggestions": [],
      "default": null,
-     "example": "2026-09-30",
+     "example": "@sample_day",
      "multiple": false,
      "premium_note": "How far back you can go depends on the plan: Free 1 year, Basic 10 years, Professional and Business 15+ years. Older dates need a paid plan.",
      "premium_values": [],
@@ -563,18 +563,18 @@
    ],
    "examples": [
     {
-     "caption": "Required parameters only: mic=XNAS, date=2026-09-30, symbols=AAPL",
+     "caption": "Required parameters only: mic=XNAS, date=@sample_day, symbols=AAPL",
      "params": {
       "mic": "XNAS",
-      "date": "2026-09-30",
+      "date": "@sample_day",
       "symbols": "AAPL"
      }
     },
     {
-     "caption": "The same with a limit of 10 rows: mic=XNAS, date=2026-09-30, symbols=AAPL",
+     "caption": "The same with a limit of 10 rows: mic=XNAS, date=@sample_day, symbols=AAPL",
      "params": {
       "mic": "XNAS",
-      "date": "2026-09-30",
+      "date": "@sample_day",
       "symbols": "AAPL",
       "limit": "10"
      }
@@ -999,7 +999,7 @@
      "enum_labels": {},
      "suggestions": [],
      "default": null,
-     "example": "2026-09-30",
+     "example": "@sample_day",
      "multiple": false,
      "premium_note": null,
      "premium_values": [],
@@ -1129,18 +1129,18 @@
    ],
    "examples": [
     {
-     "caption": "Required parameters only: mic=XNAS, date=2026-09-30, symbols=AAPL",
+     "caption": "Required parameters only: mic=XNAS, date=@sample_day, symbols=AAPL",
      "params": {
       "mic": "XNAS",
-      "date": "2026-09-30",
+      "date": "@sample_day",
       "symbols": "AAPL"
      }
     },
     {
-     "caption": "The same with a limit of 10 rows: mic=XNAS, date=2026-09-30, symbols=AAPL",
+     "caption": "The same with a limit of 10 rows: mic=XNAS, date=@sample_day, symbols=AAPL",
      "params": {
       "mic": "XNAS",
-      "date": "2026-09-30",
+      "date": "@sample_day",
       "symbols": "AAPL",
       "limit": "10"
      }
@@ -1561,7 +1561,7 @@
      "enum_labels": {},
      "suggestions": [],
      "default": null,
-     "example": "2026-09-30",
+     "example": "@sample_day",
      "multiple": false,
      "premium_note": "How far back you can go depends on the plan: Free 1 year, Basic 10 years, Professional and Business 15+ years. Older dates need a paid plan.",
      "premium_values": [],
@@ -1625,17 +1625,17 @@
    ],
    "examples": [
     {
-     "caption": "Required parameters only: symbol=AAPL, date=2026-09-30",
+     "caption": "Required parameters only: symbol=AAPL, date=@sample_day",
      "params": {
       "symbol": "AAPL",
-      "date": "2026-09-30"
+      "date": "@sample_day"
      }
     },
     {
-     "caption": "The same with a limit of 10 rows: symbol=AAPL, date=2026-09-30",
+     "caption": "The same with a limit of 10 rows: symbol=AAPL, date=@sample_day",
      "params": {
       "symbol": "AAPL",
-      "date": "2026-09-30",
+      "date": "@sample_day",
       "limit": "10"
      }
     }
@@ -2021,7 +2021,7 @@
      "enum_labels": {},
      "suggestions": [],
      "default": null,
-     "example": "2026-09-30",
+     "example": "@sample_day",
      "multiple": false,
      "premium_note": null,
      "premium_values": [],
@@ -2134,17 +2134,17 @@
    ],
    "examples": [
     {
-     "caption": "Required parameters only: symbol=AAPL, date=2026-09-30",
+     "caption": "Required parameters only: symbol=AAPL, date=@sample_day",
      "params": {
       "symbol": "AAPL",
-      "date": "2026-09-30"
+      "date": "@sample_day"
      }
     },
     {
-     "caption": "The same with a limit of 10 rows: symbol=AAPL, date=2026-09-30",
+     "caption": "The same with a limit of 10 rows: symbol=AAPL, date=@sample_day",
      "params": {
       "symbol": "AAPL",
-      "date": "2026-09-30",
+      "date": "@sample_day",
       "limit": "10"
      }
     }
@@ -2713,7 +2713,7 @@
      "enum_labels": {},
      "suggestions": [],
      "default": null,
-     "example": "2026-09-30",
+     "example": "@sample_day",
      "multiple": false,
      "premium_note": "How far back you can go depends on the plan: Free 1 year, Basic 10 years, Professional and Business 15+ years. Older dates need a paid plan.",
      "premium_values": [],
@@ -2811,16 +2811,16 @@
    ],
    "examples": [
     {
-     "caption": "Required parameters only: date=2026-09-30, symbols=AAPL",
+     "caption": "Required parameters only: date=@sample_day, symbols=AAPL",
      "params": {
-      "date": "2026-09-30",
+      "date": "@sample_day",
       "symbols": "AAPL"
      }
     },
     {
-     "caption": "The same with a limit of 10 rows: date=2026-09-30, symbols=AAPL",
+     "caption": "The same with a limit of 10 rows: date=@sample_day, symbols=AAPL",
      "params": {
-      "date": "2026-09-30",
+      "date": "@sample_day",
       "symbols": "AAPL",
       "limit": "10"
      }
@@ -3224,7 +3224,7 @@
      "enum_labels": {},
      "suggestions": [],
      "default": null,
-     "example": "2026-09-30",
+     "example": "@sample_day",
      "multiple": false,
      "premium_note": null,
      "premium_values": [],
@@ -3371,16 +3371,16 @@
    ],
    "examples": [
     {
-     "caption": "Required parameters only: date=2026-09-30, symbols=AAPL",
+     "caption": "Required parameters only: date=@sample_day, symbols=AAPL",
      "params": {
-      "date": "2026-09-30",
+      "date": "@sample_day",
       "symbols": "AAPL"
      }
     },
     {
-     "caption": "The same with a limit of 10 rows: date=2026-09-30, symbols=AAPL",
+     "caption": "The same with a limit of 10 rows: date=@sample_day, symbols=AAPL",
      "params": {
-      "date": "2026-09-30",
+      "date": "@sample_day",
       "symbols": "AAPL",
       "limit": "10"
      }

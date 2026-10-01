@@ -118,15 +118,32 @@ _PARAM_EXAMPLES = {
 _UTILITY_TAGS = {"Reference Data"}
 ISO_NOTE = "Also accepts a full ISO-8601 timestamp, for example 2020-05-21T00:00:00+0000."
 
+# The examples of the endpoints that take a date in their path need a recent trading day, and a day
+# written into the committed catalog would age out of the Free plan's one-year history. The catalog
+# holds this placeholder instead and the provider fills in the day when it serves the catalog.
+SAMPLE_DAY = "@sample_day"
+
 
 def sample_day(today: date) -> str:
-    """The latest weekday before ``today``: a day the exchanges were normally open, for the examples
-    of the endpoints that take a date in their path (a weekend or holiday returns no rows)."""
+    """The latest weekday before ``today``: a day the exchanges were normally open (a weekend or
+    holiday returns no rows)."""
 
     day = today - timedelta(days=1)
     while day.weekday() >= 5:
         day -= timedelta(days=1)
     return day.isoformat()
+
+
+def fill_sample_day(value: Any, day: str) -> Any:
+    """``value`` (any nesting of lists, dicts and strings) with every ``SAMPLE_DAY`` replaced by ``day``."""
+
+    if isinstance(value, str):
+        return value.replace(SAMPLE_DAY, day)
+    if isinstance(value, list):
+        return [fill_sample_day(v, day) for v in value]
+    if isinstance(value, dict):
+        return {k: fill_sample_day(v, day) for k, v in value.items()}
+    return value
 
 
 def clean_text(text: str) -> str:
@@ -191,7 +208,7 @@ def commodity_names(xlsx: Path) -> list[str]:
     return names
 
 
-def _param(spec: dict[str, Any], raw: dict[str, Any], endpoint_id: str, commodities: list[str], accepts_iso: bool, day: str) -> dict[str, Any]:
+def _param(spec: dict[str, Any], raw: dict[str, Any], endpoint_id: str, commodities: list[str], accepts_iso: bool) -> dict[str, Any]:
     p = _resolve(spec, raw)
     schema = p.get("schema", {})
     name = p["name"]
@@ -210,7 +227,7 @@ def _param(spec: dict[str, Any], raw: dict[str, Any], endpoint_id: str, commodit
         "enum_labels": {},
         "suggestions": [],
         "default": str(schema["default"]) if "default" in schema else None,
-        "example": day if kind == "datetime" else _PARAM_EXAMPLES.get(name),
+        "example": SAMPLE_DAY if kind == "datetime" else _PARAM_EXAMPLES.get(name),
         "multiple": False,
         "premium_note": None,
         "premium_values": [],
@@ -232,7 +249,7 @@ def _param(spec: dict[str, Any], raw: dict[str, Any], endpoint_id: str, commodit
 
 def _examples(params: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Examples are complete requests: none is offered unless every required parameter has a value
-    the documentation (or the sample day) supplies, so choosing one always leaves Fetch usable."""
+    the documentation (or the sample-day placeholder) supplies, so choosing one always leaves Fetch usable."""
 
     required = [p for p in params if p["required"]]
     if not required or any(not p["example"] for p in required):
@@ -245,9 +262,8 @@ def _examples(params: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return examples
 
 
-def build_catalog(spec: dict[str, Any], commodities: Optional[list[str]] = None, today: Optional[date] = None) -> dict[str, Any]:
+def build_catalog(spec: dict[str, Any], commodities: Optional[list[str]] = None) -> dict[str, Any]:
     warnings: list[str] = []
-    day = sample_day(today or date.today())
     commodities = commodities or []
     tags = spec.get("tags", [])
     categories = [{"id": _slug(t["name"]), "title": t["name"], "summary": clean_text(t.get("description", ""))} for t in tags]
@@ -261,7 +277,7 @@ def build_catalog(spec: dict[str, Any], commodities: Optional[list[str]] = None,
         op = methods["get"]
         tag = op["tags"][0]
         accepts_iso = "ISO-8601" in op["description"]
-        params = [_param(spec, p, endpoint_id, commodities, accepts_iso, day) for p in op["parameters"]]
+        params = [_param(spec, p, endpoint_id, commodities, accepts_iso) for p in op["parameters"]]
         params = [p for p in params if p["name"] != "access_key"]
         params.sort(key=lambda p: p["in"] != "path")  # stable: path parameters first, as in the URL
         endpoints.append(

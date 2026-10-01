@@ -18,6 +18,7 @@ import json
 import os
 import threading
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
 from urllib.parse import quote
@@ -26,6 +27,7 @@ import requests
 
 from .base import Params, Plan, Provider, ProviderInfo
 from .common import HttpGet, HttpResult, ResponseCache, default_http_get, first_sentence, key_fingerprint, scrub, validate_params as _validate
+from .marketstack_docs import fill_sample_day, sample_day
 from .marketstack_views import build_views
 
 BASE_URL = "https://api.marketstack.com"
@@ -75,12 +77,13 @@ _ERROR_CODES = {101: "invalid_key", 102: "invalid_key", 103: "invalid_request", 
 _HTTP_STATUSES = {400: "invalid_request", 401: "invalid_key", 403: "premium_required", 404: "invalid_request", 422: "invalid_request", 429: "rate_limited"}
 
 
-def build_catalog(raw: dict[str, Any]) -> dict[str, Any]:
-    """The contract's catalog from the generated JSON; request paths stay server-side."""
+def build_catalog(raw: dict[str, Any], day: str) -> dict[str, Any]:
+    """The contract's catalog from the generated JSON; request paths stay server-side. ``day`` is the
+    recent trading day that replaces the sample-day placeholder in the examples."""
 
     endpoints = []
     for item in raw["endpoints"]:
-        params = [{**{k: p.get(k) for k in ("name", "required", "type", "description", "enum", "enum_labels", "suggestions", "default", "example", "multiple", "premium_note", "minimum", "maximum", "premium_values")}, "managed": False} for p in item["params"]]
+        params = [{**{k: p.get(k) for k in ("name", "required", "type", "description", "enum", "enum_labels", "suggestions", "default", "example", "multiple", "premium_note", "minimum", "maximum", "premium_values")}, "managed": False} for p in fill_sample_day(item["params"], day)]
         endpoints.append(
             {
                 "id": item["id"],
@@ -96,7 +99,7 @@ def build_catalog(raw: dict[str, Any]) -> dict[str, Any]:
                 "request_cost": item["request_cost"],
                 "doc_url": raw["source"],
                 "params": params,
-                "examples": item["examples"],
+                "examples": fill_sample_day(item["examples"], day),
             }
         )
     categories = [
@@ -175,6 +178,7 @@ class Marketstack(Provider):
         self._catalog_path = catalog_path
         self._raw: Optional[dict[str, Any]] = None
         self._catalog: Optional[dict[str, Any]] = None
+        self._catalog_day: Optional[str] = None
         self._cache = ResponseCache(clock, ttl_seconds, CACHE_ENTRIES)
         self._guard = threading.Lock()
         self.requests_this_session = 0
@@ -193,8 +197,11 @@ class Marketstack(Provider):
         return self._raw
 
     def catalog(self) -> dict[str, Any]:
-        if self._catalog is None:
-            self._catalog = build_catalog(self._load())
+        """Rebuilt when the UTC day changes, so a server that stays up for weeks still offers a recent day."""
+
+        day = sample_day(datetime.fromtimestamp(self._clock(), timezone.utc).date())
+        if self._catalog is None or self._catalog_day != day:
+            self._catalog, self._catalog_day = build_catalog(self._load(), day), day
         return self._catalog
 
     def _endpoint(self, endpoint_id: str) -> dict[str, Any]:

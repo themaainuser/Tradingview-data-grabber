@@ -7,7 +7,7 @@ import json
 import re
 import threading
 import zipfile
-from datetime import date
+from datetime import date, datetime, timezone
 
 import pytest
 import requests
@@ -516,7 +516,7 @@ def test_valid_moment_checks_the_calendar_and_the_clock():
 
 
 def test_every_example_is_a_complete_valid_request_so_choosing_one_leaves_fetch_usable():
-    raw = Marketstack(http_get=FakeHttp())._load()
+    raw = docs.fill_sample_day(Marketstack(http_get=FakeHttp())._load(), "2026-09-30")
     for item in raw["endpoints"]:
         endpoint = {**item, "params": [{**p, "managed": False} for p in item["params"]]}
         required = [p for p in item["params"] if p["required"]]
@@ -527,12 +527,58 @@ def test_every_example_is_a_complete_valid_request_so_choosing_one_leaves_fetch_
             assert any(not p["example"] for p in required), item["id"]  # no example only where the docs give no value
 
 
+def at(year, month, day):
+    return lambda: datetime(year, month, day, 12, tzinfo=timezone.utc).timestamp()
+
+
 def test_the_dated_endpoints_have_examples_with_a_date_and_the_caption_shows_it():
-    endpoints = {e["id"]: e for e in Marketstack(http_get=FakeHttp()).catalog()["endpoints"]}
+    endpoints = {e["id"]: e for e in Marketstack(http_get=FakeHttp(), clock=at(2026, 10, 1)).catalog()["endpoints"]}
     for endpoint_id in DATED:
         for example in endpoints[endpoint_id]["examples"]:
-            assert "date" in example["params"] and f"date={example['params']['date']}" in example["caption"]
+            assert example["params"]["date"] == "2026-09-30" and "date=2026-09-30" in example["caption"]
         assert len(endpoints[endpoint_id]["examples"]) == 2
+        assert next(p for p in endpoints[endpoint_id]["params"] if p["name"] == "date")["example"] == "2026-09-30"
+
+
+def test_the_committed_catalog_holds_a_placeholder_not_a_day_so_it_never_goes_stale_or_churns():
+    raw = Marketstack(http_get=FakeHttp())._load()
+    text = json.dumps(raw)
+    assert docs.SAMPLE_DAY in text
+    dated = [e for e in raw["endpoints"] if e["id"] in DATED]
+    for e in dated:
+        assert next(p for p in e["params"] if p["name"] == "date")["example"] == docs.SAMPLE_DAY
+        assert all(x["params"]["date"] == docs.SAMPLE_DAY and docs.SAMPLE_DAY in x["caption"] for x in e["examples"])
+    assert not re.findall(r'"(?:example|date)": "\d{4}-\d{2}-\d{2}"|date=\d{4}-\d{2}-\d{2}', text)
+
+
+def test_the_served_catalog_never_leaks_the_placeholder():
+    assert docs.SAMPLE_DAY not in json.dumps(Marketstack(http_get=FakeHttp(), clock=at(2026, 10, 1)).catalog())
+
+
+def sample_dates(catalog):
+    return {x["params"]["date"] for e in catalog["endpoints"] if e["id"] in DATED for x in e["examples"]}
+
+
+def test_the_example_day_follows_the_clock_and_a_long_running_server_moves_on_with_it():
+    now = [at(2026, 10, 1)()]
+    pv = Marketstack(http_get=FakeHttp(), clock=lambda: now[0])
+    first = pv.catalog()
+    assert sample_dates(first) == {"2026-09-30"} and pv.catalog() is first  # same day: not rebuilt
+    now[0] = at(2026, 10, 1)() + 3600  # later the same UTC day
+    assert pv.catalog() is first
+    now[0] = at(2027, 10, 4)()  # a Monday a year on: the previous trading day is the Friday
+    later = pv.catalog()
+    assert later is not first and sample_dates(later) == {"2027-10-01"}
+    now[0] = at(2027, 10, 5)()
+    assert sample_dates(pv.catalog()) == {"2027-10-04"}
+
+
+@pytest.mark.parametrize("today", [date(2026, 10, 1), date(2026, 10, 3), date(2026, 10, 4), date(2027, 3, 1), date(2028, 2, 29)])
+def test_the_example_day_is_a_recent_weekday_always_inside_the_free_plans_one_year_window(today):
+    pv = Marketstack(http_get=FakeHttp(), clock=at(today.year, today.month, today.day))
+    (shown,) = sample_dates(pv.catalog())
+    day = date.fromisoformat(shown)
+    assert day.weekday() < 5 and 1 <= (today - day).days <= 3
 
 
 def test_endpoints_whose_required_values_the_documentation_does_not_give_offer_no_example():
@@ -545,18 +591,19 @@ def test_the_sample_day_is_the_latest_weekday_before_today(today, expected):
     assert docs.sample_day(today) == expected
 
 
-def test_the_generator_gives_a_date_endpoint_a_datetime_and_a_sample_day_only_when_iso_is_documented():
+def test_the_generator_gives_a_date_endpoint_a_datetime_and_the_sample_day_placeholder_only_when_iso_is_documented():
     def spec(description):
         return {
             "tags": [{"name": "End-of-Day Data"}],
             "paths": {"/v2/eod/{date}": {"get": {"tags": ["End-of-Day Data"], "summary": "S", "description": description, "parameters": [{"name": "symbols", "in": "query", "required": True, "schema": {"type": "string"}}, {"name": "date", "in": "path", "required": True, "description": "Date in YYYY-MM-DD format.", "schema": {"type": "string"}}]}}},
         }
 
-    iso = docs.build_catalog(spec("Given in YYYY-MM-DD or full ISO-8601 format."), today=date(2026, 10, 5))["endpoints"][0]
-    plain = docs.build_catalog(spec("Given as YYYY-MM-DD."), today=date(2026, 10, 5))["endpoints"][0]
+    iso = docs.build_catalog(spec("Given in YYYY-MM-DD or full ISO-8601 format."))["endpoints"][0]
+    plain = docs.build_catalog(spec("Given as YYYY-MM-DD."))["endpoints"][0]
     date_param = next(p for p in iso["params"] if p["name"] == "date")
-    assert (date_param["type"], date_param["example"]) == ("datetime", "2026-10-02") and docs.ISO_NOTE in date_param["description"]
-    assert iso["examples"][0]["params"] == {"date": "2026-10-02", "symbols": "AAPL"}
+    assert (date_param["type"], date_param["example"]) == ("datetime", docs.SAMPLE_DAY) and docs.ISO_NOTE in date_param["description"]
+    assert iso["examples"][0]["params"] == {"date": docs.SAMPLE_DAY, "symbols": "AAPL"}
+    assert docs.fill_sample_day(iso["examples"], "2026-10-02")[0]["params"] == {"date": "2026-10-02", "symbols": "AAPL"}
     assert next(p for p in plain["params"] if p["name"] == "date")["type"] == "date"
 
 
@@ -577,3 +624,9 @@ def test_the_key_is_never_part_of_a_cache_key(keyed):
     pv, _ = provider(ok(SAMPLES["eod"]))
     pv.query(*EOD_ARGS)
     assert pv._cache._items and all(KEY not in k for k in pv._cache._items)
+
+
+def test_fill_sample_day_replaces_the_placeholder_at_any_depth_and_leaves_everything_else_alone():
+    value = {"a": docs.SAMPLE_DAY, "b": [f"date={docs.SAMPLE_DAY}", 3, None, {"c": docs.SAMPLE_DAY}], "d": "keep", "e": 1.5, "f": True}
+    assert docs.fill_sample_day(value, "2026-09-30") == {"a": "2026-09-30", "b": ["date=2026-09-30", 3, None, {"c": "2026-09-30"}], "d": "keep", "e": 1.5, "f": True}
+    assert value["a"] == docs.SAMPLE_DAY  # the input is not modified
