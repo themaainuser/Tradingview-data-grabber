@@ -339,7 +339,12 @@ def validate_replace(payload: Any) -> dict[str, Any]:
         raise TradingInputError("The change must be an object.")
     _only(payload, {"qty", "limit_price", "stop_price", "trail", "time_in_force", "client_order_id"}, "order")
     body: dict[str, Any] = {}
-    qty = _decimal(payload, "qty", whole=True)
+    try:
+        qty = _decimal(payload, "qty", whole=True)
+    except TradingInputError as exc:
+        if "whole number" in str(exc):
+            raise TradingInputError("qty must be a whole number: Alpaca only replaces an order with a whole number of shares, and does not let the quantity of a fractional order change. Cancel it and place a new one instead.") from None
+        raise
     if qty is not None:
         body["qty"] = qty
     for name in ("limit_price", "stop_price", "trail"):

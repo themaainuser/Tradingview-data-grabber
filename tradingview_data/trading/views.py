@@ -226,13 +226,21 @@ def bulk_view(raw: Any, key: str) -> list[dict[str, Any]]:
 # --- quotes ---------------------------------------------------------------------------------------------
 
 
-def quote_view(symbol: str, kind: str, raw: Any) -> dict[str, Any]:
-    """One symbol's snapshot as a quote: bid, ask, last and the day so far. ``raw`` is the snapshot, or for
-    crypto and options the ``{"snapshots": {symbol: snapshot}}`` wrapper."""
+def snapshot_for(symbol: str, kind: str, raw: Any) -> Optional[dict[str, Any]]:
+    """The snapshot of ``symbol`` itself, or ``None`` when Alpaca sent none for it. A stock's answer is the
+    snapshot; for crypto and options it is ``{"snapshots": {symbol: snapshot}}``, and a
+    snapshot of another symbol must never be shown under this one."""
 
-    snap = _src(raw)
-    if isinstance(snap.get("snapshots"), dict):
-        snap = _src(next(iter(snap["snapshots"].values()), None))
+    found = _src(raw)
+    if kind != "us_equity":
+        found = _src(_src(found.get("snapshots")).get(symbol))
+    return found or None
+
+
+def quote_view(symbol: str, kind: str, raw: Any) -> dict[str, Any]:
+    """One symbol's snapshot as a quote: bid, ask, last and the day so far."""
+
+    snap = snapshot_for(symbol, kind, raw) or {}
     trade, quote, day, previous = _src(snap.get("latestTrade")), _src(snap.get("latestQuote")), _src(snap.get("dailyBar")), _src(snap.get("prevDailyBar"))
     bid, ask, last = num(quote.get("bp")), num(quote.get("ap")), num(trade.get("p"))
     close = num(day.get("c")) if num(day.get("c")) is not None else last

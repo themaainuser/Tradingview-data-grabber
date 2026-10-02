@@ -174,7 +174,10 @@ class TradingClient:
                 if 200 <= result.status < 300:
                     return Outcome("upstream_error", result.status, "Alpaca returned a response that could not be read." + self._maybe_sent(mutating), None, None, elapsed, mutating)
         status, code, message = classify(result.status, payload, auth_statuses)
-        return Outcome(status, result.status, self._message(status, result.status, message), code, payload if status == "ok" else None, elapsed)
+        # A 5xx (a gateway timeout, a 500 after the work was done) does not say the request was not applied.
+        unknown = mutating and status == "upstream_error"
+        shown = self._message(status, result.status, message) or ""
+        return Outcome(status, result.status, shown + (self._maybe_sent(True) if unknown else ""), code, payload if status == "ok" else None, elapsed, unknown)
 
     @staticmethod
     def _maybe_sent(mutating: bool) -> str:

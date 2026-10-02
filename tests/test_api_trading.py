@@ -9,7 +9,7 @@ import requests
 from fastapi.testclient import TestClient
 
 from tradingview_data.api import create_app
-from tradingview_data.trading.routes import allowed_hosts, host_name
+from tradingview_data.trading.routes import allowed_clients, allowed_hosts, client_allowed, host_name
 from tradingview_data.trading.service import TradingService
 
 from trading_support import KEY, LIVE_HOST, PAPER_HOST, SECRET, FakeBroker, uid
@@ -26,11 +26,11 @@ def no_real_network(monkeypatch):
     monkeypatch.setattr(requests.Session, "request", refuse)
 
 
-def app_with(tmp_path, env=None, broker=None, host="localhost", **kwargs):
+def app_with(tmp_path, env=None, broker=None, host="localhost", peer="127.0.0.1", **kwargs):
     broker = broker or FakeBroker()
     values = {"ALPACA_PAPER_API_KEY_ID": KEY, "ALPACA_PAPER_API_SECRET_KEY": SECRET} if env is None else env
     service = TradingService(http=broker, getenv=values.get, audit_path=tmp_path / "audit.jsonl")
-    return TestClient(create_app(tmp_path, trading=service, **kwargs), base_url=f"http://{host}"), broker
+    return TestClient(create_app(tmp_path, trading=service, **kwargs), base_url=f"http://{host}", client=(peer, 50000)), broker
 
 
 def order(**changes):
@@ -50,6 +50,36 @@ def test_the_host_header_must_be_a_local_name_for_every_trading_route(tmp_path):
         assert api.get("/api/trading/environments", headers={"Host": host}).status_code == 403
         assert api.post("/api/trading/paper/orders", json=order(), headers={**WRITE, "Host": host}).status_code == 403
     assert len(broker.calls) == 5  # only the five local requests reached Alpaca
+
+
+def test_a_computer_that_is_not_this_one_cannot_trade_whatever_headers_it_sends(tmp_path):
+    for peer in ("203.0.113.9", "192.168.1.20", "10.0.0.5", "2001:db8::1", "testclient", ""):
+        api, broker = app_with(tmp_path, peer=peer)
+        for method, path, body in (("GET", "/api/trading/environments", None), ("GET", "/api/trading/paper/account", None), ("POST", "/api/trading/paper/orders", order()), ("DELETE", "/api/trading/paper/positions", None)):
+            refused = api.request(method, path, json=body, headers={**WRITE, "Host": "localhost"})
+            assert refused.status_code == 403 and "only served to this machine" in refused.json()["detail"] and "TVDATA_TRADING_ALLOWED_CLIENTS" in refused.json()["detail"], (peer, path)
+        assert broker.calls == [], peer
+    for peer in ("127.0.0.1", "127.0.0.2", "::1", "::ffff:127.0.0.1"):
+        api, _ = app_with(tmp_path, peer=peer)
+        assert api.get("/api/trading/paper/account").status_code == 200, peer
+
+
+def test_other_computers_can_be_allowed_by_address_or_range_and_a_mistake_in_the_list_is_loud(tmp_path, monkeypatch):
+    monkeypatch.setenv("TVDATA_TRADING_ALLOWED_CLIENTS", "203.0.113.0/24, 192.168.1.20 ,2001:db8::/32")
+    assert [str(n) for n in allowed_clients()] == ["203.0.113.0/24", "192.168.1.20/32", "2001:db8::/32"]
+    for peer in ("203.0.113.9", "192.168.1.20", "2001:db8::7"):
+        api, _ = app_with(tmp_path, peer=peer)
+        assert api.get("/api/trading/paper/account").status_code == 200, peer
+    api, broker = app_with(tmp_path, peer="192.168.1.21")  # next to an allowed address, not on the list
+    assert api.get("/api/trading/paper/account").status_code == 403 and broker.calls == []
+    monkeypatch.setenv("TVDATA_TRADING_ALLOWED_CLIENTS", "my-laptop")
+    with pytest.raises(ValueError):
+        allowed_clients()
+
+
+def test_the_client_check_treats_anything_that_is_not_an_address_as_not_allowed():
+    assert [client_allowed(h) for h in ("127.0.0.1", "::1", "::ffff:127.0.0.1", "10.0.0.1", "testclient", "", None, "localhost", "999.1.1.1")] == [True, True, True, False, False, False, False, False, False]
+    assert client_allowed("10.1.2.3", allowed_clients(["10.0.0.0/8"])) and not client_allowed("11.1.2.3", allowed_clients(["10.0.0.0/8"]))
 
 
 def test_other_hosts_can_be_allowed_by_name_and_the_names_are_parsed_without_port_or_brackets(tmp_path, monkeypatch):
@@ -137,7 +167,7 @@ def test_live_works_once_it_is_switched_on_and_uses_only_the_live_keys_on_the_li
         return live(method, url, params, body, headers)
 
     env = {"ALPACA_PAPER_API_KEY_ID": KEY, "ALPACA_PAPER_API_SECRET_KEY": SECRET, "ALPACA_LIVE_API_KEY_ID": live.key, "ALPACA_LIVE_API_SECRET_KEY": live.secret, "ALPACA_ENABLE_LIVE_TRADING": "true"}
-    api = TestClient(create_app(tmp_path, trading=TradingService(http=router, getenv=env.get)), base_url="http://localhost")
+    api = TestClient(create_app(tmp_path, trading=TradingService(http=router, getenv=env.get)), base_url="http://localhost", client=("127.0.0.1", 50000))
     placed = api.post("/api/trading/live/orders", json=order(), headers=WRITE).json()
     assert placed["environment"] == "live" and placed["status"] == "ok"
     method, url, headers = seen[-1]
@@ -266,7 +296,7 @@ def test_a_by_client_id_lookup_is_not_taken_for_an_order_id(tmp_path):
 
 
 def test_the_default_app_contacts_no_one_and_keeps_its_audit_log_out_of_the_dataset_list(tmp_path):
-    api = TestClient(create_app(tmp_path), base_url="http://localhost")  # the autouse guard fails the test on any real request
+    api = TestClient(create_app(tmp_path), base_url="http://localhost", client=("127.0.0.1", 50000))  # the autouse guard fails the test on any real request
     assert api.get("/api/trading/environments").status_code == 200
     assert api.get("/api/datasets").json()["datasets"] == []
     assert api.get("/api/health").json()["dataset_count"] == 0

@@ -296,7 +296,7 @@ def test_a_replacement_carries_only_what_changes():
         ({"qty": ""}, "Nothing to change"),
         ({"symbol": "TSLA"}, "Unknown order field 'symbol'"),
         ({"notional": "5"}, "Unknown order field 'notional'"),
-        ({"qty": "1.5"}, "whole number"),
+        ({"qty": "1.5"}, "does not let the quantity of a fractional order change"),
         ({"qty": "0"}, "greater than zero"),
         ({"limit_price": "-1"}, "greater than zero"),
         ({"time_in_force": "later"}, "time_in_force must be one of"),

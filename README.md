@@ -431,14 +431,20 @@ words in `message`; a request that is wrong before it leaves is a 422 with one p
   values, extended hours, notional and fractional quantities, and bracket, oto and oco classes.
 - **One request, once.** Nothing is retried, because a retried order could be placed twice. Every order gets a
   client order ID (yours, or `tvdata-<random>`), which Alpaca requires to be unique, so sending the same order
-  twice is refused. If the connection fails after an order may have been sent, the answer has
-  `outcome_unknown: true` and the `client_order_id` to look the order up by.
+  twice is refused. If the connection fails, or Alpaca answers with a server error (5xx), after a request that
+  changes something may have been applied, the answer has `outcome_unknown: true` and the `client_order_id` to
+  look the order up by.
 - **Audit log.** Every request that changes something is appended to `<data-dir>/.tvdata-trading/trading-audit.jsonl`
-  (time, environment, what was sent, what came back; no keys).
-- **The server has no login, so two guards protect it.** The `Host` header must be `localhost`, `127.0.0.1` or `::1`
-  (add names with `TVDATA_TRADING_ALLOWED_HOSTS`), which stops a web page from reaching the server through its own
-  domain; and every request that changes something needs an `X-Tvdata-Trading: 1` header, which a browser will not
-  send from another site without the server's agreement. Keep `tvdata serve` on its default `127.0.0.1` for trading.
+  (time, environment, what was sent, what came back; no keys). The directory is created owner-only (0700) and the
+  file 0600, whatever the umask, because it records what you traded.
+- **The server has no login, so three guards protect it.** The connecting address must be this machine (loopback;
+  add addresses or ranges with `TVDATA_TRADING_ALLOWED_CLIENTS`, e.g. a Docker bridge such as `172.17.0.0/16`):
+  headers can be forged by another computer, so this is what keeps a server bound to a network interface from
+  trading for strangers, and every `/api/trading` route answers 403 to anyone else. The `Host` header must be
+  `localhost`, `127.0.0.1` or `::1` (add names with `TVDATA_TRADING_ALLOWED_HOSTS`), which stops a web page from
+  reaching the server through its own domain. And every request that changes something needs an
+  `X-Tvdata-Trading: 1` header, which a browser will not send from another site without the server's agreement.
+  Without a login of its own, anyone you let in can trade your account: allow only addresses you control.
 - **Not included.** Crypto funding (wallets, withdrawals, whitelisted addresses), tokenization, short locates (not
   available in paper), the activity event stream, Elite/DMA advanced routing, the deprecated corporate-action
   announcements (use the Providers page's Alpaca *Corporate actions*), and the order-update WebSocket (read orders

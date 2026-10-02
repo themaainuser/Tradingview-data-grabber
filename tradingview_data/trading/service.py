@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import threading
 import time
@@ -140,8 +141,12 @@ class AuditLog:
         line = json.dumps({"time": datetime.fromtimestamp(self._clock(), timezone.utc).isoformat(timespec="seconds"), **entry}, default=str)
         try:
             with self._lock:
-                self._path.parent.mkdir(parents=True, exist_ok=True)
-                with self._path.open("a", encoding="utf-8") as handle:
+                # What was ordered is private to this user: the directory and the file are owner-only whatever the umask.
+                self._path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+                descriptor = os.open(self._path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+                with os.fdopen(descriptor, "a", encoding="utf-8") as handle:
+                    if hasattr(os, "fchmod"):
+                        os.fchmod(handle.fileno(), 0o600)
                     handle.write(line + "\n")
         except OSError:  # a log that cannot be written must not stop a trade the user asked for
             log.warning("could not write the trading audit log %s", self._path, exc_info=True)
@@ -325,7 +330,10 @@ class TradingService:
             path, query = "/v1beta3/crypto/us/snapshots", [("symbols", name)]
         else:
             path, query = "/v1beta1/options/snapshots", [("symbols", name)]
-        return self._run(env_id, "GET", path, lambda raw: V.quote_view(name, kind, raw), query=query, base_url=DATA_URL, auth_statuses=(401, 403))
+        outcome = self._client(env_id).call("GET", path, query=query, base_url=DATA_URL, auth_statuses=(401, 403))
+        if outcome.status == "ok" and V.snapshot_for(name, kind, outcome.data) is None:
+            outcome = Outcome("not_found", outcome.http_status, f"Alpaca has no quote for {name}. Check the symbol.", None, None, outcome.elapsed_ms)
+        return self._envelope(env_id, outcome, lambda raw: V.quote_view(name, kind, raw))
 
     # --- orders --------------------------------------------------------------------------------------------------
 
