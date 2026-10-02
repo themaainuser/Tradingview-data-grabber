@@ -4,7 +4,11 @@ Three guards protect them, because they can spend money and the server has no lo
 
 * the connecting address must be this machine (or one listed in ``TVDATA_TRADING_ALLOWED_CLIENTS``). The
   two header checks below stop a *web page*; they cannot stop another computer, which can send any header
-  it likes, so this is what keeps a server that was bound to a network interface from trading for strangers;
+  it likes, so this is what keeps a server that was bound to a network interface from trading for strangers.
+  That address is only trustworthy if nothing rewrote it: uvicorn replaces it with the ``X-Forwarded-For``
+  value when the connection comes from a local proxy, and a proxy that passes a caller's header through
+  (Vite's dev proxy does) lets that caller claim to be ``127.0.0.1``. So a request that carries a forwarding
+  header is refused, unless ``TVDATA_TRADING_TRUST_PROXY`` says the proxy in front is yours and sets it itself;
 * the ``Host`` header must be a local name (or one listed in ``TVDATA_TRADING_ALLOWED_HOSTS``), which
   stops a web page from reaching the server by pointing its own domain at 127.0.0.1;
 * every request that changes something must carry ``X-Tvdata-Trading: 1``. A browser will not add a
@@ -28,6 +32,10 @@ WRITE_HEADER = "x-tvdata-trading"
 LOCAL_HOSTS = ("localhost", "127.0.0.1", "::1")
 HOSTS_ENV = "TVDATA_TRADING_ALLOWED_HOSTS"
 CLIENTS_ENV = "TVDATA_TRADING_ALLOWED_CLIENTS"
+PROXY_ENV = "TVDATA_TRADING_TRUST_PROXY"
+# Headers a proxy adds to say who the caller was. A browser talking to the server directly never sends them.
+FORWARDING_HEADERS = ("x-forwarded-for", "forwarded", "x-real-ip")
+_TRUE = {"1", "true", "yes", "on"}
 Network = Union[ipaddress.IPv4Network, ipaddress.IPv6Network]
 
 
@@ -44,6 +52,12 @@ def allowed_clients(extra: Iterable[str] = ()) -> list[Network]:
 
     listed = [name.strip() for name in os.environ.get(CLIENTS_ENV, "").split(",") if name.strip()]
     return [ipaddress.ip_network(name, strict=False) for name in [*extra, *listed]]
+
+
+def trusts_proxy() -> bool:
+    """Whether ``TVDATA_TRADING_TRUST_PROXY`` says the proxy in front of the server is the user's own."""
+
+    return os.environ.get(PROXY_ENV, "").strip().lower() in _TRUE
 
 
 def client_allowed(host: Optional[str], networks: Iterable[Network] = ()) -> bool:
@@ -74,13 +88,20 @@ def register_trading_routes(
     respond: Callable[[Any], Response],
     hosts: Optional[Iterable[str]] = None,
     clients: Optional[Iterable[str]] = None,
+    trust_proxy: Optional[bool] = None,
 ) -> None:
     """Adds the trading routes. ``respond`` serialises a payload (the API's NaN-safe JSON response)."""
 
     allowed = allowed_hosts(hosts or ())
     networks = allowed_clients(clients or ())
+    behind_proxy = trusts_proxy() if trust_proxy is None else trust_proxy
 
     def local_only(request: Request) -> None:
+        if not behind_proxy and any(name in request.headers for name in FORWARDING_HEADERS):
+            raise HTTPException(
+                status_code=403,
+                detail=f"This request came through a proxy (it carries a forwarding header such as X-Forwarded-For). A proxy can pass on a caller's claim about who it is, so trading is refused. Open the dashboard directly on this machine, or, if you run a reverse proxy of your own that sets these headers itself, set {PROXY_ENV}=true and restart the backend.",
+            )
         peer = request.client.host if request.client else None
         if not client_allowed(peer, networks):
             raise HTTPException(status_code=403, detail=f"Trading is only served to this machine, not to {peer or 'an unknown address'}. To allow that address, list it in {CLIENTS_ENV} and restart the backend.")

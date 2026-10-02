@@ -7,9 +7,10 @@ import json
 import pytest
 import requests
 from fastapi.testclient import TestClient
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from tradingview_data.api import create_app
-from tradingview_data.trading.routes import allowed_clients, allowed_hosts, client_allowed, host_name
+from tradingview_data.trading.routes import allowed_clients, allowed_hosts, client_allowed, host_name, trusts_proxy
 from tradingview_data.trading.service import TradingService
 
 from trading_support import KEY, LIVE_HOST, PAPER_HOST, SECRET, FakeBroker, uid
@@ -80,6 +81,54 @@ def test_other_computers_can_be_allowed_by_address_or_range_and_a_mistake_in_the
 def test_the_client_check_treats_anything_that_is_not_an_address_as_not_allowed():
     assert [client_allowed(h) for h in ("127.0.0.1", "::1", "::ffff:127.0.0.1", "10.0.0.1", "testclient", "", None, "localhost", "999.1.1.1")] == [True, True, True, False, False, False, False, False, False]
     assert client_allowed("10.1.2.3", allowed_clients(["10.0.0.0/8"])) and not client_allowed("11.1.2.3", allowed_clients(["10.0.0.0/8"]))
+
+
+def behind_local_proxy(tmp_path, monkeypatch, trust=False):
+    """The app as `tvdata serve` runs it: uvicorn's own proxy middleware (it trusts 127.0.0.1 by default) in front,
+    and the connection coming from a proxy on this machine, as Vite's dev proxy or nginx would make it."""
+
+    if trust:
+        monkeypatch.setenv("TVDATA_TRADING_TRUST_PROXY", "true")
+    broker = FakeBroker()
+    values = {"ALPACA_PAPER_API_KEY_ID": KEY, "ALPACA_PAPER_API_SECRET_KEY": SECRET}
+    app = create_app(tmp_path, trading=TradingService(http=broker, getenv=values.get))
+    return TestClient(ProxyHeadersMiddleware(app, trusted_hosts="127.0.0.1"), base_url="http://localhost", client=("127.0.0.1", 50000)), broker
+
+
+@pytest.mark.parametrize("header, value", [("X-Forwarded-For", "127.0.0.1"), ("X-Forwarded-For", "203.0.113.9"), ("X-Forwarded-For", "127.0.0.1, 127.0.0.1"), ("x-forwarded-for", "::1"), ("Forwarded", "for=127.0.0.1"), ("X-Real-IP", "127.0.0.1")])
+def test_a_proxy_that_passes_a_forged_local_address_through_cannot_make_a_stranger_look_local(tmp_path, monkeypatch, header, value):
+    api, broker = behind_local_proxy(tmp_path, monkeypatch)
+    for method, path, body in (("GET", "/api/trading/environments", None), ("GET", "/api/trading/paper/account", None), ("POST", "/api/trading/paper/orders", order()), ("DELETE", "/api/trading/paper/positions", None)):
+        refused = api.request(method, path, json=body, headers={**WRITE, header: value})
+        assert refused.status_code == 403 and "came through a proxy" in refused.json()["detail"] and "TVDATA_TRADING_TRUST_PROXY" in refused.json()["detail"], (header, value, path)
+    assert broker.calls == []
+
+
+def test_a_request_with_no_forwarding_header_works_through_the_same_stack_and_so_does_the_dashboards_own_proxy(tmp_path, monkeypatch):
+    api, broker = behind_local_proxy(tmp_path, monkeypatch)
+    assert api.get("/api/trading/paper/account").status_code == 200  # Vite's proxy adds none of these headers
+    assert api.post("/api/trading/paper/orders", json=order(), headers=WRITE).json()["status"] == "ok"
+    assert len(broker.calls) == 2
+
+
+def test_with_a_proxy_declared_as_yours_the_address_it_reports_is_checked_against_the_list(tmp_path, monkeypatch):
+    assert trusts_proxy() is False
+    api, broker = behind_local_proxy(tmp_path, monkeypatch, trust=True)
+    assert trusts_proxy() is True
+    stranger = api.get("/api/trading/paper/account", headers={"X-Forwarded-For": "203.0.113.9"})
+    assert stranger.status_code == 403 and "only served to this machine" in stranger.json()["detail"] and broker.calls == []
+    appended = api.get("/api/trading/paper/account", headers={"X-Forwarded-For": "127.0.0.1, 203.0.113.9"})  # a proxy that appends: the rightmost address is the caller
+    assert appended.status_code == 403 and broker.calls == []
+    assert api.get("/api/trading/paper/account", headers={"X-Forwarded-For": "127.0.0.1"}).status_code == 200  # this machine, as the proxy says
+    monkeypatch.setenv("TVDATA_TRADING_ALLOWED_CLIENTS", "203.0.113.0/24")
+    api, _ = behind_local_proxy(tmp_path, monkeypatch, trust=True)
+    assert api.get("/api/trading/paper/account", headers={"X-Forwarded-For": "203.0.113.9"}).status_code == 200
+
+
+@pytest.mark.parametrize("value, expected", [("1", True), ("true", True), ("TRUE", True), (" yes ", True), ("on", True), ("", False), ("0", False), ("false", False), ("maybe", False)])
+def test_trusting_a_proxy_is_off_unless_said_plainly(monkeypatch, value, expected):
+    monkeypatch.setenv("TVDATA_TRADING_TRUST_PROXY", value)
+    assert trusts_proxy() is expected
 
 
 def test_other_hosts_can_be_allowed_by_name_and_the_names_are_parsed_without_port_or_brackets(tmp_path, monkeypatch):
