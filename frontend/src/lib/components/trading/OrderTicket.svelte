@@ -51,6 +51,8 @@
 		order: Record<string, unknown>;
 		text: string;
 		clientOrderId: string;
+		/** The account the review was made for; the order is only ever sent there. */
+		env: string;
 	}
 
 	let attempted = $state(false);
@@ -97,8 +99,11 @@
 			review = null;
 			return;
 		}
+		const env = store.env;
+		if (!env) return;
 		const clientOrderId = `tvdata-${crypto.randomUUID()}`;
 		review = {
+			env,
 			order: { ...built.order, client_order_id: clientOrderId },
 			text: describeOrder(built.order),
 			clientOrderId
@@ -107,7 +112,7 @@
 
 	async function submit() {
 		if (!review || store.submitting || (real && liveWord.trim() !== 'LIVE')) return;
-		const result = await store.placeOrder(review.order);
+		const result = await store.placeOrder(review.order, review.env);
 		outcome = { ok: result.ok, message: result.message, unknown: result.unknown };
 		if (result.ok) {
 			review = null;

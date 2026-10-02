@@ -54,7 +54,10 @@
 				go(known.some((e) => e.id === 'paper') ? 'paper' : (known[0]?.id ?? 'paper'), null, true);
 				return;
 			}
-			store.select(known.some((e) => e.id === wanted) ? wanted : null);
+			const next = known.some((e) => e.id === wanted) ? wanted : null;
+			// Numbers typed for one account are not carried to another: the ticket starts empty there.
+			if (store.env !== next) draft = emptyDraft();
+			store.select(next);
 		});
 	});
 
@@ -170,30 +173,33 @@
 				{/each}
 			</nav>
 
-			{#if view === 'overview'}
-				<AccountPanel {store} ongo={(next) => store.env && go(store.env, next)} />
-				<PositionsPanel {store} ontrade={trade} />
-			{:else if view === 'trade'}
-				<div class="grid min-w-0 gap-6">
-					<OrderTicket {store} bind:draft />
-					<ContractBrowser
-						{store}
-						underlying={draft.symbol}
-						multiLeg={draft.multiLeg}
-						onuse={useContract}
-					/>
-				</div>
-			{:else if view === 'orders'}
-				<OrdersPanel {store} />
-			{:else if view === 'positions'}
-				<PositionsPanel {store} ontrade={trade} />
-			{:else if view === 'watchlists'}
-				<WatchlistsPanel {store} ontrade={trade} />
-			{:else if view === 'activity'}
-				<ActivityPanel {store} />
-			{:else if view === 'settings'}
-				<SettingsPanel {store} />
-			{/if}
+			<!-- Keyed by the account: its panels read their data when they appear, so a switch must make them appear again. -->
+			{#key store.env}
+				{#if view === 'overview'}
+					<AccountPanel {store} ongo={(next) => store.env && go(store.env, next)} />
+					<PositionsPanel {store} ontrade={trade} />
+				{:else if view === 'trade'}
+					<div class="grid min-w-0 gap-6">
+						<OrderTicket {store} bind:draft />
+						<ContractBrowser
+							{store}
+							underlying={draft.symbol}
+							multiLeg={draft.multiLeg}
+							onuse={useContract}
+						/>
+					</div>
+				{:else if view === 'orders'}
+					<OrdersPanel {store} />
+				{:else if view === 'positions'}
+					<PositionsPanel {store} ontrade={trade} />
+				{:else if view === 'watchlists'}
+					<WatchlistsPanel {store} ontrade={trade} />
+				{:else if view === 'activity'}
+					<ActivityPanel {store} />
+				{:else if view === 'settings'}
+					<SettingsPanel {store} />
+				{/if}
+			{/key}
 		{/if}
 	{/if}
 </div>

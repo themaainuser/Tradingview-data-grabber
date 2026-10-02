@@ -120,7 +120,7 @@ describe('environments', () => {
 			await open(store, env);
 			expect(store.usable).toBe(false);
 			await store.refresh();
-			expect(await store.placeOrder(order)).toMatchObject({
+			expect(await store.placeOrder(order, env)).toMatchObject({
 				ok: false,
 				message: 'This environment is not ready.'
 			});
@@ -329,7 +329,7 @@ describe('placing an order', () => {
 	it('sends it once and refreshes the orders, the positions and the account', async () => {
 		const { store, trading } = setup();
 		await open(store);
-		const result = await store.placeOrder(order);
+		const result = await store.placeOrder(order, 'paper');
 		expect(result).toMatchObject({ ok: true, unknown: null, message: 'Order placed.' });
 		expect(store.notice).toMatchObject({ tone: 'success' });
 		expect(store.notice!.text).toContain('buy AAPL');
@@ -348,22 +348,24 @@ describe('placing an order', () => {
 		const gate = deferred<Json>();
 		const { store, trading } = setup({ 'POST /orders': () => gate.promise });
 		await open(store);
-		const first = store.placeOrder(order);
+		const first = store.placeOrder(order, 'paper');
 		expect(store.submitting).toBe(true);
-		expect(await store.placeOrder(order)).toMatchObject({
+		expect(await store.placeOrder(order, 'paper')).toMatchObject({
 			ok: false,
 			message: 'An order is already being sent.'
 		});
 		gate.resolve(fixture('order_filled'));
 		expect((await first).ok).toBe(true);
 		expect(trading.mock.calls.filter(([, c]) => c.method === 'POST')).toHaveLength(1);
-		expect((await store.placeOrder({ ...order, client_order_id: 'vcheck-2' })).ok).toBe(true);
+		expect((await store.placeOrder({ ...order, client_order_id: 'vcheck-2' }, 'paper')).ok).toBe(
+			true
+		);
 	});
 
 	it('says Alpaca’s reason when it refuses, and leaves the lists alone', async () => {
 		const { store, trading } = setup({ 'POST /orders': fixture('order_refused') });
 		await open(store);
-		const result = await store.placeOrder(order);
+		const result = await store.placeOrder(order, 'paper');
 		expect(result).toMatchObject({
 			ok: false,
 			message: 'insufficient buying power',
@@ -387,7 +389,7 @@ describe('placing an order', () => {
 				)
 		});
 		await open(store);
-		const result = await store.placeOrder(order);
+		const result = await store.placeOrder(order, 'paper');
 		expect(result).toMatchObject({
 			ok: false,
 			unknown: null,
@@ -406,7 +408,7 @@ describe('placing an order', () => {
 				'GET /orders/by-client-id': fixture('order_one')
 			});
 			await open(store);
-			const pending = store.placeOrder(order);
+			const pending = store.placeOrder(order, 'paper');
 			await vi.advanceTimersByTimeAsync(1500);
 			const result = await pending;
 			expect(result).toMatchObject({ ok: true, unknown: 'placed' });
@@ -423,7 +425,7 @@ describe('placing an order', () => {
 				'GET /orders/by-client-id': fixture('not_found')
 			});
 			await open(store);
-			const pending = store.placeOrder(order);
+			const pending = store.placeOrder(order, 'paper');
 			await vi.advanceTimersByTimeAsync(1500);
 			expect(await pending).toMatchObject({ ok: false, unknown: 'not_found' });
 			expect(store.notice!.text).toContain('was not placed');
@@ -436,21 +438,231 @@ describe('placing an order', () => {
 				'GET /orders/by-client-id': () => Promise.reject(new ApiError('network', 'down', null))
 			});
 			await open(store);
-			const pending = store.placeOrder(order);
+			const pending = store.placeOrder(order, 'paper');
 			await vi.advanceTimersByTimeAsync(1500);
 			const result = await pending;
 			expect(result).toMatchObject({ ok: false, unknown: 'unclear' });
 			expect(result.message).toContain('may or may not have been placed');
 		});
 
-		it('treats a request that never reached the backend as unclear', async () => {
+		it.each([
+			['the connection is lost', new ApiError('network', 'Cannot reach the backend.', null)],
+			[
+				'the browser gives up waiting',
+				new ApiError('timeout', 'The backend took too long to respond', null)
+			],
+			['a proxy answers 502', new ApiError('http', 'Bad gateway', 502)],
+			['the backend answers 500', new ApiError('http', 'Internal Server Error', 500)],
+			['the answer cannot be read', new ApiError('contract', 'Unexpected response: order.qty', 200)]
+		])(
+			'looks the order up by its client ID when %s, because it may have been placed',
+			async (_, failure) => {
+				vi.useFakeTimers();
+				const { store, trading } = setup({
+					'POST /orders': () => Promise.reject(failure),
+					'GET /orders/by-client-id': fixture('order_one')
+				});
+				await open(store);
+				const pending = store.placeOrder(order, 'paper');
+				await vi.advanceTimersByTimeAsync(1500);
+				expect(await pending).toMatchObject({ ok: true, unknown: 'placed' });
+				expect(paths(trading)[1]).toBe('paper GET /orders/by-client-id/vcheck-1');
+				expect(store.notice).toMatchObject({ tone: 'warning' });
+			}
+		);
+
+		it.each([
+			[422, 'limit_price does not apply to a market order.'],
+			[403, 'Trading is only served to this machine.'],
+			[404, 'Unknown trading environment.']
+		])(
+			'does not look anything up after the backend refuses with %i: nothing was sent',
+			async (status, message) => {
+				const { store, trading } = setup({
+					'POST /orders': () => Promise.reject(new ApiError('http', message, status))
+				});
+				await open(store);
+				expect(await store.placeOrder(order, 'paper')).toMatchObject({
+					ok: false,
+					unknown: null,
+					message
+				});
+				expect(paths(trading)).toEqual(['paper POST /orders']);
+			}
+		);
+
+		it('says not placed, or unclear, when the lookup after a lost connection finds nothing or fails', async () => {
+			vi.useFakeTimers();
+			const lookup = [
+				fixture('not_found'),
+				() => Promise.reject(new ApiError('network', 'down', null))
+			];
 			const { store } = setup({
-				'POST /orders': () =>
-					Promise.reject(new ApiError('timeout', 'The backend took too long to respond', null))
+				'POST /orders': () => Promise.reject(new ApiError('network', 'lost', null)),
+				'GET /orders/by-client-id': () => {
+					const next = lookup.shift()!;
+					return typeof next === 'function' ? next() : next;
+				}
 			});
 			await open(store);
-			expect(await store.placeOrder(order)).toMatchObject({ ok: false, unknown: 'unclear' });
+			const first = store.placeOrder(order, 'paper');
+			await vi.advanceTimersByTimeAsync(1500);
+			expect(await first).toMatchObject({ ok: false, unknown: 'not_found' });
+			const second = store.placeOrder({ ...order, client_order_id: 'vcheck-2' }, 'paper');
+			await vi.advanceTimersByTimeAsync(1500);
+			expect(await second).toMatchObject({ ok: false, unknown: 'unclear' });
 		});
+	});
+
+	describe('a retry after an unclear submission', () => {
+		/** The first attempt is lost and cannot be looked up; the second is refused by Alpaca, as a duplicate ID is. */
+		async function afterAnUnclearAttempt(
+			retryAnswer: Json,
+			lookupAnswer: Json | (() => Promise<Json>)
+		) {
+			vi.useFakeTimers();
+			let posts = 0;
+			const lookups: string[] = [];
+			const { store, trading } = setup({
+				'POST /orders': () =>
+					++posts === 1 ? Promise.reject(new ApiError('network', 'lost', null)) : retryAnswer,
+				'GET /orders/by-client-id': () => {
+					lookups.push('lookup');
+					if (lookups.length === 1) return Promise.reject(new ApiError('network', 'down', null));
+					return typeof lookupAnswer === 'function' ? lookupAnswer() : lookupAnswer;
+				}
+			});
+			await open(store);
+			const first = store.placeOrder(order, 'paper');
+			await vi.advanceTimersByTimeAsync(1500);
+			expect(await first).toMatchObject({ unknown: 'unclear' });
+			return { store, trading, lookups };
+		}
+		const duplicate = fixture('order_refused', {
+			message: 'client_order_id must be unique',
+			code: 42210000,
+			http_status: 422
+		});
+
+		it('looks for the order Alpaca says already exists and reports that the first attempt went through', async () => {
+			const { store, trading, lookups } = await afterAnUnclearAttempt(
+				duplicate,
+				fixture('order_one')
+			);
+			const retry = await store.placeOrder(order, 'paper');
+			expect(retry).toMatchObject({ ok: true, unknown: 'placed' });
+			expect(retry.message).toContain('The first attempt did go through');
+			expect(lookups).toHaveLength(2);
+			expect(paths(trading).filter((p) => p.includes('POST'))).toHaveLength(2);
+			expect(store.notice).toMatchObject({ tone: 'warning' });
+		});
+
+		it('shows Alpaca’s own reason when the retry is refused for another reason and the order does not exist', async () => {
+			const { store, lookups } = await afterAnUnclearAttempt(
+				fixture('order_refused'),
+				fixture('not_found')
+			);
+			const retry = await store.placeOrder(order, 'paper');
+			expect(retry).toMatchObject({
+				ok: false,
+				unknown: 'not_found',
+				message: 'insufficient buying power'
+			});
+			expect(store.notice).toMatchObject({ tone: 'error', text: 'insufficient buying power' });
+			// the question is settled: the same ID refused again is an ordinary refusal and is not looked up again
+			expect(await store.placeOrder(order, 'paper')).toMatchObject({ ok: false, unknown: null });
+			expect(lookups).toHaveLength(2);
+		});
+
+		it('stays unclear when the lookup of a refused retry fails too', async () => {
+			const { store } = await afterAnUnclearAttempt(duplicate, () =>
+				Promise.reject(new ApiError('network', 'down', null))
+			);
+			expect(await store.placeOrder(order, 'paper')).toMatchObject({
+				ok: false,
+				unknown: 'unclear'
+			});
+		});
+	});
+});
+
+describe('switching account while something is in flight', () => {
+	it('refuses an order that was reviewed for another account, and sends nothing', async () => {
+		const { store, trading } = setup({}, { live: true });
+		await open(store, 'live');
+		trading.mockClear();
+		expect(await store.placeOrder(order, 'paper')).toMatchObject({ ok: false, unknown: null });
+		expect((await store.placeOrder(order, 'paper')).message).toContain(
+			'account changed since this order was reviewed'
+		);
+		expect(trading).not.toHaveBeenCalled();
+		await open(store, 'paper');
+		expect((await store.placeOrder(order, 'live')).message).toContain('account changed');
+		expect(trading).not.toHaveBeenCalled();
+	});
+
+	it('keeps the one-order-at-a-time guard up across the switch until the first order is answered', async () => {
+		const gate = deferred<Json>();
+		const { store, trading } = setup({ 'POST /orders': () => gate.promise }, { live: true });
+		await open(store, 'paper');
+		const first = store.placeOrder(order, 'paper');
+		expect(store.submitting).toBe(true);
+		store.select('live');
+		expect(store.submitting).toBe(true); // the paper POST is still out
+		expect(
+			await store.placeOrder({ ...order, client_order_id: 'vcheck-live' }, 'live')
+		).toMatchObject({
+			ok: false,
+			message: 'An order is already being sent.'
+		});
+		gate.resolve(fixture('order_filled'));
+		await first;
+		expect(store.submitting).toBe(false);
+		expect(trading.mock.calls.filter(([, c]) => c.method === 'POST')).toHaveLength(1);
+		expect((await store.placeOrder({ ...order, client_order_id: 'vcheck-live' }, 'live')).ok).toBe(
+			true
+		);
+	});
+
+	it('does not announce the outcome of an order lookup under the account that was switched to', async () => {
+		vi.useFakeTimers();
+		const lookup = deferred<Json>();
+		const { store } = setup(
+			{
+				'POST /orders': fixture('outcome_unknown', { client_order_id: 'vcheck-1' }),
+				'GET /orders/by-client-id': () => lookup.promise
+			},
+			{ live: true }
+		);
+		await open(store, 'paper');
+		const pending = store.placeOrder(order, 'paper');
+		await vi.advanceTimersByTimeAsync(1500); // the lookup is out
+		store.select('live');
+		lookup.resolve(fixture('not_found'));
+		expect(await pending).toMatchObject({ ok: false });
+		expect(store.notice).toBeNull();
+	});
+
+	it('does not announce a refusal or a failure of an order or another change after the switch', async () => {
+		const refusal = deferred<Json>();
+		const failure = deferred<Json>();
+		const { store } = setup(
+			{
+				'POST /orders': () => refusal.promise,
+				'DELETE /orders': () => failure.promise
+			},
+			{ live: true }
+		);
+		await open(store, 'paper');
+		const placing = store.placeOrder(order, 'paper');
+		const cancelling = store.cancelOrder('00000000-0000-4000-8000-000000000001');
+		store.select('live');
+		refusal.reject(new ApiError('http', 'qty must be greater than zero.', 422));
+		failure.reject(new ApiError('network', 'Cannot reach the backend.', null));
+		await Promise.all([placing, cancelling]);
+		expect(store.notice).toBeNull();
+		// and an announcement about the account that is open still works
+		await store.cancelAllOrders().catch(() => undefined);
 	});
 });
 

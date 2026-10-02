@@ -53,10 +53,12 @@
 	let replacing = $state<string | null>(null);
 	let changes = $state({ qty: '', limit_price: '', stop_price: '', trail: '' });
 	let replaceError = $state<string | null>(null);
+	let replaceWord = $state('');
 
 	function startReplace(order: Order) {
 		replacing = order.id;
 		replaceError = null;
+		replaceWord = '';
 		changes = {
 			qty: order.qty === null ? '' : String(order.qty),
 			limit_price: order.limit_price === null ? '' : String(order.limit_price),
@@ -66,6 +68,10 @@
 	}
 
 	async function replace(order: Order) {
+		if (store.realMoney && replaceWord.trim() !== 'LIVE') {
+			replaceError = 'Type LIVE to change a real order.';
+			return;
+		}
 		const was = {
 			qty: order.qty,
 			limit_price: order.limit_price,
@@ -83,8 +89,10 @@
 			return;
 		}
 		const result = await store.replaceOrder(order.id as string, sent);
-		if (result.ok) replacing = null;
-		else replaceError = result.message;
+		if (result.ok) {
+			replacing = null;
+			replaceWord = '';
+		} else replaceError = result.message;
 	}
 
 	const canReplace = (order: Order) =>
@@ -182,7 +190,7 @@
 							>
 							<td class="px-3 py-2">
 								{#if !leg && order.cancelable}
-									<div class="flex flex-wrap gap-2">
+									<div class="flex flex-wrap items-start gap-2">
 										{#if canReplace(order)}<Button
 												type="button"
 												variant="translucent"
@@ -191,13 +199,25 @@
 													replacing === order.id ? (replacing = null) : startReplace(order)}
 												>Replace</Button
 											>{/if}
-										<Button
-											type="button"
-											variant="translucent"
-											size="xs"
-											disabled={store.busy > 0}
-											onclick={() => store.cancelOrder(order.id as string)}>Cancel</Button
-										>
+										{#if store.realMoney}
+											<ConfirmAction
+												label="Cancel"
+												confirmLabel="Cancel the order"
+												description="Sends a cancel request for this {order.symbol} order."
+												realMoney={true}
+												size="xs"
+												disabled={store.busy > 0}
+												onconfirm={async () => void (await store.cancelOrder(order.id as string))}
+											/>
+										{:else}
+											<Button
+												type="button"
+												variant="translucent"
+												size="xs"
+												disabled={store.busy > 0}
+												onclick={() => store.cancelOrder(order.id as string)}>Cancel</Button
+											>
+										{/if}
 									</div>
 								{/if}
 							</td>
@@ -250,7 +270,28 @@
 													inputmode="decimal"
 												/></Field
 											>{/if}
-										<Button type="submit" size="sm" disabled={store.busy > 0}>Replace order</Button>
+										{#if store.realMoney}
+											<Field
+												id="replace-live"
+												label="Type LIVE to confirm"
+												hint="This changes a real order."
+												class="w-44"
+											>
+												<Input
+													id="replace-live"
+													bind:value={replaceWord}
+													autocomplete="off"
+													spellcheck="false"
+													data-testid="replace-live-confirm"
+												/>
+											</Field>
+										{/if}
+										<Button
+											type="submit"
+											size="sm"
+											disabled={store.busy > 0 ||
+												(store.realMoney && replaceWord.trim() !== 'LIVE')}>Replace order</Button
+										>
 										<Button
 											type="button"
 											variant="ghost"

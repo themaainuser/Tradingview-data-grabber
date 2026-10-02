@@ -136,7 +136,7 @@
 							label="Delete"
 							confirmLabel="Delete the watchlist"
 							description="Deletes the watchlist {selected.name} for good."
-							realMoney={false}
+							realMoney={store.realMoney}
 							variant="destructive"
 							onconfirm={async () =>
 								void (selected.id && (await store.deleteWatchlist(selected.id)))}

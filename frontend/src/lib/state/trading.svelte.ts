@@ -1,4 +1,4 @@
-import { SvelteMap } from 'svelte/reactivity';
+import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { ApiClient, TradingCall } from '$lib/api/client';
 import { isAbort, toApiError, type ApiError } from '$lib/api/errors';
 import {
@@ -103,6 +103,13 @@ export interface PlaceResult extends ActionResult<Order> {
 	unknown: UnknownOutcome | null;
 }
 
+/** Whether a failure of an order POST leaves open that the order reached Alpaca: not a plain 4xx refusal by the backend. */
+const mayHaveBeenSent = (failure: ApiError): boolean =>
+	failure.kind === 'network' ||
+	failure.kind === 'timeout' ||
+	failure.kind === 'contract' ||
+	(failure.kind === 'http' && (failure.status ?? 0) >= 500);
+
 const REFRESH_MS = 5000;
 const LOOKUP_DELAY_MS = 1500;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -111,6 +118,8 @@ const encodeSymbol = (symbol: string) => symbol.split('/').map(encodeURIComponen
 export class TradingStore {
 	readonly #api: ApiClient;
 	readonly #controllers = new SvelteMap<object, AbortController>();
+	/** `env:clientOrderId` of orders whose first submission got no clear answer: a refused retry of one is looked up. */
+	readonly #uncertain = new SvelteSet<string>();
 
 	environments = $state.raw<TradingEnvironment[]>([]);
 	environmentsStatus = $state<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -182,7 +191,8 @@ export class TradingStore {
 		])
 			resource.reset();
 		this.notice = null;
-		this.submitting = false;
+		// `submitting` is left alone: an order POST for the account just left is still in flight, and a second
+		// order must wait for it. Its own `finally` clears the flag.
 		this.refreshing = false;
 	}
 
@@ -353,7 +363,9 @@ export class TradingStore {
 
 	// --- changing things -----------------------------------------------------------------------------------
 
-	#tell(tone: Notice['tone'], text: string): void {
+	/** Says something about `env`. Silent when that account is no longer the one open: its news must not appear under another's banner. */
+	#tell(env: string, tone: Notice['tone'], text: string): void {
+		if (this.env !== env) return;
 		this.notice = { tone, text, at: Date.now() };
 	}
 
@@ -383,15 +395,15 @@ export class TradingStore {
 				};
 			if (envelope.status !== 'ok') {
 				const message = envelope.message ?? `Alpaca answered ${envelope.status}.`;
-				this.#tell('error', message);
+				this.#tell(env, 'error', message);
 				return { ok: false, envelope, error: null, message };
 			}
-			this.#tell('success', done);
+			this.#tell(env, 'success', done);
 			await Promise.all(refresh.map((load) => load()));
 			return { ok: true, envelope, error: null, message: done };
 		} catch (error) {
 			const failure = toApiError(error);
-			this.#tell('error', failure.message);
+			this.#tell(env, 'error', failure.message);
 			return { ok: false, envelope: null, error: failure, message: failure.message };
 		} finally {
 			this.busy--;
@@ -401,27 +413,27 @@ export class TradingStore {
 	#touchedByOrders = () => [this.loadOrders, this.loadPositions, this.loadAccount];
 
 	/**
-	 * Places an order. One at a time: a second call while one is out is refused, so a double click cannot place
-	 * two. When no answer comes back the order may still exist, so it is looked up by its client ID.
+	 * Places an order on `env`, the account it was reviewed for: if another account is open by now it is refused,
+	 * so a review for paper can never be sent to live. One at a time (a second call while one is out is refused,
+	 * even across a switch of account). When no usable answer comes back, or a retry of an order whose first
+	 * attempt was unclear is refused, the order may exist, so it is looked up by its client ID before anyone is told
+	 * what happened.
 	 */
-	async placeOrder(order: Record<string, unknown>): Promise<PlaceResult> {
-		const env = this.env;
-		if (this.submitting)
-			return {
-				ok: false,
-				envelope: null,
-				error: null,
-				message: 'An order is already being sent.',
-				unknown: null
-			};
-		if (!env || !this.usable)
-			return {
-				ok: false,
-				envelope: null,
-				error: null,
-				message: 'This environment is not ready.',
-				unknown: null
-			};
+	async placeOrder(order: Record<string, unknown>, env: string): Promise<PlaceResult> {
+		const refuse = (message: string): PlaceResult => ({
+			ok: false,
+			envelope: null,
+			error: null,
+			message,
+			unknown: null
+		});
+		if (this.env !== env)
+			return refuse(
+				'The account changed since this order was reviewed. Review it again for this account.'
+			);
+		if (this.submitting) return refuse('An order is already being sent.');
+		if (!this.usable) return refuse('This environment is not ready.');
+		const id = typeof order.client_order_id === 'string' ? order.client_order_id : null;
 		this.submitting = true;
 		this.busy++;
 		try {
@@ -439,8 +451,10 @@ export class TradingStore {
 					unknown: null
 				};
 			if (envelope.status === 'ok') {
+				if (id) this.#uncertain.delete(`${env}:${id}`);
 				const placed = envelope.data;
 				this.#tell(
+					env,
 					'success',
 					placed?.order_class === 'mleg'
 						? `Multi-leg order placed (${placed.status ?? 'sent'}).`
@@ -450,46 +464,78 @@ export class TradingStore {
 				return { ok: true, envelope, error: null, message: 'Order placed.', unknown: null };
 			}
 			if (envelope.outcome_unknown && envelope.client_order_id)
-				return await this.#resolve(env, envelope);
+				return await this.#resolve(env, envelope.client_order_id, envelope, false);
+			// A refused retry of an order whose first attempt was unclear: Alpaca may be refusing it because the
+			// first attempt went through (the client ID is already in use), so look before saying anything.
+			if (id && this.#uncertain.has(`${env}:${id}`))
+				return await this.#resolve(env, id, envelope, true);
 			const message = envelope.message ?? `Alpaca answered ${envelope.status}.`;
-			this.#tell('error', message);
+			this.#tell(env, 'error', message);
 			return { ok: false, envelope, error: null, message, unknown: null };
 		} catch (error) {
 			const failure = toApiError(error);
-			this.#tell('error', failure.message);
-			return {
-				ok: false,
-				envelope: null,
-				error: failure,
-				message: failure.message,
-				unknown: failure.kind === 'network' || failure.kind === 'timeout' ? 'unclear' : null
-			};
+			if (this.env !== env)
+				return {
+					ok: false,
+					envelope: null,
+					error: failure,
+					message: failure.message,
+					unknown: null
+				};
+			// Anything that is not a plain refusal by the backend may have come after the order reached Alpaca:
+			// a lost connection, a timeout, a server fault, an answer that could not be read.
+			if (id && mayHaveBeenSent(failure)) return await this.#resolve(env, id, null, false);
+			this.#tell(env, 'error', failure.message);
+			return { ok: false, envelope: null, error: failure, message: failure.message, unknown: null };
 		} finally {
 			this.submitting = false;
 			this.busy--;
 		}
 	}
 
-	async #resolve(env: string, sent: Envelope<Order>): Promise<PlaceResult> {
-		await sleep(LOOKUP_DELAY_MS);
-		const id = sent.client_order_id as string;
+	/**
+	 * Finds out whether the order with this client ID exists. `sent` is the answer that prompted the question (none
+	 * when no answer came); `retry` says the question is about a refused second attempt, which needs no delay.
+	 */
+	async #resolve(
+		env: string,
+		id: string,
+		sent: Envelope<Order> | null,
+		retry: boolean
+	): Promise<PlaceResult> {
+		const key = `${env}:${id}`;
+		this.#uncertain.add(key);
+		if (!retry) await sleep(LOOKUP_DELAY_MS);
 		try {
 			const found = await this.#api.trading(
 				env,
 				{ method: 'GET', path: `/orders/by-client-id/${encodeURIComponent(id)}` },
 				parseOrder
 			);
-			if (this.env === env && found.status === 'ok') {
-				const message =
-					'The connection failed, but Alpaca did receive the order. It is in the order list.';
-				this.#tell('warning', message);
+			if (this.env !== env)
+				return {
+					ok: false,
+					envelope: sent,
+					error: null,
+					message: 'The environment changed before the answer arrived.',
+					unknown: 'unclear'
+				};
+			if (found.status === 'ok') {
+				this.#uncertain.delete(key);
+				const message = retry
+					? 'The first attempt did go through: Alpaca already has this order. It is in the order list.'
+					: 'The connection failed, but Alpaca did receive the order. It is in the order list.';
+				this.#tell(env, 'warning', message);
 				await Promise.all(this.#touchedByOrders().map((load) => load()));
 				return { ok: true, envelope: found, error: null, message, unknown: 'placed' };
 			}
 			if (found.status === 'not_found') {
+				this.#uncertain.delete(key);
 				const message =
-					'The connection failed and Alpaca has no order with this ID, so it was not placed. Check the order list before trying again.';
-				this.#tell('warning', message);
+					retry && sent?.message
+						? sent.message
+						: 'The connection failed and Alpaca has no order with this ID, so it was not placed. Check the order list before trying again.';
+				this.#tell(env, retry ? 'error' : 'warning', message);
 				return { ok: false, envelope: sent, error: null, message, unknown: 'not_found' };
 			}
 		} catch {
@@ -497,7 +543,7 @@ export class TradingStore {
 		}
 		const message =
 			'The connection failed and the order could not be looked up. It may or may not have been placed: check the order list and your positions before trying again.';
-		this.#tell('warning', message);
+		this.#tell(env, 'warning', message);
 		return { ok: false, envelope: sent, error: null, message, unknown: 'unclear' };
 	}
 

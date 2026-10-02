@@ -4,16 +4,11 @@ import { page } from 'vitest/browser';
 import { goto } from '$app/navigation';
 import InApp from '$lib/testing/InApp.svelte';
 import { json, stubBackend } from '$lib/testing/backend';
+import { page as routePage } from '$lib/testing/route.svelte';
 import fixtures from '$lib/testing/trading-fixtures.json';
 import Trading from './[[env]]/[[view]]/+page.svelte';
 
-const route = vi.hoisted(() => ({
-	page: {
-		url: new URL('http://localhost/trading'),
-		params: { env: undefined as string | undefined, view: undefined as string | undefined }
-	}
-}));
-vi.mock('$app/state', () => route);
+vi.mock('$app/state', () => import('$lib/testing/route.svelte'));
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
 type Json = Record<string, unknown>;
@@ -46,6 +41,31 @@ function backend(
 			init?.method === 'POST' ? json(answer('order_filled')) : json(answer('orders')),
 		'/api/trading/paper/quote': () => json(answer('quote_stock')),
 		'/api/trading/paper/assets': () => json(answer('assets')),
+		...Object.fromEntries(
+			['paper', 'live'].flatMap((env) => [
+				[
+					`/api/trading/${env}/account/configurations`,
+					() => json(answer('config', { environment: env }))
+				],
+				[
+					`/api/trading/${env}/account/portfolio-history`,
+					() => json(answer('history', { environment: env }))
+				],
+				[
+					`/api/trading/${env}/account/activities`,
+					() => json(answer('activities', { environment: env }))
+				],
+				[
+					`/api/trading/${env}/watchlists`,
+					(url: URL) =>
+						json(
+							url.pathname.endsWith('/watchlists')
+								? answer('watchlists', { environment: env })
+								: answer('watchlist', { environment: env })
+						)
+				]
+			])
+		),
 		'/api/trading/live/account': () => json(answer('account', { environment: 'live' })),
 		'/api/trading/live/clock': () => json(answer('clock', { environment: 'live' })),
 		'/api/trading/live/positions': () => json(answer('positions', { environment: 'live' })),
@@ -62,7 +82,7 @@ const posted = (b: ReturnType<typeof backend>) =>
 	);
 
 beforeEach(() => {
-	route.page.params = { env: 'paper', view: undefined };
+	routePage.params = { env: 'paper', view: undefined };
 });
 afterEach(() => {
 	vi.unstubAllGlobals();
@@ -88,7 +108,7 @@ describe('Trading page: which account you are on', () => {
 	});
 
 	it('opens paper when the address names no environment, never live', async () => {
-		route.page.params = { env: undefined, view: undefined };
+		routePage.params = { env: undefined, view: undefined };
 		backend({ live: true });
 		await mount();
 		await expect.poll(() => vi.mocked(goto).mock.calls.length).toBeGreaterThan(0);
@@ -96,7 +116,7 @@ describe('Trading page: which account you are on', () => {
 	});
 
 	it('says live in red when it is on, and shows the real-money warning', async () => {
-		route.page.params = { env: 'live', view: undefined };
+		routePage.params = { env: 'live', view: undefined };
 		backend({ live: true });
 		await mount();
 		const banner = page.getByTestId('environment-banner');
@@ -105,7 +125,7 @@ describe('Trading page: which account you are on', () => {
 	});
 
 	it('shows how to turn live on, and requests nothing from live, while it is off', async () => {
-		route.page.params = { env: 'live', view: undefined };
+		routePage.params = { env: 'live', view: undefined };
 		const b = backend({ live: false });
 		await mount();
 		await expect
@@ -118,7 +138,7 @@ describe('Trading page: which account you are on', () => {
 	});
 
 	it('says an unknown environment is not found instead of showing an account', async () => {
-		route.page.params = { env: 'demo', view: undefined };
+		routePage.params = { env: 'demo', view: undefined };
 		backend();
 		await mount();
 		await expect.element(page.getByText('Environment not found')).toBeVisible();
@@ -127,7 +147,7 @@ describe('Trading page: which account you are on', () => {
 
 describe('Trading page: the order ticket', () => {
 	beforeEach(() => {
-		route.page.params = { env: 'paper', view: 'trade' };
+		routePage.params = { env: 'paper', view: 'trade' };
 	});
 
 	it('says what is wrong beside the fields and sends nothing', async () => {
@@ -217,7 +237,7 @@ describe('Trading page: the order ticket', () => {
 
 describe('Trading page: live asks for the word LIVE', () => {
 	beforeEach(() => {
-		route.page.params = { env: 'live', view: 'trade' };
+		routePage.params = { env: 'live', view: 'trade' };
 	});
 
 	it('keeps the place button off until LIVE is typed exactly, then sends to the live route', async () => {
@@ -250,7 +270,7 @@ describe('Trading page: live asks for the word LIVE', () => {
 
 describe('Trading page: positions', () => {
 	beforeEach(() => {
-		route.page.params = { env: 'paper', view: 'positions' };
+		routePage.params = { env: 'paper', view: 'positions' };
 	});
 
 	it('lists what is held and keeps the close box open with its message when the quantity is too large', async () => {
@@ -285,7 +305,7 @@ describe('Trading page: positions', () => {
 
 describe('Trading page: orders', () => {
 	beforeEach(() => {
-		route.page.params = { env: 'paper', view: 'orders' };
+		routePage.params = { env: 'paper', view: 'orders' };
 	});
 
 	it('draws the orders with their exit legs nested and offers cancel only on open ones', async () => {
@@ -302,5 +322,134 @@ describe('Trading page: orders', () => {
 				['accepted', 'new', 'partially_filled'].includes(r.getAttribute('data-status') ?? '')
 			)
 		).toBe(true);
+	});
+});
+
+describe('Trading page: switching account', () => {
+	const calls = (b: ReturnType<typeof backend>, path: string) =>
+		b.calls.filter((c) => c.startsWith(path));
+
+	it.each([
+		['settings', '/account/configurations'],
+		['activity', '/account/activities'],
+		['watchlists', '/watchlists'],
+		['overview', '/account/portfolio-history']
+	])(
+		'reads what the %s view shows again for the account that was switched to',
+		async (view, path) => {
+			routePage.params = { env: 'paper', view };
+			const b = backend({ live: true });
+			await mount();
+			await expect.poll(() => calls(b, `/api/trading/paper${path}`).length).toBeGreaterThan(0);
+			expect(calls(b, `/api/trading/live${path}`)).toEqual([]);
+			routePage.params = { env: 'live', view };
+			await expect.poll(() => calls(b, `/api/trading/live${path}`).length).toBeGreaterThan(0);
+			await expect
+				.element(page.getByTestId('environment-banner'))
+				.toHaveAttribute('data-real-money', 'true');
+		}
+	);
+
+	it('drops an open review and the draft, so an order reviewed on paper cannot be sent to live', async () => {
+		routePage.params = { env: 'paper', view: 'trade' };
+		const b = backend({ live: true });
+		await mount();
+		await page.getByLabelText('Symbol').fill('AAPL');
+		await page.getByLabelText('Quantity').fill('10');
+		await page.getByTestId('review-order').click();
+		await expect.element(page.getByTestId('order-review')).toBeVisible();
+
+		routePage.params = { env: 'live', view: 'trade' };
+		await expect
+			.element(page.getByTestId('environment-banner'))
+			.toHaveAttribute('data-real-money', 'true');
+		await expect.element(page.getByTestId('order-review')).not.toBeInTheDocument();
+		await expect.element(page.getByTestId('place-order')).not.toBeInTheDocument();
+		await expect.element(page.getByLabelText('Symbol')).toHaveValue('');
+		await expect.element(page.getByLabelText('Quantity')).toHaveValue('');
+		expect(posted(b)).toHaveLength(0);
+	});
+});
+
+describe('Trading page: live asks for LIVE before it changes or deletes anything', () => {
+	const open = (view: string, env = 'live') => {
+		routePage.params = { env, view };
+		return backend({ live: true });
+	};
+
+	it('cancelling one live order needs the word, and cancelling on paper does not', async () => {
+		const b = open('orders');
+		await mount();
+		const row = page.getByTestId('order-row').filter({ hasText: 'Accepted' }).first();
+		await row.getByRole('button', { name: 'Cancel', exact: true }).click();
+		const confirm = page.getByRole('button', { name: 'Cancel the order' });
+		await expect.element(page.getByTestId('live-confirm')).toBeVisible();
+		await expect.element(confirm).toBeDisabled();
+		expect(posted(b)).toHaveLength(0);
+		await page.getByTestId('live-confirm').fill('LIVE');
+		await expect.element(confirm).toBeEnabled();
+	});
+
+	it('cancelling one paper order is a single click', async () => {
+		const b = open('orders', 'paper');
+		await mount();
+		await page
+			.getByTestId('order-row')
+			.filter({ hasText: 'Accepted' })
+			.first()
+			.getByRole('button', { name: 'Cancel', exact: true })
+			.click();
+		await expect.poll(() => posted(b).length).toBe(1);
+		expect(posted(b)[0][1]?.method).toBe('DELETE');
+		await expect.element(page.getByTestId('live-confirm')).not.toBeInTheDocument();
+	});
+
+	it('replacing a live order keeps the button off until LIVE is typed, and paper has no such field', async () => {
+		const b = open('orders');
+		await mount();
+		await page
+			.getByTestId('order-row')
+			.filter({ hasText: 'TSLA' })
+			.getByRole('button', { name: 'Replace', exact: true })
+			.click();
+		await page.getByLabelText('Limit price').fill('310');
+		const send = page.getByRole('button', { name: 'Replace order' });
+		await expect.element(page.getByTestId('replace-live-confirm')).toBeVisible();
+		await expect.element(send).toBeDisabled();
+		await page.getByTestId('replace-live-confirm').fill('live');
+		await expect.element(send).toBeDisabled();
+		await page.getByTestId('replace-live-confirm').fill('LIVE');
+		await expect.element(send).toBeEnabled();
+		expect(posted(b)).toHaveLength(0);
+	});
+
+	it('replacing a paper order asks for no word', async () => {
+		open('orders', 'paper');
+		await mount();
+		await page
+			.getByTestId('order-row')
+			.filter({ hasText: 'TSLA' })
+			.getByRole('button', { name: 'Replace', exact: true })
+			.click();
+		await expect.element(page.getByRole('button', { name: 'Replace order' })).toBeEnabled();
+		await expect.element(page.getByTestId('replace-live-confirm')).not.toBeInTheDocument();
+	});
+
+	it('deleting a live watchlist needs the word, and deleting a paper one does not', async () => {
+		const b = open('watchlists');
+		await mount();
+		await expect.element(page.getByTestId('watchlist-detail')).toBeVisible();
+		await page.getByRole('button', { name: 'Delete', exact: true }).click();
+		await expect.element(page.getByTestId('live-confirm')).toBeVisible();
+		await expect.element(page.getByRole('button', { name: 'Delete the watchlist' })).toBeDisabled();
+		expect(posted(b)).toHaveLength(0);
+
+		document.body.innerHTML = '';
+		open('watchlists', 'paper');
+		await mount();
+		await expect.element(page.getByTestId('watchlist-detail')).toBeVisible();
+		await page.getByRole('button', { name: 'Delete', exact: true }).click();
+		await expect.element(page.getByRole('button', { name: 'Delete the watchlist' })).toBeEnabled();
+		await expect.element(page.getByTestId('live-confirm')).not.toBeInTheDocument();
 	});
 });
