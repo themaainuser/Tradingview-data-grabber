@@ -34,6 +34,12 @@ import {
 	parseVerdictState
 } from './verdict';
 import {
+	parseEnvelope,
+	parseEnvironments,
+	type Envelope,
+	type TradingEnvironments
+} from './trading';
+import {
 	parseCatalog,
 	parseProviders,
 	parseQueryResponse,
@@ -53,6 +59,17 @@ export interface ApiClientOptions {
 	retries?: number;
 	retryDelayMs?: number;
 }
+
+/** One call to the trading API. `path` is what follows `/api/trading/{env}`; its parts must already be encoded. */
+export interface TradingCall {
+	method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+	path: string;
+	query?: Record<string, string | undefined>;
+	body?: unknown;
+}
+
+/** Marks a request as coming from the dashboard; the backend refuses a trading change without it. */
+export const TRADING_HEADER = 'X-Tvdata-Trading';
 
 export interface RequestOptions {
 	signal?: AbortSignal;
@@ -138,6 +155,30 @@ export function createApiClient(options: ApiClientOptions = {}) {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(body)
+			},
+			opts,
+			false
+		);
+
+	/**
+	 * A request that changes something at the broker. Never retried (a retry after a timeout could place an
+	 * order twice) and always marked as the dashboard's own, which the backend requires.
+	 */
+	const change = (
+		method: Exclude<TradingCall['method'], 'GET'>,
+		path: string,
+		body: unknown,
+		opts: RequestOptions
+	) =>
+		request(
+			path,
+			{
+				method,
+				headers: {
+					[TRADING_HEADER]: '1',
+					...(body === undefined ? {} : { 'Content-Type': 'application/json' })
+				},
+				body: body === undefined ? undefined : JSON.stringify(body)
 			},
 			opts,
 			false
@@ -242,6 +283,28 @@ export function createApiClient(options: ApiClientOptions = {}) {
 				...opts
 			});
 			return parseQueryResponse(json);
+		},
+
+		async tradingEnvironments(opts: RequestOptions = {}): Promise<TradingEnvironments> {
+			return parseEnvironments(await request('/api/trading/environments', {}, opts, true));
+		},
+
+		/** Reads are retried like any GET; everything else is sent once. `parse` is `null` when no data is expected. */
+		async trading<T>(
+			env: string,
+			call: TradingCall,
+			parse: ((data: unknown) => T) | null,
+			opts: RequestOptions = {}
+		): Promise<Envelope<T>> {
+			const query = new URLSearchParams();
+			for (const [name, value] of Object.entries(call.query ?? {}))
+				if (value !== undefined && value !== '') query.set(name, value);
+			const path = `/api/trading/${encodeURIComponent(env)}${call.path}${query.size > 0 ? `?${query}` : ''}`;
+			const json =
+				call.method === 'GET'
+					? await request(path, {}, opts, true)
+					: await change(call.method, path, call.body, { timeoutMs: 60_000, ...opts });
+			return parseEnvelope(json, parse);
 		},
 
 		async getVerdictState(datasetId: string, opts: RequestOptions = {}): Promise<VerdictState> {
