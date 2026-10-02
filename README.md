@@ -445,6 +445,11 @@ words in `message`; a request that is wrong before it leaves is a 422 with one p
   reaching the server through its own domain. And every request that changes something needs an
   `X-Tvdata-Trading: 1` header, which a browser will not send from another site without the server's agreement.
   Without a login of its own, anyone you let in can trade your account: allow only addresses you control.
+  Two things widen who is let in. A web page served from an origin you pass to `--cors-origin` can place orders from
+  your browser (the origin is what the browser is told to trust), so list only origins you control. And a reverse
+  proxy on the same machine makes every request arrive from `127.0.0.1` unless it sends `X-Forwarded-For` (uvicorn
+  then reports the real client, which is checked against the list); do not put a proxy that does not in front of
+  `tvdata serve` while trading is configured.
 - **Not included.** Crypto funding (wallets, withdrawals, whitelisted addresses), tokenization, short locates (not
   available in paper), the activity event stream, Elite/DMA advanced routing, the deprecated corporate-action
   announcements (use the Providers page's Alpaca *Corporate actions*), and the order-update WebSocket (read orders
