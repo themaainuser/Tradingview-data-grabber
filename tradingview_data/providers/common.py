@@ -51,6 +51,27 @@ def default_http_get(url: str, params: list[tuple[str, str]], headers: Optional[
         return HttpResult(response.status_code, b"".join(chunks), response.headers.get("content-type", ""))
 
 
+# ``(method, url, query, body, headers)``: one request of any method, for the trading routes. ``body`` is
+# a JSON-serialisable value or ``None``.
+HttpRequest = Callable[..., HttpResult]
+
+
+def default_http_request(method: str, url: str, params: Optional[list[tuple[str, str]]] = None, body: Any = None, headers: Optional[Mapping[str, str]] = None) -> HttpResult:
+    """One request: no redirects, no retries (a retried order could be placed twice), bounded time and
+    size. Raises ``requests`` exceptions or ``ValueError`` (too large)."""
+
+    sent = {"User-Agent": USER_AGENT, "Accept": "application/json", **(headers or {})}
+    extra: dict[str, Any] = {} if body is None else {"json": body}
+    with requests.request(method, url, params=params or [], headers=sent, timeout=(5, 30), allow_redirects=False, stream=True, **extra) as response:
+        chunks, size = [], 0
+        for chunk in response.iter_content(chunk_size=65536):
+            size += len(chunk)
+            if size > MAX_BODY_BYTES:
+                raise ValueError("response too large")
+            chunks.append(chunk)
+        return HttpResult(response.status_code, b"".join(chunks), response.headers.get("content-type", ""))
+
+
 def first_sentence(text: str, limit: int = 200) -> str:
     sentence = re.split(r"(?<=[.!?])\s", text.strip(), maxsplit=1)[0]
     return sentence if len(sentence) <= limit else sentence[: limit - 1].rstrip() + "\u2026"
