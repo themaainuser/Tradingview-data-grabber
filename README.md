@@ -394,6 +394,73 @@ building views with `providers/views.py`; (3) classify provider-side failures in
 rather than raising; (4) never put the key in a response; (5) register it in
 `providers/registry.py`; (6) add its tests. It then appears in the dropdown with no frontend change.
 
+### Trading (Alpaca, paper or live)
+
+`/api/trading` places and manages orders through the [Alpaca Trading API](https://docs.alpaca.markets/us/docs/getting-started-with-trading-api),
+for a **paper** account (simulated money, the default) or a **live** one. Every route is under
+`/api/trading/{env}` with `env` = `paper` or `live`; `GET /api/trading/environments` says which is ready.
+Every answer has the same envelope: `{environment, status, message, code, http_status, outcome_unknown,
+client_order_id, data, fetched_at, elapsed_ms}`. What Alpaca refuses (insufficient buying power, a bad key, a
+rate limit) is a 200 with a `status` (`rejected`, `invalid_key`, `rate_limited`, `not_found`, ...) and Alpaca's own
+words in `message`; a request that is wrong before it leaves is a 422 with one plain sentence.
+
+| Route | What it does |
+| --- | --- |
+| `GET .../account`, `GET/PATCH .../account/configurations` | Equity, cash, buying power, margin and flags; the account settings (suspend trading, no shorting, fractional, margin multiplier, options level, email confirmations). |
+| `GET .../account/activities[/{TYPE}]`, `GET .../account/portfolio-history` | Fills and other activity with paging; the equity curve (`period`, `timeframe`, ...). |
+| `GET .../clock`, `GET .../calendar` | Whether the market is open and when it next is; market days. |
+| `GET .../assets?search=`, `GET .../assets/{symbol}` | Symbol search over Alpaca's asset list (fetched once per ten minutes); one asset. |
+| `GET .../options/contracts[/{symbol}]` | Option contracts filtered by underlying, type, strike and expiry. |
+| `GET .../quote/{symbol}` | Bid, ask, last and the day so far, from Alpaca's market data with the same keys. |
+| `GET/POST/DELETE .../orders`, `GET/PATCH/DELETE .../orders/{id}`, `GET .../orders/by-client-id/{id}` | List, place, cancel all, read, replace, cancel and look up by client ID. |
+| `GET/DELETE .../positions`, `GET/DELETE .../positions/{symbol}`, `POST .../positions/{contract}/exercise`, `.../do-not-exercise` | Open positions; close one (all, `qty` or `percentage`) or all; exercise an option or leave it to expire. |
+| `GET/POST .../watchlists`, `GET/PUT/DELETE .../watchlists/{id}`, `POST .../watchlists/{id}/assets`, `DELETE .../watchlists/{id}/assets/{symbol}` | Watchlists. |
+
+- **Keys.** Paper reads `ALPACA_PAPER_API_KEY_ID` and `ALPACA_PAPER_API_SECRET_KEY`, or the market-data pair
+  (`ALPACA_API_KEY_ID`, `ALPACA_API_SECRET_KEY`) if those are not set. Live reads only `ALPACA_LIVE_API_KEY_ID` and
+  `ALPACA_LIVE_API_SECRET_KEY`, and is **off** until `ALPACA_ENABLE_LIVE_TRADING=true` is set: until then every live
+  route answers 403 and nothing is sent. Paper keys do not work on the live host and live keys do not work on the
+  paper host, so a mix-up is refused by Alpaca and cannot place a trade. Keys are sent as headers only, scrubbed
+  from everything returned or logged, and never returned.
+- **Orders are checked before they leave.** Every rule below is one Alpaca documents: an order type, time in
+  force or order class that the kind of asset does not offer; `qty` and `notional` together or neither; a price field
+  that the order type would ignore (a `limit_price` on a market order reads like a cap and is not one); fractional
+  quantities with anything but `day`; bracket, oto and oco orders without the exit legs they need; multi-leg options
+  without two to four option legs. Everything else is left to Alpaca. Orders support stocks and ETFs, options
+  (single leg and multi-leg), and crypto, with market, limit, stop, stop-limit and trailing-stop types, all time-in-force
+  values, extended hours, notional and fractional quantities, and bracket, oto and oco classes.
+- **One request, once.** Nothing is retried, because a retried order could be placed twice. Every order gets a
+  client order ID (yours, or `tvdata-<random>`), which Alpaca requires to be unique, so sending the same order
+  twice is refused. If the connection fails, or Alpaca answers with a server error (5xx), after a request that
+  changes something may have been applied, the answer has `outcome_unknown: true` and the `client_order_id` to
+  look the order up by.
+- **Audit log.** Every request that changes something is appended to `<data-dir>/.tvdata-trading/trading-audit.jsonl`
+  (time, environment, what was sent, what came back; no keys). The directory is created owner-only (0700) and the
+  file 0600, whatever the umask, because it records what you traded.
+- **The server has no login, so three guards protect it.** The connecting address must be this machine (loopback;
+  add addresses or ranges with `TVDATA_TRADING_ALLOWED_CLIENTS`, e.g. a Docker bridge such as `172.17.0.0/16`):
+  headers can be forged by another computer, so this is what keeps a server bound to a network interface from
+  trading for strangers, and every `/api/trading` route answers 403 to anyone else. The `Host` header must be
+  `localhost`, `127.0.0.1` or `::1` (add names with `TVDATA_TRADING_ALLOWED_HOSTS`), which stops a web page from
+  reaching the server through its own domain. And every request that changes something needs an
+  `X-Tvdata-Trading: 1` header, which a browser will not send from another site without the server's agreement.
+  Without a login of its own, anyone you let in can trade your account: allow only addresses you control.
+  Two things widen who is let in. A web page served from an origin you pass to `--cors-origin` can place orders from
+  your browser (the origin is what the browser is told to trust), so list only origins you control. And a proxy:
+  uvicorn replaces the connecting address with the `X-Forwarded-For` value when the connection comes from a local
+  proxy, and a proxy that passes a caller's header through (Vite's dev proxy does, so `vite dev --host` would let any
+  caller claim `127.0.0.1`) would defeat the check. So **a request that carries `X-Forwarded-For`, `Forwarded` or
+  `X-Real-IP` is refused with a 403**; a browser talking to the dashboard directly, including through Vite on
+  `localhost`, sends none of them. If you run a reverse proxy of your own in front of `tvdata serve`, set
+  `TVDATA_TRADING_TRUST_PROXY=true`, and configure the proxy to **overwrite** `X-Forwarded-For` with the address it
+  saw (nginx: `proxy_set_header X-Forwarded-For $remote_addr;`, not `$proxy_add_x_forwarded_for`) and to discard
+  `Forwarded` and `X-Real-IP` from callers; the resolved address is then checked against the list as usual. Setting
+  it for a proxy that does not do that removes this protection.
+- **Not included.** Crypto funding (wallets, withdrawals, whitelisted addresses), tokenization, short locates (not
+  available in paper), the activity event stream, Elite/DMA advanced routing, the deprecated corporate-action
+  announcements (use the Providers page's Alpaca *Corporate actions*), and the order-update WebSocket (read orders
+  again instead). Alpaca's Broker API, a different login, is not supported.
+
 ### Fear & Greed source
 
 CoinMarketCap's documented Fear and Greed API (`pro-api.coinmarketcap.com/v3/fear-and-greed`)

@@ -305,7 +305,7 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--host", default="127.0.0.1", help="interface to bind (default: 127.0.0.1)")
     serve.add_argument("--port", type=int, default=8000, help="port to listen on (default: 8000)")
     serve.add_argument("--static-dir", help="built frontend directory to host at / (e.g. frontend/build)")
-    serve.add_argument("--env-file", help="read provider API keys (for example ALPHAVANTAGE_API_KEY, MARKETSTACK_API_KEY, ALPACA_API_KEY_ID and ALPACA_API_SECRET_KEY) from this file; ./.env is always read if present")
+    serve.add_argument("--env-file", help="read provider API keys (for example ALPHAVANTAGE_API_KEY, MARKETSTACK_API_KEY, ALPACA_API_KEY_ID and ALPACA_API_SECRET_KEY; for trading ALPACA_PAPER_API_KEY_ID, ALPACA_PAPER_API_SECRET_KEY and the ALPACA_LIVE_* ones) from this file; ./.env is always read if present")
     serve.add_argument(
         "--state-dir",
         help="directory for the verdict ledger (default: <data-dir>/.tvdata-verdict); keep it to keep the holdout sealed",

@@ -42,6 +42,8 @@ from .providers.registry import default_registry
 from .providers.routes import register_provider_routes
 from .research import build_research, unique_label
 from .sentiment import FearGreedService, SentimentUnavailable, build_response
+from .trading.routes import register_trading_routes
+from .trading.service import TradingService
 from .verdict import DEFAULT_MIN_TRADES, Costs
 from .verdict_service import DatasetView, VerdictError, VerdictService
 
@@ -52,6 +54,7 @@ FRAME_CACHE_SIZE = 16
 PRICE_COLUMNS = ("open", "high", "low", "close", "volume")
 IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable"
 STATE_DIR_NAME = ".tvdata-verdict"
+TRADING_DIR_NAME = ".tvdata-trading"
 MAX_LEDGER_LIMIT = 500
 
 
@@ -434,6 +437,7 @@ def create_app(
     fear_greed: Optional[FearGreedService] = None,
     state_dir: Union[str, Path, None] = None,
     providers: Optional[ProviderRegistry] = None,
+    trading: Optional[TradingService] = None,
 ) -> FastAPI:
     """Build the dashboard API for the captures stored in ``data_dir``.
 
@@ -443,6 +447,8 @@ def create_app(
     is fetched until the first request).  ``state_dir`` holds the verdict engine's ledger; it defaults
     to a hidden directory inside ``data_dir``, which the dataset scan ignores.  ``providers`` is the
     registry of external data providers (Alpha Vantage, Marketstack and Alpaca by default); nothing is fetched until a query.
+    ``trading`` is the Alpaca paper/live trading service; by default it keeps its audit log in a hidden
+    directory inside ``data_dir`` and contacts no one until a request is made.
     """
 
     root = Path(data_dir).expanduser().resolve()
@@ -467,8 +473,8 @@ def create_app(
         app.add_middleware(
             CORSMiddleware,
             allow_origins=list(cors_origins),
-            allow_methods=["GET", "POST"],
-            allow_headers=["Content-Type"],
+            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+            allow_headers=["Content-Type", "X-Tvdata-Trading"],
         )
 
     def open_dataset(dataset_id: str) -> tuple[DatasetFile, LoadedDataset]:
@@ -602,6 +608,7 @@ def create_app(
         return _json(result)
 
     register_provider_routes(app, providers or default_registry(), _json)
+    register_trading_routes(app, trading or TradingService(audit_path=root / TRADING_DIR_NAME / "trading-audit.jsonl"), _json)
 
     sentiment = fear_greed or FearGreedService()
 
