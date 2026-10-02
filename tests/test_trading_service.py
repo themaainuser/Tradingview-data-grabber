@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import stat
 
 import pytest
 import requests
@@ -163,6 +165,31 @@ def test_when_a_request_that_changes_something_gets_no_answer_the_outcome_is_mar
     assert outcome.status == "upstream_error" and outcome.outcome_unknown is unknown and words in outcome.message and outcome.http_status is None
 
 
+@pytest.mark.parametrize("status, body", [(500, b'{"message": "internal server error"}'), (502, b"<html>Bad gateway</html>"), (503, b""), (504, b"<html>Gateway Time-out</html>")])
+def test_a_server_error_on_a_change_may_have_been_applied_and_on_a_read_it_cannot_have_been(status, body):
+    results = {"POST orders": lambda s: s.place_order("paper", market(client_order_id="uncertain-1")), "DELETE order": lambda s: s.cancel_order("paper", uid(7)), "DELETE orders": lambda s: s.cancel_all_orders("paper"), "DELETE positions": lambda s: s.close_all_positions("paper", {}), "PATCH settings": lambda s: s.update_configurations("paper", {"no_shorting": True})}
+    for name, act in results.items():
+        broker = FakeBroker()
+        broker.queue.append(HttpResult(status, body, "application/json"))
+        answer = act(service(broker)[0])
+        assert (answer["status"], answer["http_status"], answer["outcome_unknown"]) == ("upstream_error", status, True), name
+        assert "may still have been processed" in answer["message"], name
+    broker = FakeBroker()
+    broker.queue.append(HttpResult(status, body, "application/json"))
+    read = service(broker)[0].orders("paper", {})
+    assert (read["status"], read["outcome_unknown"]) == ("upstream_error", False) and "may still have been processed" not in read["message"]
+    placed = FakeBroker()
+    placed.queue.append(HttpResult(status, body, "application/json"))
+    assert service(placed)[0].place_order("paper", market(client_order_id="uncertain-2"))["client_order_id"] == "uncertain-2"  # the ID to look it up by
+
+
+def test_a_definite_refusal_on_a_change_is_not_marked_uncertain():
+    for result in (refusal(403, 40310000, "insufficient buying power"), refusal(422, 42210000, "order is not cancelable"), refusal(404, 40410000, "order not found"), refusal(429, 42910000, "too many requests"), refusal(401, 40110000, "request is not authorized")):
+        broker = FakeBroker()
+        broker.queue.append(result)
+        assert service(broker)[0].place_order("paper", market())["outcome_unknown"] is False, result.status
+
+
 def test_an_unreadable_success_is_an_upstream_error_and_an_empty_one_is_fine():
     broker = FakeBroker()
     broker.queue.extend([HttpResult(200, b"<html>maintenance</html>", "text/html"), HttpResult(200, b"<html>maintenance</html>", "text/html"), reply(204)])
@@ -293,10 +320,35 @@ def test_quotes_come_from_the_data_host_for_stocks_crypto_and_options_with_the_s
     assert broker.calls[-1].path == "/v1beta3/crypto/us/snapshots" and dict(broker.calls[-1].query) == {"symbols": "BTC/USD"} and crypto["kind"] == "crypto" and crypto["last"] == 84000.0
     option = svc.quote("paper", "AAPL260116C00250000", {})["data"]
     assert broker.calls[-1].path == "/v1beta1/options/snapshots" and option["kind"] == "us_option" and option["implied_volatility"] == 0.32 and option["greeks"]["delta"] == 0.5
-    assert svc.quote("paper", "BTCUSD", {"asset_class": "crypto"})["data"]["kind"] == "crypto"
+    forced = svc.quote("paper", "BTCUSD", {"asset_class": "crypto"})  # the override picks the endpoint; Alpaca has no pair spelled that way
+    assert broker.calls[-1].path == "/v1beta3/crypto/us/snapshots" and (forced["status"], forced["data"]) == ("not_found", None)
     assert svc.quote("paper", "NOPE", {})["status"] == "not_found"
     with pytest.raises(TradingInputError):
         svc.quote("paper", "AAPL", {"asset_class": "bonds"})
+
+
+def test_a_quote_is_the_snapshot_of_the_symbol_asked_for_never_another_and_none_is_not_found():
+    svc, broker = service()
+    broker.prices["ETH/USD"] = 3000.0
+    broker.queue.append(reply(200, {"snapshots": {}}))
+    empty = svc.quote("paper", "BTC/USD", {})
+    assert (empty["status"], empty["data"], empty["http_status"], empty["message"]) == ("not_found", None, 200, "Alpaca has no quote for BTC/USD. Check the symbol.")
+    other = broker._snapshot("ETH/USD")
+    broker.queue.append(reply(200, {"snapshots": {"ETH/USD": other}}))
+    wrong = svc.quote("paper", "BTC/USD", {})
+    assert wrong["status"] == "not_found" and wrong["data"] is None  # ETH's prices are not shown as BTC's
+    broker.queue.append(reply(200, {"snapshots": {"ETH/USD": other, "BTC/USD": broker._snapshot("BTC/USD")}}))
+    right = svc.quote("paper", "BTC/USD", {})["data"]
+    assert (right["symbol"], right["last"]) == ("BTC/USD", 84000.0)
+    broker.queue.append(reply(200, {"snapshots": {}}))
+    assert svc.quote("paper", "AAPL260116C00250000", {})["status"] == "not_found"
+    broker.queue.append(reply(200, {"snapshots": {"AAPL260116P00240000": broker._snapshot("AAPL260116P00240000")}}))
+    assert svc.quote("paper", "AAPL260116C00250000", {})["status"] == "not_found"  # the put is not the call
+    for odd in (reply(200, {}), reply(200, None), reply(200, {"snapshots": None}), reply(200, {"snapshots": {"BTC/USD": None}}), reply(200, {"snapshots": {"BTC/USD": {}}})):
+        broker.queue.append(odd)
+        assert svc.quote("paper", "BTC/USD", {})["status"] == "not_found"
+    broker.queue.append(reply(200, {}))
+    assert svc.quote("paper", "AAPL", {})["status"] == "not_found"  # a stock answer with nothing in it
 
 
 def test_the_data_host_answers_403_for_bad_credentials_and_that_is_an_invalid_key_there():
@@ -518,6 +570,23 @@ def test_every_request_that_changes_something_is_logged_with_its_outcome_and_rea
     assert lines[2]["message"] == "insufficient buying power" and lines[2]["http_status"] == 403 and lines[2]["result"] is None
     text = log.read_text()
     assert KEY not in text and SECRET not in text and "APCA" not in text
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permissions")
+def test_the_audit_log_and_its_directory_are_readable_only_by_their_owner_whatever_the_umask(tmp_path):
+    old = os.umask(0o022)  # the common umask, which would make both world-readable
+    try:
+        log = tmp_path / "state" / "audit.jsonl"
+        svc, _ = service(audit_path=log)
+        svc.place_order("paper", market(client_order_id="private-1"))
+        svc.cancel_all_orders("paper")
+        assert stat.S_IMODE(log.stat().st_mode) == 0o600 and stat.S_IMODE(log.parent.stat().st_mode) == 0o700
+        assert len(log.read_text().splitlines()) == 2
+        log.chmod(0o644)  # a file that was loosened is tightened again by the next write
+        svc.cancel_all_orders("paper")
+        assert stat.S_IMODE(log.stat().st_mode) == 0o600
+    finally:
+        os.umask(old)
 
 
 def test_an_unwritable_audit_log_never_stops_a_trade(tmp_path):

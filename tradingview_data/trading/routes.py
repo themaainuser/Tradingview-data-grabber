@@ -1,7 +1,10 @@
 """HTTP routes for trading, under ``/api/trading``.
 
-Two guards protect them, because they can spend money and the server has no login:
+Three guards protect them, because they can spend money and the server has no login:
 
+* the connecting address must be this machine (or one listed in ``TVDATA_TRADING_ALLOWED_CLIENTS``). The
+  two header checks below stop a *web page*; they cannot stop another computer, which can send any header
+  it likes, so this is what keeps a server that was bound to a network interface from trading for strangers;
 * the ``Host`` header must be a local name (or one listed in ``TVDATA_TRADING_ALLOWED_HOSTS``), which
   stops a web page from reaching the server by pointing its own domain at 127.0.0.1;
 * every request that changes something must carry ``X-Tvdata-Trading: 1``. A browser will not add a
@@ -11,8 +14,9 @@ Two guards protect them, because they can spend money and the server has no logi
 
 from __future__ import annotations
 
+import ipaddress
 import os
-from typing import Any, Callable, Dict, Iterable, Optional
+from typing import Any, Callable, Dict, Iterable, Optional, Union
 
 from fastapi import APIRouter, Body, Depends, FastAPI, HTTPException, Request
 from fastapi.responses import Response
@@ -23,6 +27,8 @@ from .validation import TradingInputError
 WRITE_HEADER = "x-tvdata-trading"
 LOCAL_HOSTS = ("localhost", "127.0.0.1", "::1")
 HOSTS_ENV = "TVDATA_TRADING_ALLOWED_HOSTS"
+CLIENTS_ENV = "TVDATA_TRADING_ALLOWED_CLIENTS"
+Network = Union[ipaddress.IPv4Network, ipaddress.IPv6Network]
 
 
 def allowed_hosts(extra: Iterable[str] = ()) -> frozenset[str]:
@@ -30,6 +36,27 @@ def allowed_hosts(extra: Iterable[str] = ()) -> frozenset[str]:
 
     configured = [name.strip().lower() for name in os.environ.get(HOSTS_ENV, "").split(",") if name.strip()]
     return frozenset([*LOCAL_HOSTS, *(name.lower() for name in extra), *configured])
+
+
+def allowed_clients(extra: Iterable[str] = ()) -> list[Network]:
+    """The networks (addresses or CIDR ranges) allowed besides loopback: ``extra`` and ``TVDATA_TRADING_ALLOWED_CLIENTS``.
+    A name that is not an address or range is a mistake in the configuration and raises ``ValueError``."""
+
+    listed = [name.strip() for name in os.environ.get(CLIENTS_ENV, "").split(",") if name.strip()]
+    return [ipaddress.ip_network(name, strict=False) for name in [*extra, *listed]]
+
+
+def client_allowed(host: Optional[str], networks: Iterable[Network] = ()) -> bool:
+    """Whether a request from ``host`` (the connecting address) may use trading: loopback, or in ``networks``.
+    Anything that is not an IP address (no peer, a test client's name) is refused."""
+
+    try:
+        address: Union[ipaddress.IPv4Address, ipaddress.IPv6Address] = ipaddress.ip_address(host or "")
+    except ValueError:
+        return False
+    if isinstance(address, ipaddress.IPv6Address) and address.ipv4_mapped is not None:
+        address = address.ipv4_mapped
+    return address.is_loopback or any(address in network for network in networks)
 
 
 def host_name(header: str) -> str:
@@ -41,12 +68,22 @@ def host_name(header: str) -> str:
     return host.rsplit(":", 1)[0] if host.count(":") == 1 else host
 
 
-def register_trading_routes(app: FastAPI, service: TradingService, respond: Callable[[Any], Response], hosts: Optional[Iterable[str]] = None) -> None:
+def register_trading_routes(
+    app: FastAPI,
+    service: TradingService,
+    respond: Callable[[Any], Response],
+    hosts: Optional[Iterable[str]] = None,
+    clients: Optional[Iterable[str]] = None,
+) -> None:
     """Adds the trading routes. ``respond`` serialises a payload (the API's NaN-safe JSON response)."""
 
     allowed = allowed_hosts(hosts or ())
+    networks = allowed_clients(clients or ())
 
     def local_only(request: Request) -> None:
+        peer = request.client.host if request.client else None
+        if not client_allowed(peer, networks):
+            raise HTTPException(status_code=403, detail=f"Trading is only served to this machine, not to {peer or 'an unknown address'}. To allow that address, list it in {CLIENTS_ENV} and restart the backend.")
         name = host_name(request.headers.get("host", ""))
         if name not in allowed:
             raise HTTPException(status_code=403, detail=f"Trading is not served to the host {name!r}. Open the dashboard through localhost, or list this name in {HOSTS_ENV} and restart the backend.")
