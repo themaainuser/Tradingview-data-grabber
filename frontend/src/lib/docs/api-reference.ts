@@ -439,7 +439,7 @@ export const API_ENDPOINTS: readonly Endpoint[] = [
 			"The external data providers the backend offers, in the order of the Providers page's dropdown. Reports whether each provider's API key is set in the backend's environment, and never the key itself.",
 		params: [],
 		returns:
-			'{ providers: [{ id, name, description, website, docs_url, key_env, key_url, configured, endpoint_count, premium_count, limits_note, plans: [{ name, summary }], requests_this_session }] }',
+			'{ providers: [{ id, name, description, website, docs_url, key_env, secret_env, key_url, configured, endpoint_count, premium_count, limits_note, plans: [{ name, summary }], requests_this_session }] }',
 		errors: [],
 		usedBy: 'Providers'
 	},

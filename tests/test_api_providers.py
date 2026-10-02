@@ -11,9 +11,11 @@ from fastapi.testclient import TestClient
 
 from tradingview_data.api import create_app
 from tradingview_data.providers.alphavantage import AlphaVantage
+from tradingview_data.providers.alpaca import Alpaca
 from tradingview_data.providers.marketstack import Marketstack
 from tradingview_data.providers.base import Provider, ProviderInfo, ProviderRegistry
 
+import alpaca_support as alpaca_fixtures
 from marketstack_support import SAMPLES, error
 from providers_support import DAILY, KEY, PLACEHOLDER, FakeHttp, ok
 from tradingview_data.providers.common import HttpResult
@@ -76,11 +78,13 @@ def test_the_provider_list_reports_counts_and_whether_a_key_is_set_but_never_the
     assert api.get("/api/providers").json()["providers"][0]["configured"] is False
 
 
-def test_the_default_registry_serves_alpha_vantage_then_marketstack(tmp_path):
+def test_the_default_registry_serves_alpha_vantage_then_marketstack_then_alpaca(tmp_path):
     listed = TestClient(create_app(tmp_path)).get("/api/providers").json()["providers"]
-    assert [p["id"] for p in listed] == ["alphavantage", "marketstack"]
-    assert [p["key_env"] for p in listed] == ["ALPHAVANTAGE_API_KEY", "MARKETSTACK_API_KEY"]
+    assert [p["id"] for p in listed] == ["alphavantage", "marketstack", "alpaca"]
+    assert [p["key_env"] for p in listed] == ["ALPHAVANTAGE_API_KEY", "MARKETSTACK_API_KEY", "ALPACA_API_KEY_ID"]
+    assert [p["secret_env"] for p in listed] == [None, None, "ALPACA_API_SECRET_KEY"]
     assert [p["plans"] for p in listed][0] == [] and [x["name"] for x in listed[1]["plans"]] == ["Free", "Basic", "Professional", "Business"]
+    assert [x["name"] for x in listed[2]["plans"]] == ["Basic", "Algo Trader Plus"]
 
 
 def test_two_providers_are_listed_in_order_each_with_its_own_catalog_and_key(tmp_path, monkeypatch):
@@ -224,3 +228,64 @@ def test_marketstack_provider_side_problems_are_http_200_with_a_status(tmp_path,
 def test_marketstack_errors(tmp_path, body, status):
     api = client(tmp_path, Marketstack(http_get=FakeHttp()))
     assert api.post("/api/providers/marketstack/query", json=body).status_code == status
+
+
+# --- Alpaca ----------------------------------------------------------------------------------------------
+
+
+@pytest.fixture
+def alpaca_keyed(monkeypatch):
+    monkeypatch.setenv("ALPACA_API_KEY_ID", alpaca_fixtures.KEY_ID)
+    monkeypatch.setenv("ALPACA_API_SECRET_KEY", alpaca_fixtures.SECRET)
+
+
+def test_alpaca_serves_its_catalog_with_both_plans_and_tier_labelled_choices(tmp_path, alpaca_keyed):
+    body = client(tmp_path, Alpaca(http_get=alpaca_fixtures.FakeHttp())).get("/api/providers/alpaca/catalog").json()
+    provider = body["provider"]
+    assert (provider["endpoint_count"], provider["premium_count"], provider["configured"]) == (42, 0, True)
+    assert (provider["key_env"], provider["secret_env"]) == ("ALPACA_API_KEY_ID", "ALPACA_API_SECRET_KEY")
+    assert [p["name"] for p in provider["plans"]] == ["Basic", "Algo Trader Plus"]
+    feed = next(p for e in body["endpoints"] if e["id"] == "stock_latest_quotes" for p in e["params"] if p["name"] == "feed")
+    assert feed["premium_values"] == ["sip", "otc"] and "Algo Trader Plus" in feed["enum_labels"]["sip"]
+    assert alpaca_fixtures.KEY_ID not in json.dumps(body) and alpaca_fixtures.SECRET not in json.dumps(body)
+
+
+def test_an_alpaca_query_returns_the_contract_response_and_sends_credentials_only_as_headers(tmp_path, alpaca_keyed):
+    http = alpaca_fixtures.FakeHttp(alpaca_fixtures.ok(alpaca_fixtures.PAYLOADS["stock_bars"]))
+    api = client(tmp_path, Alpaca(http_get=http))
+    body = api.post("/api/providers/alpaca/query", json={"endpoint": "stock_bars", "params": {"symbols": "AAPL,TSLA", "timeframe": "1Day"}}).json()
+    assert set(body) == {"provider", "endpoint", "title", "status", "message", "cached", "fetched_at", "elapsed_ms", "bytes", "params", "views", "raw", "raw_omitted", "notes"}
+    assert body["status"] == "ok" and "series" in [v["kind"] for v in body["views"]]
+    assert alpaca_fixtures.KEY_ID not in json.dumps(body) and alpaca_fixtures.SECRET not in json.dumps(body)
+    url, query, headers = http.calls[0]
+    assert url == "https://data.alpaca.markets/v2/stocks/bars" and headers["APCA-API-KEY-ID"] == alpaca_fixtures.KEY_ID
+
+
+def test_an_alpaca_plan_refusal_is_http_200_with_a_premium_status(tmp_path, alpaca_keyed):
+    refusal = alpaca_fixtures.failure(403, {"code": 40310000, "message": "subscription does not permit querying recent SIP data"})
+    response = client(tmp_path, Alpaca(http_get=alpaca_fixtures.FakeHttp(refusal))).post("/api/providers/alpaca/query", json={"endpoint": "stock_latest_trades", "params": {"symbols": "AAPL", "feed": "sip"}})
+    assert response.status_code == 200 and response.json()["status"] == "premium_required" and "Algo Trader Plus" in response.json()["message"]
+
+
+def test_alpaca_without_both_credentials_is_not_configured_over_http(tmp_path, monkeypatch):
+    monkeypatch.delenv("ALPACA_API_SECRET_KEY", raising=False)
+    monkeypatch.setenv("ALPACA_API_KEY_ID", alpaca_fixtures.KEY_ID)
+    api = client(tmp_path, Alpaca(http_get=alpaca_fixtures.FakeHttp()))
+    assert api.get("/api/providers").json()["providers"][0]["configured"] is False
+    body = api.post("/api/providers/alpaca/query", json={"endpoint": "stock_latest_trades", "params": {"symbols": "AAPL"}}).json()
+    assert body["status"] == "not_configured" and "ALPACA_API_SECRET_KEY" in body["message"]
+
+
+@pytest.mark.parametrize(
+    ("body", "status"),
+    [
+        ({"endpoint": "nope"}, 404),
+        ({"endpoint": "stock_bars", "params": {"symbols": "AAPL"}}, 422),
+        ({"endpoint": "stock_bars", "params": {"symbols": "AAPL", "timeframe": "1Day", "limit": "20000"}}, 422),
+        ({"endpoint": "stock_bars_single", "params": {"symbol": "../etc", "timeframe": "1Day"}}, 422),
+        ({"endpoint": "stock_latest_trades", "params": {"symbols": "AAPL", "APCA-API-KEY-ID": "x"}}, 422),
+    ],
+)
+def test_alpaca_errors(tmp_path, body, status):
+    api = client(tmp_path, Alpaca(http_get=alpaca_fixtures.FakeHttp()))
+    assert api.post("/api/providers/alpaca/query", json=body).status_code == status

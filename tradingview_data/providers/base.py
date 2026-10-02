@@ -29,10 +29,12 @@ class ProviderInfo:
     description: str
     website: str
     docs_url: str
+    # ``key_env`` is the API key; a provider that signs requests with a key and a secret names the secret here.
     key_env: str
     key_url: Optional[str]
     limits_note: str
     plans: tuple[Plan, ...] = ()
+    secret_env: Optional[str] = None
 
 
 class Provider(ABC):
@@ -67,6 +69,7 @@ class Provider(ABC):
             "website": self.info.website,
             "docs_url": self.info.docs_url,
             "key_env": self.info.key_env,
+            "secret_env": self.info.secret_env,
             "key_url": self.info.key_url,
             "configured": self.configured(),
             "endpoint_count": len(endpoints),

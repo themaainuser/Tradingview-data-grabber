@@ -1,0 +1,5134 @@
+{
+ "provider": "alpaca",
+ "source": "https://docs.alpaca.markets/us/docs/getting-started",
+ "index": "https://docs.alpaca.markets/us/llms.txt",
+ "plans": [
+  "Basic",
+  "Algo Trader Plus"
+ ],
+ "categories": [
+  {
+   "id": "stocks",
+   "title": "Stocks",
+   "summary": "Bars, quotes, trades, snapshots and auctions for US stocks and ETFs, plus the exchange and condition code tables."
+  },
+  {
+   "id": "options",
+   "title": "Options",
+   "summary": "Bars, trades, quotes, snapshots and the option chain with greeks and implied volatility for US options."
+  },
+  {
+   "id": "crypto",
+   "title": "Crypto",
+   "summary": "Bars, quotes, trades, snapshots and the order book for crypto pairs, served by Alpaca's own exchange."
+  },
+  {
+   "id": "forex",
+   "title": "Forex",
+   "summary": "Latest and historical rates for currency pairs."
+  },
+  {
+   "id": "fixed-income",
+   "title": "Fixed income",
+   "summary": "Latest prices and quotes for fixed income securities, looked up by ISIN."
+  },
+  {
+   "id": "screener",
+   "title": "Screener",
+   "summary": "The most active stocks and the top market movers."
+  },
+  {
+   "id": "news",
+   "title": "News",
+   "summary": "News articles for stocks and crypto, from Benzinga, back to 2015."
+  },
+  {
+   "id": "corporate-actions",
+   "title": "Corporate actions",
+   "summary": "Splits, dividends, mergers, spin-offs, name changes and other corporate actions."
+  }
+ ],
+ "endpoints": [
+  {
+   "id": "stock_bars",
+   "path": "/v2/stocks/bars",
+   "title": "Stock historical bars",
+   "category": "stocks",
+   "description": "The historical stock bars API provides aggregates for a list of stock symbols between the specified dates. The returned results are sorted by symbol first, then by bar timestamp. This means that you are likely to see only one symbol in your first response if there are enough bars for that symbol to hit the limit you requested. In these situations, if you keep requesting again with the next_page_token from the previous response, you will eventually reach the other symbols if any bars were found for them.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic reads SIP data once it is 15 minutes old, or IEX data right away, at 200 calls a minute. Algo Trader Plus has no 15-minute limit and 10,000 calls a minute."
+   ],
+   "request_cost": 1,
+   "tier_rule": "stock_history",
+   "doc_url": "https://docs.alpaca.markets/us/reference/stockbars",
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of stock symbols.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL,TSLA",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "timeframe",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "The timeframe represented by each bar in aggregation. You can use any of the following values: - [1-59]Min or [1-59]T, e.g. 5Min or 5T creates 5-minute aggregations - [1-23]Hour or [1-23]H, e.g. 12Hour or 12H creates 12-hour aggregations - 1Day or 1D creates 1-day aggregations - 1Week or 1W creates 1-week aggregations - [1,2,3,4,6,12]Month or [1,2,3,4,6,12]M, e.g. 3Month or 3M creates 3-month aggregations",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [
+      "1Min",
+      "5Min",
+      "15Min",
+      "30Min",
+      "1Hour",
+      "4Hour",
+      "1Day",
+      "1Week",
+      "1Month"
+     ],
+     "default": null,
+     "example": "1Day",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "start",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive start of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the beginning of the current day, but at least 15 minutes ago if the user doesn't have real-time access for the feed.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "end",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive end of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the current time if the user has a real-time access for the feed, otherwise 15 minutes before the current time.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "On Basic, SIP data must be at least 15 minutes old, so leave end blank (it then defaults to 15 minutes ago) or choose an earlier time. Algo Trader Plus has no such limit.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "The maximum number of data points to return in the response page. The API may return less, even if there are more available data points in the requested interval. Always check the next_page_token for more pages. The limit applies to the total number of data points, not per symbol!",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1000",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 10000
+    },
+    {
+     "name": "adjustment",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Specifies the adjustments for the bars. - raw: no adjustments - split: adjust price and volume for forward and reverse stock splits - dividend: adjust price for cash dividends - spin-off: adjust price for spin-offs - all: apply all above adjustments You can combine multiple adjustments by separating them with a comma, e.g. split,spin-off.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "raw",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "asof",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The as-of date of the queried stock symbol(s). Format: YYYY-MM-DD. Default: current day. This date is used to identify the underlying entity of the provided symbol(s), so that name changes for this entity can be found. Data for past symbol(s) is returned if the query date range spans the name change. The special value of \"-\" means symbol mapping is skipped. Data is returned based on the symbol alone without looking up previous names. The same happens if the queried symbol is not found on the given asof date. Example: FB was renamed to META in 2022-06-09. Querying META with an asof date after 2022-06-09 will also yield FB data. The data for the FB ticker will be labeled as META because they are considered the same underlying entity as of 2022-06-09. Querying FB with an asof date after 2022-06-09 will only return data with the FB ticker, not with META. But with an asof date before 2022-06-09, META will also be returned (as FB).",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. The default is sip.",
+     "enum": [
+      "iex",
+      "sip",
+      "boats",
+      "otc"
+     ],
+     "enum_labels": {
+      "iex": "IEX · Basic",
+      "sip": "SIP, all US exchanges",
+      "boats": "BOATS, Blue Ocean overnight",
+      "otc": "OTC · Broker API partners only"
+     },
+     "suggestions": [],
+     "default": "sip",
+     "example": null,
+     "multiple": false,
+     "premium_note": "On Basic, the SIP feed only returns data at least 15 minutes old; IEX has no such limit. Algo Trader Plus can read SIP data up to the present. OTC data needs a special subscription that Alpaca offers only to Broker API partners.",
+     "premium_values": [
+      "otc"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "currency",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The currency of all prices in ISO 4217 format. Default: USD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "page_token",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The pagination token from which to continue. The value to pass here is returned in specific requests when more data is available, usually because of a response result limit.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort data in ascending or descending order.",
+     "enum": [
+      "asc",
+      "desc"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "asc",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "1Day bars for the last month",
+     "params": {
+      "symbols": "AAPL",
+      "timeframe": "1Day",
+      "start": "@sample_start",
+      "end": "@sample_day"
+     }
+    },
+    {
+     "caption": "Required parameters only: symbols=AAPL, timeframe=1Day",
+     "params": {
+      "symbols": "AAPL",
+      "timeframe": "1Day"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_bars_single",
+   "path": "/v2/stocks/{symbol}/bars",
+   "title": "Stock historical bars (single symbol)",
+   "category": "stocks",
+   "description": "The historical stock bars API provides aggregates for the stock symbol between the specified dates.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic reads SIP data once it is 15 minutes old, or IEX data right away, at 200 calls a minute. Algo Trader Plus has no 15-minute limit and 10,000 calls a minute."
+   ],
+   "request_cost": 1,
+   "tier_rule": "stock_history",
+   "doc_url": "https://docs.alpaca.markets/us/reference/stockbarsingle-1",
+   "params": [
+    {
+     "name": "symbol",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "The symbol to query.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "timeframe",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "The timeframe represented by each bar in aggregation. You can use any of the following values: - [1-59]Min or [1-59]T, e.g. 5Min or 5T creates 5-minute aggregations - [1-23]Hour or [1-23]H, e.g. 12Hour or 12H creates 12-hour aggregations - 1Day or 1D creates 1-day aggregations - 1Week or 1W creates 1-week aggregations - [1,2,3,4,6,12]Month or [1,2,3,4,6,12]M, e.g. 3Month or 3M creates 3-month aggregations",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [
+      "1Min",
+      "5Min",
+      "15Min",
+      "30Min",
+      "1Hour",
+      "4Hour",
+      "1Day",
+      "1Week",
+      "1Month"
+     ],
+     "default": null,
+     "example": "1Day",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "start",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive start of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the beginning of the current day, but at least 15 minutes ago if the user doesn't have real-time access for the feed.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "end",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive end of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the current time if the user has a real-time access for the feed, otherwise 15 minutes before the current time.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "On Basic, SIP data must be at least 15 minutes old, so leave end blank (it then defaults to 15 minutes ago) or choose an earlier time. Algo Trader Plus has no such limit.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "The maximum number of data points to return in the response page. The API may return less, even if there are more available data points in the requested interval. Always check the next_page_token for more pages. The limit applies to the total number of data points, not per symbol!",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1000",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 10000
+    },
+    {
+     "name": "adjustment",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Specifies the adjustments for the bars. - raw: no adjustments - split: adjust price and volume for forward and reverse stock splits - dividend: adjust price for cash dividends - spin-off: adjust price for spin-offs - all: apply all above adjustments You can combine multiple adjustments by separating them with a comma, e.g. split,spin-off.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "raw",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "asof",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The as-of date of the queried stock symbol(s). Format: YYYY-MM-DD. Default: current day. This date is used to identify the underlying entity of the provided symbol(s), so that name changes for this entity can be found. Data for past symbol(s) is returned if the query date range spans the name change. The special value of \"-\" means symbol mapping is skipped. Data is returned based on the symbol alone without looking up previous names. The same happens if the queried symbol is not found on the given asof date. Example: FB was renamed to META in 2022-06-09. Querying META with an asof date after 2022-06-09 will also yield FB data. The data for the FB ticker will be labeled as META because they are considered the same underlying entity as of 2022-06-09. Querying FB with an asof date after 2022-06-09 will only return data with the FB ticker, not with META. But with an asof date before 2022-06-09, META will also be returned (as FB).",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. The default is sip.",
+     "enum": [
+      "iex",
+      "sip",
+      "boats",
+      "otc"
+     ],
+     "enum_labels": {
+      "iex": "IEX · Basic",
+      "sip": "SIP, all US exchanges",
+      "boats": "BOATS, Blue Ocean overnight",
+      "otc": "OTC · Broker API partners only"
+     },
+     "suggestions": [],
+     "default": "sip",
+     "example": null,
+     "multiple": false,
+     "premium_note": "On Basic, the SIP feed only returns data at least 15 minutes old; IEX has no such limit. Algo Trader Plus can read SIP data up to the present. OTC data needs a special subscription that Alpaca offers only to Broker API partners.",
+     "premium_values": [
+      "otc"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "currency",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The currency of all prices in ISO 4217 format. Default: USD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "page_token",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The pagination token from which to continue. The value to pass here is returned in specific requests when more data is available, usually because of a response result limit.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort data in ascending or descending order.",
+     "enum": [
+      "asc",
+      "desc"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "asc",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "1Day bars for the last month",
+     "params": {
+      "symbol": "AAPL",
+      "timeframe": "1Day",
+      "start": "@sample_start",
+      "end": "@sample_day"
+     }
+    },
+    {
+     "caption": "Required parameters only: symbol=AAPL, timeframe=1Day",
+     "params": {
+      "symbol": "AAPL",
+      "timeframe": "1Day"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_latest_bars",
+   "path": "/v2/stocks/bars/latest",
+   "title": "Stock latest bars",
+   "category": "stocks",
+   "description": "The latest bars endpoint provides the latest minute bar for the given ticker symbols.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic gets the IEX feed. Algo Trader Plus adds the SIP feed with every US exchange."
+   ],
+   "request_cost": 1,
+   "tier_rule": "stock_latest",
+   "doc_url": "https://docs.alpaca.markets/us/reference/stocklatestbars-1",
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of stock symbols.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL,TSLA",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. Without one, Alpaca uses SIP with Algo Trader Plus and IEX on Basic.",
+     "enum": [
+      "iex",
+      "sip",
+      "delayed_sip",
+      "boats",
+      "overnight",
+      "otc"
+     ],
+     "enum_labels": {
+      "iex": "IEX · Basic",
+      "sip": "SIP, all US exchanges · Algo Trader Plus",
+      "delayed_sip": "SIP, 15 minutes delayed",
+      "boats": "BOATS, Blue Ocean overnight",
+      "overnight": "Overnight, derived from BOATS",
+      "otc": "OTC · Broker API partners only"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "The SIP feed (all US exchanges) on the latest endpoints and snapshots needs Algo Trader Plus; Basic gets IEX only. Leave feed blank and Alpaca uses the best feed your plan allows. OTC data needs a special subscription that Alpaca offers only to Broker API partners.",
+     "premium_values": [
+      "sip",
+      "otc"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "currency",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The currency of all prices in ISO 4217 format. Default: USD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_latest_bar_single",
+   "path": "/v2/stocks/{symbol}/bars/latest",
+   "title": "Stock latest bar (single symbol)",
+   "category": "stocks",
+   "description": "The latest bar endpoint returns the latest minute bar for the given ticker symbol.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic gets the IEX feed. Algo Trader Plus adds the SIP feed with every US exchange."
+   ],
+   "request_cost": 1,
+   "tier_rule": "stock_latest",
+   "doc_url": "https://docs.alpaca.markets/us/reference/stocklatestbarsingle-1",
+   "params": [
+    {
+     "name": "symbol",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "The symbol to query.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. Without one, Alpaca uses SIP with Algo Trader Plus and IEX on Basic.",
+     "enum": [
+      "iex",
+      "sip",
+      "delayed_sip",
+      "boats",
+      "overnight",
+      "otc"
+     ],
+     "enum_labels": {
+      "iex": "IEX · Basic",
+      "sip": "SIP, all US exchanges · Algo Trader Plus",
+      "delayed_sip": "SIP, 15 minutes delayed",
+      "boats": "BOATS, Blue Ocean overnight",
+      "overnight": "Overnight, derived from BOATS",
+      "otc": "OTC · Broker API partners only"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "The SIP feed (all US exchanges) on the latest endpoints and snapshots needs Algo Trader Plus; Basic gets IEX only. Leave feed blank and Alpaca uses the best feed your plan allows. OTC data needs a special subscription that Alpaca offers only to Broker API partners.",
+     "premium_values": [
+      "sip",
+      "otc"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "currency",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The currency of all prices in ISO 4217 format. Default: USD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_quotes",
+   "path": "/v2/stocks/quotes",
+   "title": "Stock historical quotes",
+   "category": "stocks",
+   "description": "The historical stock quotes API provides quote data for a list of stock symbols between the specified dates. The returned results are sorted by symbol first, then by the quote timestamp. This means that you are likely to see only one symbol in your first response if there are enough quotes for that symbol to hit the limit you requested. In these situations, if you keep requesting again with the next_page_token from the previous response, you will eventually reach the other symbols if any quotes were found for them.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic reads SIP data once it is 15 minutes old, or IEX data right away, at 200 calls a minute. Algo Trader Plus has no 15-minute limit and 10,000 calls a minute."
+   ],
+   "request_cost": 1,
+   "tier_rule": "stock_history",
+   "doc_url": "https://docs.alpaca.markets/us/reference/stockquotes-1",
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of stock symbols.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL,TSLA",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "start",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive start of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the beginning of the current day, but at least 15 minutes ago if the user doesn't have real-time access for the feed.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "end",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive end of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the current time if the user has a real-time access for the feed, otherwise 15 minutes before the current time.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "On Basic, SIP data must be at least 15 minutes old, so leave end blank (it then defaults to 15 minutes ago) or choose an earlier time. Algo Trader Plus has no such limit.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "The maximum number of data points to return in the response page. The API may return less, even if there are more available data points in the requested interval. Always check the next_page_token for more pages. The limit applies to the total number of data points, not per symbol!",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1000",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 10000
+    },
+    {
+     "name": "asof",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The as-of date of the queried stock symbol(s). Format: YYYY-MM-DD. Default: current day. This date is used to identify the underlying entity of the provided symbol(s), so that name changes for this entity can be found. Data for past symbol(s) is returned if the query date range spans the name change. The special value of \"-\" means symbol mapping is skipped. Data is returned based on the symbol alone without looking up previous names. The same happens if the queried symbol is not found on the given asof date. Example: FB was renamed to META in 2022-06-09. Querying META with an asof date after 2022-06-09 will also yield FB data. The data for the FB ticker will be labeled as META because they are considered the same underlying entity as of 2022-06-09. Querying FB with an asof date after 2022-06-09 will only return data with the FB ticker, not with META. But with an asof date before 2022-06-09, META will also be returned (as FB).",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. The default is sip.",
+     "enum": [
+      "iex",
+      "sip",
+      "boats",
+      "otc"
+     ],
+     "enum_labels": {
+      "iex": "IEX · Basic",
+      "sip": "SIP, all US exchanges",
+      "boats": "BOATS, Blue Ocean overnight",
+      "otc": "OTC · Broker API partners only"
+     },
+     "suggestions": [],
+     "default": "sip",
+     "example": null,
+     "multiple": false,
+     "premium_note": "On Basic, the SIP feed only returns data at least 15 minutes old; IEX has no such limit. Algo Trader Plus can read SIP data up to the present. OTC data needs a special subscription that Alpaca offers only to Broker API partners.",
+     "premium_values": [
+      "otc"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "currency",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The currency of all prices in ISO 4217 format. Default: USD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "page_token",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The pagination token from which to continue. The value to pass here is returned in specific requests when more data is available, usually because of a response result limit.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort data in ascending or descending order.",
+     "enum": [
+      "asc",
+      "desc"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "asc",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "The first 10 rows from @sample_day",
+     "params": {
+      "symbols": "AAPL",
+      "start": "@sample_day",
+      "limit": "10"
+     }
+    },
+    {
+     "caption": "Required parameters only: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_quotes_single",
+   "path": "/v2/stocks/{symbol}/quotes",
+   "title": "Stock historical quotes (single symbol)",
+   "category": "stocks",
+   "description": "The historical stock quotes API provides quote data for a stock symbol between the specified dates.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic reads SIP data once it is 15 minutes old, or IEX data right away, at 200 calls a minute. Algo Trader Plus has no 15-minute limit and 10,000 calls a minute."
+   ],
+   "request_cost": 1,
+   "tier_rule": "stock_history",
+   "doc_url": "https://docs.alpaca.markets/us/reference/stockquotesingle-1",
+   "params": [
+    {
+     "name": "symbol",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "The symbol to query.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "start",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive start of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the beginning of the current day, but at least 15 minutes ago if the user doesn't have real-time access for the feed.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "end",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive end of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the current time if the user has a real-time access for the feed, otherwise 15 minutes before the current time.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "On Basic, SIP data must be at least 15 minutes old, so leave end blank (it then defaults to 15 minutes ago) or choose an earlier time. Algo Trader Plus has no such limit.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "The maximum number of data points to return in the response page. The API may return less, even if there are more available data points in the requested interval. Always check the next_page_token for more pages. The limit applies to the total number of data points, not per symbol!",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1000",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 10000
+    },
+    {
+     "name": "asof",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The as-of date of the queried stock symbol(s). Format: YYYY-MM-DD. Default: current day. This date is used to identify the underlying entity of the provided symbol(s), so that name changes for this entity can be found. Data for past symbol(s) is returned if the query date range spans the name change. The special value of \"-\" means symbol mapping is skipped. Data is returned based on the symbol alone without looking up previous names. The same happens if the queried symbol is not found on the given asof date. Example: FB was renamed to META in 2022-06-09. Querying META with an asof date after 2022-06-09 will also yield FB data. The data for the FB ticker will be labeled as META because they are considered the same underlying entity as of 2022-06-09. Querying FB with an asof date after 2022-06-09 will only return data with the FB ticker, not with META. But with an asof date before 2022-06-09, META will also be returned (as FB).",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. The default is sip.",
+     "enum": [
+      "iex",
+      "sip",
+      "boats",
+      "otc"
+     ],
+     "enum_labels": {
+      "iex": "IEX · Basic",
+      "sip": "SIP, all US exchanges",
+      "boats": "BOATS, Blue Ocean overnight",
+      "otc": "OTC · Broker API partners only"
+     },
+     "suggestions": [],
+     "default": "sip",
+     "example": null,
+     "multiple": false,
+     "premium_note": "On Basic, the SIP feed only returns data at least 15 minutes old; IEX has no such limit. Algo Trader Plus can read SIP data up to the present. OTC data needs a special subscription that Alpaca offers only to Broker API partners.",
+     "premium_values": [
+      "otc"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "currency",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The currency of all prices in ISO 4217 format. Default: USD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "page_token",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The pagination token from which to continue. The value to pass here is returned in specific requests when more data is available, usually because of a response result limit.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort data in ascending or descending order.",
+     "enum": [
+      "asc",
+      "desc"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "asc",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "The first 10 rows from @sample_day",
+     "params": {
+      "symbol": "AAPL",
+      "start": "@sample_day",
+      "limit": "10"
+     }
+    },
+    {
+     "caption": "Required parameters only: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_latest_quotes",
+   "path": "/v2/stocks/quotes/latest",
+   "title": "Stock latest quotes",
+   "category": "stocks",
+   "description": "The latest quotes endpoint provides the latest best bid and ask prices for the given ticker symbols.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic gets the IEX feed. Algo Trader Plus adds the SIP feed with every US exchange."
+   ],
+   "request_cost": 1,
+   "tier_rule": "stock_latest",
+   "doc_url": "https://docs.alpaca.markets/us/reference/stocklatestquotes-1",
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of stock symbols.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL,TSLA",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. Without one, Alpaca uses SIP with Algo Trader Plus and IEX on Basic.",
+     "enum": [
+      "iex",
+      "sip",
+      "delayed_sip",
+      "boats",
+      "overnight",
+      "otc"
+     ],
+     "enum_labels": {
+      "iex": "IEX · Basic",
+      "sip": "SIP, all US exchanges · Algo Trader Plus",
+      "delayed_sip": "SIP, 15 minutes delayed",
+      "boats": "BOATS, Blue Ocean overnight",
+      "overnight": "Overnight, derived from BOATS",
+      "otc": "OTC · Broker API partners only"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "The SIP feed (all US exchanges) on the latest endpoints and snapshots needs Algo Trader Plus; Basic gets IEX only. Leave feed blank and Alpaca uses the best feed your plan allows. OTC data needs a special subscription that Alpaca offers only to Broker API partners.",
+     "premium_values": [
+      "sip",
+      "otc"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "currency",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The currency of all prices in ISO 4217 format. Default: USD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_latest_quote_single",
+   "path": "/v2/stocks/{symbol}/quotes/latest",
+   "title": "Stock latest quote (single symbol)",
+   "category": "stocks",
+   "description": "The latest quote endpoint provides the latest best bid and ask prices for a given ticker symbol.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic gets the IEX feed. Algo Trader Plus adds the SIP feed with every US exchange."
+   ],
+   "request_cost": 1,
+   "tier_rule": "stock_latest",
+   "doc_url": "https://docs.alpaca.markets/us/reference/stocklatestquotesingle-1",
+   "params": [
+    {
+     "name": "symbol",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "The symbol to query.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. Without one, Alpaca uses SIP with Algo Trader Plus and IEX on Basic.",
+     "enum": [
+      "iex",
+      "sip",
+      "delayed_sip",
+      "boats",
+      "overnight",
+      "otc"
+     ],
+     "enum_labels": {
+      "iex": "IEX · Basic",
+      "sip": "SIP, all US exchanges · Algo Trader Plus",
+      "delayed_sip": "SIP, 15 minutes delayed",
+      "boats": "BOATS, Blue Ocean overnight",
+      "overnight": "Overnight, derived from BOATS",
+      "otc": "OTC · Broker API partners only"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "The SIP feed (all US exchanges) on the latest endpoints and snapshots needs Algo Trader Plus; Basic gets IEX only. Leave feed blank and Alpaca uses the best feed your plan allows. OTC data needs a special subscription that Alpaca offers only to Broker API partners.",
+     "premium_values": [
+      "sip",
+      "otc"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "currency",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The currency of all prices in ISO 4217 format. Default: USD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_trades",
+   "path": "/v2/stocks/trades",
+   "title": "Stock historical trades",
+   "category": "stocks",
+   "description": "The historical stock trades API provides trade data for a list of stock symbols between the specified dates. The returned results are sorted by symbol first then by trade timestamp. This means that you are likely to see only one symbol in your first response if there are enough trades for that symbol to hit the limit you requested. In these situations, if you keep requesting again with the next_page_token from the previous response, you will eventually reach the other symbols if any trades were found for them.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic reads SIP data once it is 15 minutes old, or IEX data right away, at 200 calls a minute. Algo Trader Plus has no 15-minute limit and 10,000 calls a minute."
+   ],
+   "request_cost": 1,
+   "tier_rule": "stock_history",
+   "doc_url": "https://docs.alpaca.markets/us/reference/stocktrades-1",
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of stock symbols.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL,TSLA",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "start",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive start of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the beginning of the current day, but at least 15 minutes ago if the user doesn't have real-time access for the feed.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "end",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive end of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the current time if the user has a real-time access for the feed, otherwise 15 minutes before the current time.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "On Basic, SIP data must be at least 15 minutes old, so leave end blank (it then defaults to 15 minutes ago) or choose an earlier time. Algo Trader Plus has no such limit.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "The maximum number of data points to return in the response page. The API may return less, even if there are more available data points in the requested interval. Always check the next_page_token for more pages. The limit applies to the total number of data points, not per symbol!",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1000",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 10000
+    },
+    {
+     "name": "asof",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The as-of date of the queried stock symbol(s). Format: YYYY-MM-DD. Default: current day. This date is used to identify the underlying entity of the provided symbol(s), so that name changes for this entity can be found. Data for past symbol(s) is returned if the query date range spans the name change. The special value of \"-\" means symbol mapping is skipped. Data is returned based on the symbol alone without looking up previous names. The same happens if the queried symbol is not found on the given asof date. Example: FB was renamed to META in 2022-06-09. Querying META with an asof date after 2022-06-09 will also yield FB data. The data for the FB ticker will be labeled as META because they are considered the same underlying entity as of 2022-06-09. Querying FB with an asof date after 2022-06-09 will only return data with the FB ticker, not with META. But with an asof date before 2022-06-09, META will also be returned (as FB).",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. The default is sip.",
+     "enum": [
+      "iex",
+      "sip",
+      "boats",
+      "otc"
+     ],
+     "enum_labels": {
+      "iex": "IEX · Basic",
+      "sip": "SIP, all US exchanges",
+      "boats": "BOATS, Blue Ocean overnight",
+      "otc": "OTC · Broker API partners only"
+     },
+     "suggestions": [],
+     "default": "sip",
+     "example": null,
+     "multiple": false,
+     "premium_note": "On Basic, the SIP feed only returns data at least 15 minutes old; IEX has no such limit. Algo Trader Plus can read SIP data up to the present. OTC data needs a special subscription that Alpaca offers only to Broker API partners.",
+     "premium_values": [
+      "otc"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "currency",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The currency of all prices in ISO 4217 format. Default: USD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "page_token",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The pagination token from which to continue. The value to pass here is returned in specific requests when more data is available, usually because of a response result limit.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort data in ascending or descending order.",
+     "enum": [
+      "asc",
+      "desc"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "asc",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "The first 10 rows from @sample_day",
+     "params": {
+      "symbols": "AAPL",
+      "start": "@sample_day",
+      "limit": "10"
+     }
+    },
+    {
+     "caption": "Required parameters only: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_trades_single",
+   "path": "/v2/stocks/{symbol}/trades",
+   "title": "Stock historical trades (single symbol)",
+   "category": "stocks",
+   "description": "The historical stock trades API provides trade data for a stock symbol between the specified dates.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic reads SIP data once it is 15 minutes old, or IEX data right away, at 200 calls a minute. Algo Trader Plus has no 15-minute limit and 10,000 calls a minute."
+   ],
+   "request_cost": 1,
+   "tier_rule": "stock_history",
+   "doc_url": "https://docs.alpaca.markets/us/reference/stocktradesingle-1",
+   "params": [
+    {
+     "name": "symbol",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "The symbol to query.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "start",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive start of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the beginning of the current day, but at least 15 minutes ago if the user doesn't have real-time access for the feed.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "end",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive end of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the current time if the user has a real-time access for the feed, otherwise 15 minutes before the current time.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "On Basic, SIP data must be at least 15 minutes old, so leave end blank (it then defaults to 15 minutes ago) or choose an earlier time. Algo Trader Plus has no such limit.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "The maximum number of data points to return in the response page. The API may return less, even if there are more available data points in the requested interval. Always check the next_page_token for more pages. The limit applies to the total number of data points, not per symbol!",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1000",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 10000
+    },
+    {
+     "name": "asof",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The as-of date of the queried stock symbol(s). Format: YYYY-MM-DD. Default: current day. This date is used to identify the underlying entity of the provided symbol(s), so that name changes for this entity can be found. Data for past symbol(s) is returned if the query date range spans the name change. The special value of \"-\" means symbol mapping is skipped. Data is returned based on the symbol alone without looking up previous names. The same happens if the queried symbol is not found on the given asof date. Example: FB was renamed to META in 2022-06-09. Querying META with an asof date after 2022-06-09 will also yield FB data. The data for the FB ticker will be labeled as META because they are considered the same underlying entity as of 2022-06-09. Querying FB with an asof date after 2022-06-09 will only return data with the FB ticker, not with META. But with an asof date before 2022-06-09, META will also be returned (as FB).",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. The default is sip.",
+     "enum": [
+      "iex",
+      "sip",
+      "boats",
+      "otc"
+     ],
+     "enum_labels": {
+      "iex": "IEX · Basic",
+      "sip": "SIP, all US exchanges",
+      "boats": "BOATS, Blue Ocean overnight",
+      "otc": "OTC · Broker API partners only"
+     },
+     "suggestions": [],
+     "default": "sip",
+     "example": null,
+     "multiple": false,
+     "premium_note": "On Basic, the SIP feed only returns data at least 15 minutes old; IEX has no such limit. Algo Trader Plus can read SIP data up to the present. OTC data needs a special subscription that Alpaca offers only to Broker API partners.",
+     "premium_values": [
+      "otc"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "currency",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The currency of all prices in ISO 4217 format. Default: USD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "page_token",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The pagination token from which to continue. The value to pass here is returned in specific requests when more data is available, usually because of a response result limit.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort data in ascending or descending order.",
+     "enum": [
+      "asc",
+      "desc"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "asc",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "The first 10 rows from @sample_day",
+     "params": {
+      "symbol": "AAPL",
+      "start": "@sample_day",
+      "limit": "10"
+     }
+    },
+    {
+     "caption": "Required parameters only: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_latest_trades",
+   "path": "/v2/stocks/trades/latest",
+   "title": "Stock latest trades",
+   "category": "stocks",
+   "description": "The latest trades endpoint provides the latest trades for the given ticker symbols. Trades with any conditions that causes them to not update the bar price are excluded. For example a trade with condition I (odd lot) will never appear on this endpoint. You can find the complete list of excluded conditions in this FAQ.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic gets the IEX feed. Algo Trader Plus adds the SIP feed with every US exchange."
+   ],
+   "request_cost": 1,
+   "tier_rule": "stock_latest",
+   "doc_url": "https://docs.alpaca.markets/us/reference/stocklatesttrades-1",
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of stock symbols.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL,TSLA",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. Without one, Alpaca uses SIP with Algo Trader Plus and IEX on Basic.",
+     "enum": [
+      "iex",
+      "sip",
+      "delayed_sip",
+      "boats",
+      "overnight",
+      "otc"
+     ],
+     "enum_labels": {
+      "iex": "IEX · Basic",
+      "sip": "SIP, all US exchanges · Algo Trader Plus",
+      "delayed_sip": "SIP, 15 minutes delayed",
+      "boats": "BOATS, Blue Ocean overnight",
+      "overnight": "Overnight, derived from BOATS",
+      "otc": "OTC · Broker API partners only"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "The SIP feed (all US exchanges) on the latest endpoints and snapshots needs Algo Trader Plus; Basic gets IEX only. Leave feed blank and Alpaca uses the best feed your plan allows. OTC data needs a special subscription that Alpaca offers only to Broker API partners.",
+     "premium_values": [
+      "sip",
+      "otc"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "currency",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The currency of all prices in ISO 4217 format. Default: USD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_latest_trade_single",
+   "path": "/v2/stocks/{symbol}/trades/latest",
+   "title": "Stock latest trade (single symbol)",
+   "category": "stocks",
+   "description": "The latest trade endpoint provides the latest trade for the given ticker symbol. Trades with any conditions that causes them to not update the bar price are excluded. For example a trade with condition I (odd lot) will never appear on this endpoint. You can find the complete list of excluded conditions in this FAQ.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic gets the IEX feed. Algo Trader Plus adds the SIP feed with every US exchange."
+   ],
+   "request_cost": 1,
+   "tier_rule": "stock_latest",
+   "doc_url": "https://docs.alpaca.markets/us/reference/stocklatesttradesingle-1",
+   "params": [
+    {
+     "name": "symbol",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "The symbol to query.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. Without one, Alpaca uses SIP with Algo Trader Plus and IEX on Basic.",
+     "enum": [
+      "iex",
+      "sip",
+      "delayed_sip",
+      "boats",
+      "overnight",
+      "otc"
+     ],
+     "enum_labels": {
+      "iex": "IEX · Basic",
+      "sip": "SIP, all US exchanges · Algo Trader Plus",
+      "delayed_sip": "SIP, 15 minutes delayed",
+      "boats": "BOATS, Blue Ocean overnight",
+      "overnight": "Overnight, derived from BOATS",
+      "otc": "OTC · Broker API partners only"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "The SIP feed (all US exchanges) on the latest endpoints and snapshots needs Algo Trader Plus; Basic gets IEX only. Leave feed blank and Alpaca uses the best feed your plan allows. OTC data needs a special subscription that Alpaca offers only to Broker API partners.",
+     "premium_values": [
+      "sip",
+      "otc"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "currency",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The currency of all prices in ISO 4217 format. Default: USD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_snapshots",
+   "path": "/v2/stocks/snapshots",
+   "title": "Stock snapshots",
+   "category": "stocks",
+   "description": "The snapshot endpoint for multiple tickers provides the latest trade, latest quote, minute bar, daily bar, and previous daily bar data for each given ticker symbol.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic gets the IEX feed. Algo Trader Plus adds the SIP feed with every US exchange."
+   ],
+   "request_cost": 1,
+   "tier_rule": "stock_latest",
+   "doc_url": "https://docs.alpaca.markets/us/reference/stocksnapshots-1",
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of stock symbols.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL,TSLA",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. Without one, Alpaca uses SIP with Algo Trader Plus and IEX on Basic.",
+     "enum": [
+      "iex",
+      "sip",
+      "delayed_sip",
+      "boats",
+      "overnight",
+      "otc"
+     ],
+     "enum_labels": {
+      "iex": "IEX · Basic",
+      "sip": "SIP, all US exchanges · Algo Trader Plus",
+      "delayed_sip": "SIP, 15 minutes delayed",
+      "boats": "BOATS, Blue Ocean overnight",
+      "overnight": "Overnight, derived from BOATS",
+      "otc": "OTC · Broker API partners only"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "The SIP feed (all US exchanges) on the latest endpoints and snapshots needs Algo Trader Plus; Basic gets IEX only. Leave feed blank and Alpaca uses the best feed your plan allows. OTC data needs a special subscription that Alpaca offers only to Broker API partners.",
+     "premium_values": [
+      "sip",
+      "otc"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "currency",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The currency of all prices in ISO 4217 format. Default: USD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_snapshot_single",
+   "path": "/v2/stocks/{symbol}/snapshot",
+   "title": "Stock snapshot (single symbol)",
+   "category": "stocks",
+   "description": "The snapshot endpoint provides the latest trade, latest quote, minute bar, daily bar, and previous daily bar data for a given ticker symbol.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic gets the IEX feed. Algo Trader Plus adds the SIP feed with every US exchange."
+   ],
+   "request_cost": 1,
+   "tier_rule": "stock_latest",
+   "doc_url": "https://docs.alpaca.markets/us/reference/stocksnapshotsingle",
+   "params": [
+    {
+     "name": "symbol",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "The symbol to query.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. Without one, Alpaca uses SIP with Algo Trader Plus and IEX on Basic.",
+     "enum": [
+      "iex",
+      "sip",
+      "delayed_sip",
+      "boats",
+      "overnight",
+      "otc"
+     ],
+     "enum_labels": {
+      "iex": "IEX · Basic",
+      "sip": "SIP, all US exchanges · Algo Trader Plus",
+      "delayed_sip": "SIP, 15 minutes delayed",
+      "boats": "BOATS, Blue Ocean overnight",
+      "overnight": "Overnight, derived from BOATS",
+      "otc": "OTC · Broker API partners only"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "The SIP feed (all US exchanges) on the latest endpoints and snapshots needs Algo Trader Plus; Basic gets IEX only. Leave feed blank and Alpaca uses the best feed your plan allows. OTC data needs a special subscription that Alpaca offers only to Broker API partners.",
+     "premium_values": [
+      "sip",
+      "otc"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "currency",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The currency of all prices in ISO 4217 format. Default: USD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_auctions",
+   "path": "/v2/stocks/auctions",
+   "title": "Stock historical auctions",
+   "category": "stocks",
+   "description": "The historical auctions endpoint provides auction prices for a list of stock symbols between the specified dates.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic reads SIP data once it is 15 minutes old, or IEX data right away, at 200 calls a minute. Algo Trader Plus has no 15-minute limit and 10,000 calls a minute."
+   ],
+   "request_cost": 1,
+   "tier_rule": "stock_history",
+   "doc_url": "https://docs.alpaca.markets/us/reference/stockauctions-1",
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of stock symbols.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL,TSLA",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "start",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive start of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the beginning of the current day, but at least 15 minutes ago if the user doesn't have real-time access for the feed.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "end",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive end of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the current time if the user has a real-time access for the feed, otherwise 15 minutes before the current time.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "On Basic, SIP data must be at least 15 minutes old, so leave end blank (it then defaults to 15 minutes ago) or choose an earlier time. Algo Trader Plus has no such limit.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "The maximum number of data points to return in the response page. The API may return less, even if there are more available data points in the requested interval. Always check the next_page_token for more pages. The limit applies to the total number of data points, not per symbol!",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1000",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 10000
+    },
+    {
+     "name": "asof",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The as-of date of the queried stock symbol(s). Format: YYYY-MM-DD. Default: current day. This date is used to identify the underlying entity of the provided symbol(s), so that name changes for this entity can be found. Data for past symbol(s) is returned if the query date range spans the name change. The special value of \"-\" means symbol mapping is skipped. Data is returned based on the symbol alone without looking up previous names. The same happens if the queried symbol is not found on the given asof date. Example: FB was renamed to META in 2022-06-09. Querying META with an asof date after 2022-06-09 will also yield FB data. The data for the FB ticker will be labeled as META because they are considered the same underlying entity as of 2022-06-09. Querying FB with an asof date after 2022-06-09 will only return data with the FB ticker, not with META. But with an asof date before 2022-06-09, META will also be returned (as FB).",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. The default is sip.",
+     "enum": [
+      "iex",
+      "sip",
+      "delayed_sip",
+      "boats",
+      "overnight",
+      "otc"
+     ],
+     "enum_labels": {
+      "iex": "IEX · Basic",
+      "sip": "SIP, all US exchanges",
+      "delayed_sip": "SIP, 15 minutes delayed",
+      "boats": "BOATS, Blue Ocean overnight",
+      "overnight": "Overnight, derived from BOATS",
+      "otc": "OTC · Broker API partners only"
+     },
+     "suggestions": [],
+     "default": "sip",
+     "example": null,
+     "multiple": false,
+     "premium_note": "On Basic, the SIP feed only returns data at least 15 minutes old; IEX has no such limit. Algo Trader Plus can read SIP data up to the present. OTC data needs a special subscription that Alpaca offers only to Broker API partners.",
+     "premium_values": [
+      "otc"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "currency",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The currency of all prices in ISO 4217 format. Default: USD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "page_token",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The pagination token from which to continue. The value to pass here is returned in specific requests when more data is available, usually because of a response result limit.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort data in ascending or descending order.",
+     "enum": [
+      "asc",
+      "desc"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "asc",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "The first 10 rows from @sample_day",
+     "params": {
+      "symbols": "AAPL",
+      "start": "@sample_day",
+      "limit": "10"
+     }
+    },
+    {
+     "caption": "Required parameters only: symbols=AAPL",
+     "params": {
+      "symbols": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_auctions_single",
+   "path": "/v2/stocks/{symbol}/auctions",
+   "title": "Stock historical auctions (single symbol)",
+   "category": "stocks",
+   "description": "The historical auctions endpoint provides auction prices for the given stock symbol between the specified dates.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic reads SIP data once it is 15 minutes old, or IEX data right away, at 200 calls a minute. Algo Trader Plus has no 15-minute limit and 10,000 calls a minute."
+   ],
+   "request_cost": 1,
+   "tier_rule": "stock_history",
+   "doc_url": "https://docs.alpaca.markets/us/reference/stockauctionsingle-1",
+   "params": [
+    {
+     "name": "symbol",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "The symbol to query.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "start",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive start of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the beginning of the current day, but at least 15 minutes ago if the user doesn't have real-time access for the feed.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "end",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive end of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the current time if the user has a real-time access for the feed, otherwise 15 minutes before the current time.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "On Basic, SIP data must be at least 15 minutes old, so leave end blank (it then defaults to 15 minutes ago) or choose an earlier time. Algo Trader Plus has no such limit.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "The maximum number of data points to return in the response page. The API may return less, even if there are more available data points in the requested interval. Always check the next_page_token for more pages. The limit applies to the total number of data points, not per symbol!",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1000",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 10000
+    },
+    {
+     "name": "asof",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The as-of date of the queried stock symbol(s). Format: YYYY-MM-DD. Default: current day. This date is used to identify the underlying entity of the provided symbol(s), so that name changes for this entity can be found. Data for past symbol(s) is returned if the query date range spans the name change. The special value of \"-\" means symbol mapping is skipped. Data is returned based on the symbol alone without looking up previous names. The same happens if the queried symbol is not found on the given asof date. Example: FB was renamed to META in 2022-06-09. Querying META with an asof date after 2022-06-09 will also yield FB data. The data for the FB ticker will be labeled as META because they are considered the same underlying entity as of 2022-06-09. Querying FB with an asof date after 2022-06-09 will only return data with the FB ticker, not with META. But with an asof date before 2022-06-09, META will also be returned (as FB).",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. The default is sip.",
+     "enum": [
+      "iex",
+      "sip",
+      "delayed_sip",
+      "boats",
+      "overnight",
+      "otc"
+     ],
+     "enum_labels": {
+      "iex": "IEX · Basic",
+      "sip": "SIP, all US exchanges",
+      "delayed_sip": "SIP, 15 minutes delayed",
+      "boats": "BOATS, Blue Ocean overnight",
+      "overnight": "Overnight, derived from BOATS",
+      "otc": "OTC · Broker API partners only"
+     },
+     "suggestions": [],
+     "default": "sip",
+     "example": null,
+     "multiple": false,
+     "premium_note": "On Basic, the SIP feed only returns data at least 15 minutes old; IEX has no such limit. Algo Trader Plus can read SIP data up to the present. OTC data needs a special subscription that Alpaca offers only to Broker API partners.",
+     "premium_values": [
+      "otc"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "currency",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The currency of all prices in ISO 4217 format. Default: USD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "page_token",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The pagination token from which to continue. The value to pass here is returned in specific requests when more data is available, usually because of a response result limit.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort data in ascending or descending order.",
+     "enum": [
+      "asc",
+      "desc"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "asc",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "The first 10 rows from @sample_day",
+     "params": {
+      "symbol": "AAPL",
+      "start": "@sample_day",
+      "limit": "10"
+     }
+    },
+    {
+     "caption": "Required parameters only: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_conditions",
+   "path": "/v2/stocks/meta/conditions/{ticktype}",
+   "title": "Stock condition codes",
+   "category": "stocks",
+   "description": "Returns the mapping between the condition codes and names.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": true,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/stockmetaconditions-1",
+   "params": [
+    {
+     "name": "ticktype",
+     "in": "path",
+     "required": true,
+     "type": "enum",
+     "description": "The type of ticks.",
+     "enum": [
+      "trade",
+      "quote"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "trade",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "tape",
+     "in": "query",
+     "required": true,
+     "type": "enum",
+     "description": "The one character name of the tape.",
+     "enum": [
+      "A",
+      "B",
+      "C"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "A",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: ticktype=trade, tape=A",
+     "params": {
+      "ticktype": "trade",
+      "tape": "A"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_exchanges",
+   "path": "/v2/stocks/meta/exchanges",
+   "title": "Stock exchange codes",
+   "category": "stocks",
+   "description": "Returns the mapping between the stock exchange codes and the corresponding exchange names.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": true,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/stockmetaexchanges-1",
+   "params": [],
+   "examples": []
+  },
+  {
+   "id": "option_bars",
+   "path": "/v1beta1/options/bars",
+   "title": "Option historical bars",
+   "category": "options",
+   "description": "The historical option bars API provides aggregates for a list of option symbols between the specified dates. The returned results are sorted by symbol first, then by bar timestamp. This means that you are likely to see only one symbol in your first response if there are enough bars for that symbol to hit the limit you requested. In these situations, if you keep requesting again with the next_page_token from the previous response, you will eventually reach the other symbols if any bars were found for them.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic reads data once it is 15 minutes old, at 200 calls a minute. Algo Trader Plus has no 15-minute limit and 10,000 calls a minute."
+   ],
+   "request_cost": 1,
+   "tier_rule": "option_history",
+   "doc_url": "https://docs.alpaca.markets/us/reference/optionbars",
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of contract symbols with a limit of 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL241220C00300000,AAPL240315C00225000",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "timeframe",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "The timeframe represented by each bar in aggregation. You can use any of the following values: - [1-59]Min or [1-59]T, e.g. 5Min or 5T creates 5-minute aggregations - [1-23]Hour or [1-23]H, e.g. 12Hour or 12H creates 12-hour aggregations - 1Day or 1D creates 1-day aggregations - 1Week or 1W creates 1-week aggregations - [1,2,3,4,6,12]Month or [1,2,3,4,6,12]M, e.g. 3Month or 3M creates 3-month aggregations",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [
+      "1Min",
+      "5Min",
+      "15Min",
+      "30Min",
+      "1Hour",
+      "4Hour",
+      "1Day",
+      "1Week",
+      "1Month"
+     ],
+     "default": null,
+     "example": "1Day",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "start",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive start of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the beginning of the current day, but at least 15 minutes ago if the user doesn't have real-time access for the feed.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "end",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive end of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the current time if the user has a real-time access for the feed, otherwise 15 minutes before the current time.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "On Basic, SIP data must be at least 15 minutes old, so leave end blank (it then defaults to 15 minutes ago) or choose an earlier time. Algo Trader Plus has no such limit.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "The maximum number of data points to return in the response page. The API may return less, even if there are more available data points in the requested interval. Always check the next_page_token for more pages. The limit applies to the total number of data points, not per symbol!",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1000",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 10000
+    },
+    {
+     "name": "page_token",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The pagination token from which to continue. The value to pass here is returned in specific requests when more data is available, usually because of a response result limit.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort data in ascending or descending order.",
+     "enum": [
+      "asc",
+      "desc"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "asc",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "option_trades",
+   "path": "/v1beta1/options/trades",
+   "title": "Option historical trades",
+   "category": "options",
+   "description": "The historical option trades API provides trade data for a list of contract symbols between the specified dates. The returned results are sorted by symbol first then by trade timestamp. This means that you are likely to see only one symbol in your first response if there are enough trades for that symbol to hit the limit you requested. In these situations, if you keep requesting again with the next_page_token from the previous response, you will eventually reach the other symbols if any trades were found for them.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic reads data once it is 15 minutes old, at 200 calls a minute. Algo Trader Plus has no 15-minute limit and 10,000 calls a minute."
+   ],
+   "request_cost": 1,
+   "tier_rule": "option_history",
+   "doc_url": "https://docs.alpaca.markets/us/reference/optiontrades",
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of contract symbols with a limit of 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL241220C00300000,AAPL240315C00225000",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "start",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive start of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the beginning of the current day, but at least 15 minutes ago if the user doesn't have real-time access for the feed.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "end",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive end of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the current time if the user has a real-time access for the feed, otherwise 15 minutes before the current time.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "On Basic, SIP data must be at least 15 minutes old, so leave end blank (it then defaults to 15 minutes ago) or choose an earlier time. Algo Trader Plus has no such limit.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "The maximum number of data points to return in the response page. The API may return less, even if there are more available data points in the requested interval. Always check the next_page_token for more pages. The limit applies to the total number of data points, not per symbol!",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1000",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 10000
+    },
+    {
+     "name": "page_token",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The pagination token from which to continue. The value to pass here is returned in specific requests when more data is available, usually because of a response result limit.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort data in ascending or descending order.",
+     "enum": [
+      "asc",
+      "desc"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "asc",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "option_latest_quotes",
+   "path": "/v1beta1/options/quotes/latest",
+   "title": "Option latest quotes",
+   "category": "options",
+   "description": "The latest multi-quotes endpoint provides the latest bid and ask prices for each given contract symbol.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic gets the indicative feed. Algo Trader Plus adds the real-time OPRA feed."
+   ],
+   "request_cost": 1,
+   "tier_rule": "option_latest",
+   "doc_url": "https://docs.alpaca.markets/us/reference/optionlatestquotes",
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of contract symbols with a limit of 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL241220C00300000,AAPL240315C00225000",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. Without one, Alpaca uses OPRA with Algo Trader Plus and the indicative feed on Basic.",
+     "enum": [
+      "opra",
+      "indicative"
+     ],
+     "enum_labels": {
+      "opra": "OPRA, real time · Algo Trader Plus",
+      "indicative": "Indicative · Basic"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "The real-time OPRA feed needs Algo Trader Plus. Basic gets the indicative feed, where quotes are modified and trades are delayed by 15 minutes. Leave feed blank and Alpaca uses the best feed your plan allows.",
+     "premium_values": [
+      "opra"
+     ],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "option_latest_trades",
+   "path": "/v1beta1/options/trades/latest",
+   "title": "Option latest trades",
+   "category": "options",
+   "description": "The latest multi-trades endpoint provides the latest historical trade data for multiple given contract symbols.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic gets the indicative feed. Algo Trader Plus adds the real-time OPRA feed."
+   ],
+   "request_cost": 1,
+   "tier_rule": "option_latest",
+   "doc_url": "https://docs.alpaca.markets/us/reference/optionlatesttrades",
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of contract symbols with a limit of 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL241220C00300000,AAPL240315C00225000",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. Without one, Alpaca uses OPRA with Algo Trader Plus and the indicative feed on Basic.",
+     "enum": [
+      "opra",
+      "indicative"
+     ],
+     "enum_labels": {
+      "opra": "OPRA, real time · Algo Trader Plus",
+      "indicative": "Indicative · Basic"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "The real-time OPRA feed needs Algo Trader Plus. Basic gets the indicative feed, where quotes are modified and trades are delayed by 15 minutes. Leave feed blank and Alpaca uses the best feed your plan allows.",
+     "premium_values": [
+      "opra"
+     ],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "option_snapshots",
+   "path": "/v1beta1/options/snapshots",
+   "title": "Option snapshots",
+   "category": "options",
+   "description": "The snapshots endpoint provides the latest trade, latest quote and greeks for each given contract symbol.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic gets the indicative feed. Algo Trader Plus adds the real-time OPRA feed."
+   ],
+   "request_cost": 1,
+   "tier_rule": "option_latest",
+   "doc_url": "https://docs.alpaca.markets/us/reference/optionsnapshots",
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of contract symbols with a limit of 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL241220C00300000,AAPL240315C00225000",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. Without one, Alpaca uses OPRA with Algo Trader Plus and the indicative feed on Basic.",
+     "enum": [
+      "opra",
+      "indicative"
+     ],
+     "enum_labels": {
+      "opra": "OPRA, real time · Algo Trader Plus",
+      "indicative": "Indicative · Basic"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "The real-time OPRA feed needs Algo Trader Plus. Basic gets the indicative feed, where quotes are modified and trades are delayed by 15 minutes. Leave feed blank and Alpaca uses the best feed your plan allows.",
+     "premium_values": [
+      "opra"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "updated_since",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "Filter to snapshots that were updated since this timestamp, meaning that the timestamp of the trade or the quote is greater than or equal to this value. Format: RFC-3339 or YYYY-MM-DD. If missing, all values are returned.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Number of maximum snapshots to return in a response. The limit applies to the total number of data points, not the number per symbol! Use next_page_token to fetch the next set of responses.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "page_token",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The pagination token from which to continue. The value to pass here is returned in specific requests when more data is available, usually because of a response result limit.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "option_chain",
+   "path": "/v1beta1/options/snapshots/{underlying_symbol}",
+   "title": "Option chain",
+   "category": "options",
+   "description": "The option chain endpoint provides the latest trade, latest quote, and greeks for each contract symbol of the underlying symbol.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Basic gets the indicative feed. Algo Trader Plus adds the real-time OPRA feed."
+   ],
+   "request_cost": 1,
+   "tier_rule": "option_latest",
+   "doc_url": "https://docs.alpaca.markets/us/reference/optionchain",
+   "params": [
+    {
+     "name": "underlying_symbol",
+     "in": "path",
+     "required": true,
+     "type": "text",
+     "description": "The financial instrument on which an option contract is based or derived.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "feed",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The source feed of the data. Without one, Alpaca uses OPRA with Algo Trader Plus and the indicative feed on Basic.",
+     "enum": [
+      "opra",
+      "indicative"
+     ],
+     "enum_labels": {
+      "opra": "OPRA, real time · Algo Trader Plus",
+      "indicative": "Indicative · Basic"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "The real-time OPRA feed needs Algo Trader Plus. Basic gets the indicative feed, where quotes are modified and trades are delayed by 15 minutes. Leave feed blank and Alpaca uses the best feed your plan allows.",
+     "premium_values": [
+      "opra"
+     ],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Number of maximum snapshots to return in a response. The limit applies to the total number of data points, not the number per symbol! Use next_page_token to fetch the next set of responses.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "updated_since",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "Filter to snapshots that were updated since this timestamp, meaning that the timestamp of the trade or the quote is greater than or equal to this value. Format: RFC-3339 or YYYY-MM-DD. If missing, all values are returned.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "page_token",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The pagination token from which to continue. The value to pass here is returned in specific requests when more data is available, usually because of a response result limit.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "type",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Filter contracts by the type (call or put).",
+     "enum": [
+      "call",
+      "put"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "strike_price_gte",
+     "in": "query",
+     "required": false,
+     "type": "number",
+     "description": "Filter contracts with strike price greater than or equal to the specified value.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "strike_price_lte",
+     "in": "query",
+     "required": false,
+     "type": "number",
+     "description": "Filter contracts with strike price less than or equal to the specified value.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "expiration_date",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter contracts by the exact expiration date (format: YYYY-MM-DD).",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "expiration_date_gte",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter contracts with expiration date greater than or equal to the specified date.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "expiration_date_lte",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "Filter contracts with expiration date less than or equal to the specified date.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "root_symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filter contracts by the root symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL1",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: underlying_symbol=AAPL",
+     "params": {
+      "underlying_symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: underlying_symbol=AAPL",
+     "params": {
+      "underlying_symbol": "AAPL",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "option_conditions",
+   "path": "/v1beta1/options/meta/conditions/{ticktype}",
+   "title": "Option condition codes",
+   "category": "options",
+   "description": "Returns the mapping between the condition codes and names.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": true,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/optionmetaconditions",
+   "params": [
+    {
+     "name": "ticktype",
+     "in": "path",
+     "required": true,
+     "type": "enum",
+     "description": "The type of ticks.",
+     "enum": [
+      "trade",
+      "quote"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "trade",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: ticktype=trade",
+     "params": {
+      "ticktype": "trade"
+     }
+    }
+   ]
+  },
+  {
+   "id": "option_exchanges",
+   "path": "/v1beta1/options/meta/exchanges",
+   "title": "Option exchange codes",
+   "category": "options",
+   "description": "Returns the mapping between the option exchange codes and the corresponding exchange names.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": true,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/optionmetaexchanges",
+   "params": [],
+   "examples": []
+  },
+  {
+   "id": "crypto_bars",
+   "path": "/v1beta3/crypto/{loc}/bars",
+   "title": "Crypto historical bars",
+   "category": "crypto",
+   "description": "The crypto bars API provides historical aggregates for a list of crypto symbols between the specified dates.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/cryptobars-1",
+   "params": [
+    {
+     "name": "loc",
+     "in": "path",
+     "required": true,
+     "type": "enum",
+     "description": "Crypto location from where the historical market data is retrieved.",
+     "enum": [
+      "us",
+      "us-1",
+      "us-2",
+      "eu-1",
+      "bs-1"
+     ],
+     "enum_labels": {
+      "us": "Alpaca US",
+      "us-1": "Kraken US",
+      "eu-1": "Kraken EU"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": "us",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of crypto symbols.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "BTC/USD,LTC/USD",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "timeframe",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "The timeframe represented by each bar in aggregation. You can use any of the following values: - [1-59]Min or [1-59]T, e.g. 5Min or 5T creates 5-minute aggregations - [1-23]Hour or [1-23]H, e.g. 12Hour or 12H creates 12-hour aggregations - 1Day or 1D creates 1-day aggregations - 1Week or 1W creates 1-week aggregations - [1,2,3,4,6,12]Month or [1,2,3,4,6,12]M, e.g. 3Month or 3M creates 3-month aggregations",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [
+      "1Min",
+      "5Min",
+      "15Min",
+      "30Min",
+      "1Hour",
+      "4Hour",
+      "1Day",
+      "1Week",
+      "1Month"
+     ],
+     "default": null,
+     "example": "1Day",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "start",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive start of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the beginning of the current day, but at least 15 minutes ago if the user doesn't have real-time access for the feed.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "end",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive end of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the current time if the user has a real-time access for the feed, otherwise 15 minutes before the current time.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "The maximum number of data points to return in the response page. The API may return less, even if there are more available data points in the requested interval. Always check the next_page_token for more pages. The limit applies to the total number of data points, not per symbol!",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1000",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 10000
+    },
+    {
+     "name": "page_token",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The pagination token from which to continue. The value to pass here is returned in specific requests when more data is available, usually because of a response result limit.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort data in ascending or descending order.",
+     "enum": [
+      "asc",
+      "desc"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "asc",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "1Day bars for the last month",
+     "params": {
+      "loc": "us",
+      "symbols": "BTC/USD",
+      "timeframe": "1Day",
+      "start": "@sample_start",
+      "end": "@sample_day"
+     }
+    },
+    {
+     "caption": "Required parameters only: loc=us, symbols=BTC/USD, timeframe=1Day",
+     "params": {
+      "loc": "us",
+      "symbols": "BTC/USD",
+      "timeframe": "1Day"
+     }
+    }
+   ]
+  },
+  {
+   "id": "crypto_quotes",
+   "path": "/v1beta3/crypto/{loc}/quotes",
+   "title": "Crypto historical quotes",
+   "category": "crypto",
+   "description": "The crypto quotes API provides historical quote data for a list of crypto symbols between the specified dates. The oldest date to retrieve historical quotes of us-1 location is 14th October, 2025 12AM UTC.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/cryptoquotes-1",
+   "params": [
+    {
+     "name": "loc",
+     "in": "path",
+     "required": true,
+     "type": "enum",
+     "description": "Crypto location from where the historical market data is retrieved.",
+     "enum": [
+      "us",
+      "us-1",
+      "us-2",
+      "eu-1",
+      "bs-1"
+     ],
+     "enum_labels": {
+      "us": "Alpaca US",
+      "us-1": "Kraken US",
+      "eu-1": "Kraken EU"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": "us",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of crypto symbols.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "BTC/USD,LTC/USD",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "start",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive start of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the beginning of the current day, but at least 15 minutes ago if the user doesn't have real-time access for the feed.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "end",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive end of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the current time if the user has a real-time access for the feed, otherwise 15 minutes before the current time.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "The maximum number of data points to return in the response page. The API may return less, even if there are more available data points in the requested interval. Always check the next_page_token for more pages. The limit applies to the total number of data points, not per symbol!",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1000",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 10000
+    },
+    {
+     "name": "page_token",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The pagination token from which to continue. The value to pass here is returned in specific requests when more data is available, usually because of a response result limit.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort data in ascending or descending order.",
+     "enum": [
+      "asc",
+      "desc"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "asc",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "The first 10 rows from @sample_day",
+     "params": {
+      "loc": "us",
+      "symbols": "BTC/USD",
+      "start": "@sample_day",
+      "limit": "10"
+     }
+    },
+    {
+     "caption": "Required parameters only: loc=us, symbols=BTC/USD",
+     "params": {
+      "loc": "us",
+      "symbols": "BTC/USD"
+     }
+    }
+   ]
+  },
+  {
+   "id": "crypto_trades",
+   "path": "/v1beta3/crypto/{loc}/trades",
+   "title": "Crypto historical trades",
+   "category": "crypto",
+   "description": "The crypto trades API provides historical trade data for a list of crypto symbols between the specified dates.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/cryptotrades-1",
+   "params": [
+    {
+     "name": "loc",
+     "in": "path",
+     "required": true,
+     "type": "enum",
+     "description": "Crypto location from where the historical market data is retrieved.",
+     "enum": [
+      "us",
+      "us-1",
+      "us-2",
+      "eu-1",
+      "bs-1"
+     ],
+     "enum_labels": {
+      "us": "Alpaca US",
+      "us-1": "Kraken US",
+      "eu-1": "Kraken EU"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": "us",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of crypto symbols.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "BTC/USD,LTC/USD",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "start",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive start of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the beginning of the current day, but at least 15 minutes ago if the user doesn't have real-time access for the feed.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "end",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive end of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the current time if the user has a real-time access for the feed, otherwise 15 minutes before the current time.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "The maximum number of data points to return in the response page. The API may return less, even if there are more available data points in the requested interval. Always check the next_page_token for more pages. The limit applies to the total number of data points, not per symbol!",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1000",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 10000
+    },
+    {
+     "name": "page_token",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The pagination token from which to continue. The value to pass here is returned in specific requests when more data is available, usually because of a response result limit.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort data in ascending or descending order.",
+     "enum": [
+      "asc",
+      "desc"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "asc",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "The first 10 rows from @sample_day",
+     "params": {
+      "loc": "us",
+      "symbols": "BTC/USD",
+      "start": "@sample_day",
+      "limit": "10"
+     }
+    },
+    {
+     "caption": "Required parameters only: loc=us, symbols=BTC/USD",
+     "params": {
+      "loc": "us",
+      "symbols": "BTC/USD"
+     }
+    }
+   ]
+  },
+  {
+   "id": "crypto_latest_bars",
+   "path": "/v1beta3/crypto/{loc}/latest/bars",
+   "title": "Crypto latest bars",
+   "category": "crypto",
+   "description": "The latest multi-bars endpoint returns the latest minute-aggregated historical bar data for each of the crypto symbols provided.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/cryptolatestbars-1",
+   "params": [
+    {
+     "name": "loc",
+     "in": "path",
+     "required": true,
+     "type": "enum",
+     "description": "Crypto location from where the latest market data is retrieved.",
+     "enum": [
+      "us",
+      "us-1",
+      "us-2",
+      "eu-1",
+      "bs-1"
+     ],
+     "enum_labels": {
+      "us": "Alpaca US",
+      "us-1": "Kraken US",
+      "eu-1": "Kraken EU"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": "us",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of crypto symbols.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "BTC/USD,LTC/USD",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: loc=us, symbols=BTC/USD",
+     "params": {
+      "loc": "us",
+      "symbols": "BTC/USD"
+     }
+    }
+   ]
+  },
+  {
+   "id": "crypto_latest_quotes",
+   "path": "/v1beta3/crypto/{loc}/latest/quotes",
+   "title": "Crypto latest quotes",
+   "category": "crypto",
+   "description": "The latest quotes endpoint returns the latest bid and ask prices for the crypto symbols provided.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/cryptolatestquotes-1",
+   "params": [
+    {
+     "name": "loc",
+     "in": "path",
+     "required": true,
+     "type": "enum",
+     "description": "Crypto location from where the latest market data is retrieved.",
+     "enum": [
+      "us",
+      "us-1",
+      "us-2",
+      "eu-1",
+      "bs-1"
+     ],
+     "enum_labels": {
+      "us": "Alpaca US",
+      "us-1": "Kraken US",
+      "eu-1": "Kraken EU"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": "us",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of crypto symbols.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "BTC/USD,LTC/USD",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: loc=us, symbols=BTC/USD",
+     "params": {
+      "loc": "us",
+      "symbols": "BTC/USD"
+     }
+    }
+   ]
+  },
+  {
+   "id": "crypto_latest_trades",
+   "path": "/v1beta3/crypto/{loc}/latest/trades",
+   "title": "Crypto latest trades",
+   "category": "crypto",
+   "description": "The latest trades endpoint returns the latest trade data for the crypto symbols provided.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/cryptolatesttrades-1",
+   "params": [
+    {
+     "name": "loc",
+     "in": "path",
+     "required": true,
+     "type": "enum",
+     "description": "Crypto location from where the latest market data is retrieved.",
+     "enum": [
+      "us",
+      "us-1",
+      "us-2",
+      "eu-1",
+      "bs-1"
+     ],
+     "enum_labels": {
+      "us": "Alpaca US",
+      "us-1": "Kraken US",
+      "eu-1": "Kraken EU"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": "us",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of crypto symbols.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "BTC/USD,LTC/USD",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: loc=us, symbols=BTC/USD",
+     "params": {
+      "loc": "us",
+      "symbols": "BTC/USD"
+     }
+    }
+   ]
+  },
+  {
+   "id": "crypto_orderbooks",
+   "path": "/v1beta3/crypto/{loc}/latest/orderbooks",
+   "title": "Crypto latest order book",
+   "category": "crypto",
+   "description": "The latest orderbook endpoint returns the latest bid and ask orderbook for the crypto symbols provided.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/cryptolatestorderbooks-1",
+   "params": [
+    {
+     "name": "loc",
+     "in": "path",
+     "required": true,
+     "type": "enum",
+     "description": "Crypto location from where the latest market data is retrieved.",
+     "enum": [
+      "us",
+      "us-1",
+      "us-2",
+      "eu-1",
+      "bs-1"
+     ],
+     "enum_labels": {
+      "us": "Alpaca US",
+      "us-1": "Kraken US",
+      "eu-1": "Kraken EU"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": "us",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of crypto symbols.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "BTC/USD,LTC/USD",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: loc=us, symbols=BTC/USD",
+     "params": {
+      "loc": "us",
+      "symbols": "BTC/USD"
+     }
+    }
+   ]
+  },
+  {
+   "id": "crypto_snapshots",
+   "path": "/v1beta3/crypto/{loc}/snapshots",
+   "title": "Crypto snapshots",
+   "category": "crypto",
+   "description": "The snapshots endpoint returns the latest trade, latest quote, latest minute bar, latest daily bar, and previous daily bar data for crypto symbols.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/cryptosnapshots-1",
+   "params": [
+    {
+     "name": "loc",
+     "in": "path",
+     "required": true,
+     "type": "enum",
+     "description": "Crypto location from where the latest market data is retrieved.",
+     "enum": [
+      "us",
+      "us-1",
+      "us-2",
+      "eu-1",
+      "bs-1"
+     ],
+     "enum_labels": {
+      "us": "Alpaca US",
+      "us-1": "Kraken US",
+      "eu-1": "Kraken EU"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": "us",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of crypto symbols.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "BTC/USD,LTC/USD",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: loc=us, symbols=BTC/USD",
+     "params": {
+      "loc": "us",
+      "symbols": "BTC/USD"
+     }
+    }
+   ]
+  },
+  {
+   "id": "forex_latest_rates",
+   "path": "/v1beta1/forex/latest/rates",
+   "title": "Forex latest rates",
+   "category": "forex",
+   "description": "Get the latest forex rates for the given currency pairs.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/latestrates-1",
+   "params": [
+    {
+     "name": "currency_pairs",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated string with currency pairs.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "USDJPY",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: currency_pairs=USDJPY",
+     "params": {
+      "currency_pairs": "USDJPY"
+     }
+    }
+   ]
+  },
+  {
+   "id": "forex_rates",
+   "path": "/v1beta1/forex/rates",
+   "title": "Forex historical rates",
+   "category": "forex",
+   "description": "Get historical forex rates for the given currency pairs in the given time interval and at the given timeframe (snapshot frequency).",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/rates-1",
+   "params": [
+    {
+     "name": "currency_pairs",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated string with currency pairs.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "USDJPY",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "timeframe",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The sampling interval of the currency rates. For example, 5S returns forex rates sampled every five seconds. You can use the following values: - 5Sec or 5S - 1Min or 1T - 1Day or 1D",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [
+      "5Sec",
+      "1Min",
+      "1Day"
+     ],
+     "default": "1Min",
+     "example": "1Day",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "start",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive start of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the beginning of the current day, but at least 15 minutes ago if the user doesn't have real-time access for the feed.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "end",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive end of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the current time if the user has a real-time access for the feed, otherwise 15 minutes before the current time.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "The maximum number of data points to return in the response page. The API may return less, even if there are more available data points in the requested interval. Always check the next_page_token for more pages. The limit applies to the total number of data points, not per symbol!",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "1000",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 10000
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort data in ascending or descending order.",
+     "enum": [
+      "asc",
+      "desc"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "asc",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "page_token",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The pagination token from which to continue. The value to pass here is returned in specific requests when more data is available, usually because of a response result limit.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: currency_pairs=USDJPY",
+     "params": {
+      "currency_pairs": "USDJPY"
+     }
+    },
+    {
+     "caption": "The same with a limit of 10 rows: currency_pairs=USDJPY",
+     "params": {
+      "currency_pairs": "USDJPY",
+      "limit": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "fixed_income_prices",
+   "path": "/v1beta1/fixed_income/latest/prices",
+   "title": "Fixed income latest prices",
+   "category": "fixed-income",
+   "description": "This endpoint returns the latest prices for the given fixed income securities.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/fixedincomelatestprices",
+   "params": [
+    {
+     "name": "isins",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of ISINs with a limit of 1000.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "US912797KJ59,US912797KS58,US912797LB15",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "fixed_income_quotes",
+   "path": "/v1beta1/fixed_income/latest/quotes",
+   "title": "Fixed income latest quotes",
+   "category": "fixed-income",
+   "description": "This endpoint returns the latest quotes for the given fixed income securities.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/fixedincomelatestquotes",
+   "params": [
+    {
+     "name": "isins",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "A comma-separated list of ISINs with a limit of 100.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "US912797SX61,US912810SK51",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "trade_size",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Filters to best bid/ask where the minimum trade size is less than or equal to the given numeric value. For any negative value the best bid/ask will be returned for the smallest trade size on either side.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "most_actives",
+   "path": "/v1beta1/screener/stocks/most-actives",
+   "title": "Most active stocks",
+   "category": "screener",
+   "description": "Returns the most active stocks by volume or trade count based on real time SIP data. By default, returns the top 10 symbols by volume.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/mostactives-1",
+   "params": [
+    {
+     "name": "by",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The metric used for ranking the most active stocks.",
+     "enum": [
+      "volume",
+      "trades"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "volume",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "top",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "The number of top most active stocks to fetch per day.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "10",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 100
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "movers",
+   "path": "/v1beta1/screener/{market_type}/movers",
+   "title": "Top market movers",
+   "category": "screener",
+   "description": "Returns the top market movers (gainers and losers) based on real time SIP data. The change for each symbol is calculated from the previous closing price and the latest closing price. For stocks, the endpoint resets at market open. Until then, it shows the previous market day's movers. The data is split-adjusted. Only tradable symbols in exchanges are included. For crypto, the endpoint resets at midnight.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/movers-1",
+   "params": [
+    {
+     "name": "market_type",
+     "in": "path",
+     "required": true,
+     "type": "enum",
+     "description": "Screen-specific market (stocks or crypto).",
+     "enum": [
+      "stocks",
+      "crypto"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "stocks",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "top",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Number of top market movers to fetch (gainers and losers). Will return this number of results for each. By default, 10 gainers and 10 losers.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "10",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 50
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Required parameters only: market_type=stocks",
+     "params": {
+      "market_type": "stocks"
+     }
+    }
+   ]
+  },
+  {
+   "id": "news",
+   "path": "/v1beta1/news",
+   "title": "News articles",
+   "category": "news",
+   "description": "Returns the latest news articles across stocks and crypto. By default, returns the latest 10 news articles.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/news-3",
+   "params": [
+    {
+     "name": "start",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive start of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the beginning of the current day, but at least 15 minutes ago if the user doesn't have real-time access for the feed.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "end",
+     "in": "query",
+     "required": false,
+     "type": "datetime",
+     "description": "The inclusive end of the interval. Format: RFC-3339 or YYYY-MM-DD. Default: the current time if the user has a real-time access for the feed, otherwise 15 minutes before the current time.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort articles by updated date.",
+     "enum": [
+      "asc",
+      "desc"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "desc",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "A comma-separated list of symbols for which to query news.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL,TSLA,BTCUSD",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Limit of news items to be returned for a result page.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "10",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 50
+    },
+    {
+     "name": "include_content",
+     "in": "query",
+     "required": false,
+     "type": "boolean",
+     "description": "Boolean indicator to include content for news articles (if available).",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "exclude_contentless",
+     "in": "query",
+     "required": false,
+     "type": "boolean",
+     "description": "Boolean indicator to exclude news articles that do not contain content.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "page_token",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The pagination token from which to continue. The value to pass here is returned in specific requests when more data is available, usually because of a response result limit.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "corporate_actions",
+   "path": "/v1/corporate-actions",
+   "title": "Corporate actions",
+   "category": "corporate-actions",
+   "description": "This endpoint provides data about the corporate actions for each given symbol over a specified time period. By default (data_quality=complete), corporate actions that are still incomplete (for example, missing required fields such as ex-date or CUSIP/ISIN) and have not yet been processed are excluded from the response. Pass data_quality=all to also receive those early, incomplete records. Already-processed corporate actions are always returned when data_quality=complete, even if they would otherwise be considered incomplete. ⚠️ Warning Currently Alpaca has no guarantees on the creation time of corporate actions. There may be delays in receiving corporate actions from our data providers, and there may be delays in processing and making them available via this API. As a result, corporate actions may not be available immediately after they are announced.",
+   "plan": "Basic",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "tier_rule": "",
+   "doc_url": "https://docs.alpaca.markets/us/reference/corporateactions-1",
+   "params": [
+    {
+     "name": "symbols",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "A comma-separated list of symbols.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL,TSLA",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "cusips",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "A comma-separated list of CUSIPs.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "037833100,88160R101",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "types",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "A comma-separated list of types. If not provided, search all types. The following types are supported: - reverse_split - forward_split - unit_split - cash_dividend - stock_dividend - spin_off - cash_merger - stock_merger - stock_and_cash_merger - redemption - name_change - worthless_removal - rights_distribution - partial_call - reorganization - capital_gains_distribution",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [
+      "capital_gains_distribution",
+      "cash_dividend",
+      "cash_merger",
+      "forward_split",
+      "name_change",
+      "partial_call",
+      "redemption",
+      "reorganization",
+      "reverse_split",
+      "rights_distribution",
+      "spin_off",
+      "stock_and_cash_merger",
+      "stock_dividend",
+      "stock_merger",
+      "unit_split",
+      "worthless_removal"
+     ],
+     "default": null,
+     "example": "forward_split,reverse_split",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "region",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "The region to filter corporate actions by.",
+     "enum": [
+      "us",
+      "non_us",
+      "all"
+     ],
+     "enum_labels": {
+      "us": "only US corporate actions",
+      "non_us": "only non-US corporate actions",
+      "all": "both US and non-US corporate actions"
+     },
+     "suggestions": [],
+     "default": "us",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "start",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "The inclusive start of the interval. The corporate actions are sorted by their process_date. Format: YYYY-MM-DD. Default: current day.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "end",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "The inclusive end of the interval. The corporate actions are sorted by their process_date. Format: YYYY-MM-DD. Default: current day.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "ids",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "A comma-separated list of corporate action IDs. This parameter is mutually exclusive with all other filters (symbols, types, start, end, region, data_quality).",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "1dbc7685-9517-4a77-a236-8527d49cefdc,f8489167-4e4b-431d-a0be-6017ae1cf08a",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Maximum number of corporate actions to return in a response. The limit applies to the total number of data points, not the count per symbol! Use next_page_token to fetch the next set of corporate actions.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "100",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": 1000
+    },
+    {
+     "name": "data_quality",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Controls which corporate actions are returned based on data quality.",
+     "enum": [
+      "complete",
+      "all"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "complete",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "page_token",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "The pagination token from which to continue. The value to pass here is returned in specific requests when more data is available, usually because of a response result limit.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "sort",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Sort data in ascending or descending order.",
+     "enum": [
+      "asc",
+      "desc"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": "asc",
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  }
+ ],
+ "skipped": [
+  {
+   "path": "/v1beta1/logos/{symbol}",
+   "reason": "It answers with a PNG image, which a request-and-view page cannot show."
+  },
+  {
+   "path": "/v1beta1/events/corporate-actions",
+   "reason": "It is a long-lived server-sent event stream, not a request with an answer. GET /v1/corporate-actions returns the same data."
+  }
+ ],
+ "warnings": []
+}

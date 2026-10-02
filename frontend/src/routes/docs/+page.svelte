@@ -600,7 +600,7 @@ tvdata serve --data-dir data --static-dir frontend/build`;
 			<DocSection
 				id="providers"
 				title="Providers"
-				lead="Data from outside services, fetched by your backend. Alpha Vantage and Marketstack, with room for more."
+				lead="Data from outside services, fetched by your backend. Alpha Vantage, Marketstack and Alpaca, with room for more."
 			>
 				<p>
 					The <a
@@ -615,15 +615,16 @@ tvdata serve --data-dir data --static-dir frontend/build`;
 				<h3>Your API key</h3>
 				<ul>
 					<li>
-						Set <code>ALPHAVANTAGE_API_KEY</code> and/or <code>MARKETSTACK_API_KEY</code> in the
-						backend's environment, or in a
+						Set <code>ALPHAVANTAGE_API_KEY</code>, <code>MARKETSTACK_API_KEY</code> and/or
+						<code>ALPACA_API_KEY_ID</code> with <code>ALPACA_API_SECRET_KEY</code> (Alpaca needs
+						both) in the backend's environment, or in a
 						<code>.env</code> file in the folder you run <code>tvdata serve</code> from (or pass
 						<code>--env-file</code>), and restart the backend. <code>.env.example</code> shows the format.
 					</li>
 					<li>
-						The key is read by the backend only. It is never sent to the browser, never returned in
-						a response and never written to the log. Without it you can still browse every endpoint;
-						Fetch data stays off and says why.
+						The key (and Alpaca's secret) is read by the backend only. It is never sent to the
+						browser, never returned in a response and never written to the log. Without it you can
+						still browse every endpoint; Fetch data stays off and says why.
 					</li>
 				</ul>
 				<h3>Premium</h3>
@@ -641,6 +642,15 @@ tvdata serve --data-dir data --static-dir frontend/build`;
 						an endpoint is refused when you fetch, and this page says so and draws nothing.
 					</li>
 					<li>
+						Alpaca has two plans, <strong>Basic</strong> and <strong>Algo Trader Plus</strong>, that
+						differ in the feed, how recent the data may be and the rate limit rather than in which
+						endpoints exist. Every Alpaca endpoint is therefore labelled <strong>Basic</strong>, and
+						the tiers sit on what each plan unlocks: feed choices are named in the dropdown (for
+						example <strong>SIP, all US exchanges · Algo Trader Plus</strong> or
+						<strong>IEX · Basic</strong>), the paid ones are marked, and the end of a historical
+						range carries Basic's 15-minute limit.
+					</li>
+					<li>
 						Some choices are premium on their own. Intraday intervals below 15 minutes are marked
 						<strong>Premium</strong> in the interval dropdown, and a note explains the history limit of
 						each plan.
@@ -651,8 +661,8 @@ tvdata serve --data-dir data --static-dir frontend/build`;
 					</li>
 					<li>
 						When a key is not entitled, Alpha Vantage answers with made-up sample data and
-						Marketstack with an error. This page detects both, shows the provider's own message and
-						draws nothing.
+						Marketstack and Alpaca with an error. This page detects both, shows the provider's own
+						message and draws nothing.
 					</li>
 				</ul>
 				<h3>Limits and honesty</h3>
@@ -661,7 +671,9 @@ tvdata serve --data-dir data --static-dir frontend/build`;
 						Nothing is requested until you press Fetch data; opening a provider or an endpoint is
 						free. Free Alpha Vantage keys allow 25 requests a day and free Marketstack keys 100 a
 						month (ETF endpoints cost 20 each, which the form tells you), so identical requests are
-						served from a five minute cache and only Fetch again spends a request.
+						served from a five minute cache and only Fetch again spends a request. Alpaca limits
+						calls per minute (200 on Basic) and its data is real time, so its answers are kept for
+						30 seconds.
 					</li>
 					<li>
 						Rate limits, a rejected key, an unreachable provider and an empty answer each get their

@@ -21,12 +21,11 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Optional
-from urllib.parse import quote
 
 import requests
 
 from .base import Params, Plan, Provider, ProviderInfo
-from .common import HttpGet, HttpResult, ResponseCache, default_http_get, first_sentence, key_fingerprint, scrub, validate_params as _validate
+from .common import HttpGet, HttpResult, ResponseCache, default_http_get, first_sentence, key_fingerprint, request_target, scrub, validate_params as _validate
 from .marketstack_docs import fill_sample_day, sample_day
 from .marketstack_views import build_views
 
@@ -113,22 +112,6 @@ def build_catalog(raw: dict[str, Any], day: str) -> dict[str, Any]:
         for c in raw["categories"]
     ]
     return {"categories": categories, "endpoints": endpoints}
-
-
-def request_target(endpoint: dict[str, Any], clean: dict[str, Any]) -> tuple[str, list[tuple[str, str]]]:
-    """The URL path with its parameters filled in, and the remaining parameters as a query string."""
-
-    path = endpoint["path"]
-    query: list[tuple[str, str]] = []
-    for spec in endpoint["params"]:
-        value = clean.get(spec["name"])
-        if value is None:
-            continue
-        if spec["in"] == "path":
-            path = path.replace("{" + spec["name"] + "}", quote(str(value), safe=""))
-        else:
-            query.append((spec["name"], str(value)))
-    return path, query
 
 
 def _error_text(error: dict[str, Any]) -> str:

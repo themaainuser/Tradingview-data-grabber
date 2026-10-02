@@ -12,6 +12,7 @@ import {
 	accessCounts,
 	buildPayload,
 	categoryCounts,
+	credentialNames,
 	filterEndpoints,
 	planCounts,
 	seedValues,
@@ -96,7 +97,7 @@ export class ProvidersStore {
 	blockedReason = $derived.by(() => {
 		if (!this.endpoint) return 'Choose an endpoint first.';
 		if (!this.configured && this.provider)
-			return `Set ${this.provider.key_env} on the backend to fetch.`;
+			return `Set ${credentialNames(this.provider)} on the backend to fetch.`;
 		if (Object.keys(this.errors).length > 0) return 'Fix the highlighted fields first.';
 		return null;
 	});

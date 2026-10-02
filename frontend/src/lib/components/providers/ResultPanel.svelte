@@ -9,7 +9,7 @@
 	import ErrorPanel from '$lib/components/app/ErrorPanel.svelte';
 	import { formatBytes } from '$lib/format';
 	import { formatTimestamp } from '$lib/providers/format';
-	import { quotaText } from '$lib/providers/form';
+	import { credentialNames, quotaText } from '$lib/providers/form';
 	import { statusCopy } from '$lib/providers/status';
 	import type { ProvidersStore } from '$lib/state/providers.svelte';
 	import PremiumBadge from './PremiumBadge.svelte';
@@ -21,7 +21,10 @@
 	const name = $derived(store.provider?.name ?? 'the provider');
 	const copy = $derived(
 		result && result.status !== 'ok'
-			? statusCopy(result.status, store.provider?.key_env ?? 'the API key variable')
+			? statusCopy(
+					result.status,
+					store.provider ? credentialNames(store.provider) : 'the API key variable'
+				)
 			: null
 	);
 	const sent = $derived(

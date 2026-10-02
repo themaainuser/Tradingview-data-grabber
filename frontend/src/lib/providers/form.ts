@@ -9,7 +9,8 @@ import type {
 	CatalogParam,
 	ParamValue,
 	ParamValues,
-	ProviderPlan
+	ProviderPlan,
+	ProviderSummary
 } from '$lib/api/providers';
 
 export type Access = 'all' | 'free' | 'premium';
@@ -41,6 +42,20 @@ export const quotaText = (cost: number): string =>
 /** The words on a premium badge: `Premium · Basic` when the endpoint names its plan. */
 export const premiumLabel = (endpoint: Pick<CatalogEndpoint, 'plan'>): string =>
 	endpoint.plan ? `Premium · ${endpoint.plan}` : 'Premium';
+
+/** The badge of an endpoint that is not premium: its plan when the provider has tiers (`Basic`), else `Free`. */
+export const tierLabel = (endpoint: Pick<CatalogEndpoint, 'plan'>): string =>
+	endpoint.plan ?? 'Free';
+
+/** True when some parameter of the endpoint has a choice or a limit that only a higher plan unlocks. */
+export const hasPremiumOptions = (endpoint: Pick<CatalogEndpoint, 'params'>): boolean =>
+	endpoint.params.some((p) => p.premium_note);
+
+/** The environment variables that hold a provider's credentials, as one phrase: `KEY` or `KEY and SECRET`. */
+export const credentialNames = (
+	provider: Pick<ProviderSummary, 'key_env' | 'secret_env'>
+): string =>
+	provider.secret_env ? `${provider.key_env} and ${provider.secret_env}` : provider.key_env;
 
 export interface PlanCount extends ProviderPlan {
 	/** Endpoints whose cheapest plan is this one. */
@@ -78,7 +93,7 @@ function validDate(value: string): boolean {
 /** A date, or `T` and a time with optional seconds, fraction and `Z` / `+HH:MM` / `+HHMM` offset. */
 function validDateTime(value: string): boolean {
 	const match =
-		/^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,6})?)?(?:Z|[+-](\d{2}):?(\d{2}))?)?$/.exec(
+		/^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?(?:Z|[+-](\d{2}):?(\d{2}))?)?$/.exec(
 			value
 		);
 	if (!match || !validDate(match[1])) return false;

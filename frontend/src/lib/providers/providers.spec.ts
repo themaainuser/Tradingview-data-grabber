@@ -3,15 +3,20 @@ import {
 	accessCounts,
 	buildPayload,
 	categoryCounts,
+	credentialNames,
 	filterEndpoints,
+	hasPremiumOptions,
 	planCounts,
 	premiumLabel,
 	quotaText,
 	seedValues,
+	tierLabel,
 	validateParams,
 	valuesFromExample
 } from './form';
 import {
+	ALPACA_LIKE,
+	ALPACA_LIKE_ENDPOINTS,
 	CATEGORIES,
 	ENDPOINTS,
 	TIERED,
@@ -219,6 +224,8 @@ describe('tiered providers', () => {
 			'2020-05-21T00:00:00+0000',
 			'2020-05-21T00:00:00+00:00',
 			'2020-05-21T09:30:15.123456-04:00',
+			'2024-01-04T01:02:03.123456789Z',
+			'2024-01-04T01:02:03.1-04:00',
 			'2020-05-21T00:00:00Z',
 			'2020-05-21T09:30',
 			'2024-02-29'
@@ -230,6 +237,8 @@ describe('tiered providers', () => {
 			'2020-05-21T24:00:00',
 			'2020-05-21T10:61',
 			'2020-05-21T10:00:60',
+			'2024-01-04T01:02:03.1234567890Z',
+			'2024-01-04T01:02:03.Z',
 			'2020-05-21T10:00:00+2500',
 			'2020-05-21 10:00:00',
 			'20200521',
@@ -298,5 +307,35 @@ describe('tiered providers', () => {
 		expect(
 			filterEndpoints(TIERED_ENDPOINTS, { ...all, access: 'premium' }).map((e) => e.id)
 		).toEqual(['intraday', 'etfholdings', 'commodities']);
+	});
+});
+
+describe('tier labels and credentials', () => {
+	const [quotes, news] = ALPACA_LIKE_ENDPOINTS;
+
+	it('labels a non-premium endpoint with its plan, or Free when the provider has no tiers', () => {
+		expect(tierLabel(quotes)).toBe('Basic');
+		expect(tierLabel(endpoint('X'))).toBe('Free');
+		expect(tierLabel(by('TIME_SERIES_DAILY'))).toBe('Free');
+	});
+
+	it('knows which endpoints have choices or limits that only a higher plan unlocks', () => {
+		expect(hasPremiumOptions(quotes)).toBe(true);
+		expect(hasPremiumOptions(news)).toBe(false);
+		expect(ENDPOINTS.filter(hasPremiumOptions).length).toBeGreaterThan(0);
+	});
+
+	it('names one credential variable, or a key and a secret', () => {
+		expect(credentialNames(ALPACA_LIKE)).toBe('ALPACA_API_KEY_ID and ALPACA_API_SECRET_KEY');
+		expect(credentialNames({ key_env: 'ONLY_KEY', secret_env: null })).toBe('ONLY_KEY');
+	});
+
+	it('counts a plan that no endpoint needs outright as a paid plan with none starting there', () => {
+		expect(
+			planCounts(ALPACA_LIKE.plans, ALPACA_LIKE_ENDPOINTS).map((p) => [p.name, p.count, p.premium])
+		).toEqual([
+			['Basic', 2, false],
+			['Algo Trader Plus', 0, true]
+		]);
 	});
 });

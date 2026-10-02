@@ -14,7 +14,8 @@ import threading
 from collections import OrderedDict
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Callable, Collection, Optional
+from typing import Any, Callable, Collection, Mapping, Optional
+from urllib.parse import quote
 
 import requests
 
@@ -32,13 +33,15 @@ class HttpResult:
     content_type: str
 
 
-HttpGet = Callable[[str, "list[tuple[str, str]]"], HttpResult]
+# ``(url, query)``, plus an optional ``headers=`` keyword for providers that authenticate with headers.
+HttpGet = Callable[..., HttpResult]
 
 
-def default_http_get(url: str, params: list[tuple[str, str]]) -> HttpResult:
+def default_http_get(url: str, params: list[tuple[str, str]], headers: Optional[Mapping[str, str]] = None) -> HttpResult:
     """One GET: no redirects, bounded time and size. Raises ``requests`` exceptions or ``ValueError`` (too large)."""
 
-    with requests.get(url, params=params, headers={"User-Agent": USER_AGENT, "Accept": "application/json, text/csv"}, timeout=(5, 60), allow_redirects=False, stream=True) as response:
+    sent = {"User-Agent": USER_AGENT, "Accept": "application/json, text/csv", **(headers or {})}
+    with requests.get(url, params=params, headers=sent, timeout=(5, 60), allow_redirects=False, stream=True) as response:
         chunks, size = [], 0
         for chunk in response.iter_content(chunk_size=65536):
             size += len(chunk)
@@ -73,7 +76,7 @@ def scrub(response: dict[str, Any], key: str) -> dict[str, Any]:
 # --- parameters ------------------------------------------------------------------------------------
 
 _PATH_VALUE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._\-^=]{0,63}$")
-_ISO_MOMENT = re.compile(r"^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,6})?)?(?:Z|[+-](\d{2}):?(\d{2}))?)?$")
+_ISO_MOMENT = re.compile(r"^(\d{4}-\d{2}-\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?(?:Z|[+-](\d{2}):?(\d{2}))?)?$")
 
 
 def validate_params(endpoint: dict[str, Any], params: Params, *, forbidden: Collection[str] = (), long_text: Collection[str] = ()) -> dict[str, Any]:
@@ -163,6 +166,22 @@ def valid_moment(value: str) -> bool:
         return False
     hour, minute, second, zone_hour, zone_minute = (int(g) if g is not None else 0 for g in match.groups()[1:])
     return hour <= 23 and minute <= 59 and second <= 59 and zone_hour <= 23 and zone_minute <= 59
+
+
+def request_target(endpoint: dict[str, Any], clean: dict[str, Any]) -> tuple[str, list[tuple[str, str]]]:
+    """The URL path with its parameters filled in, and the remaining parameters as a query string."""
+
+    path = endpoint["path"]
+    query: list[tuple[str, str]] = []
+    for spec in endpoint["params"]:
+        value = clean.get(spec["name"])
+        if value is None:
+            continue
+        if spec["in"] == "path":
+            path = path.replace("{" + spec["name"] + "}", quote(str(value), safe=""))
+        else:
+            query.append((spec["name"], str(value)))
+    return path, query
 
 
 # --- cache ---------------------------------------------------------------------------------------------

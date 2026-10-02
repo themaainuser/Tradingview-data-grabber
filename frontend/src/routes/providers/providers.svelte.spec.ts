@@ -6,6 +6,9 @@ import InApp from '$lib/testing/InApp.svelte';
 import { json, stubBackend } from '$lib/testing/backend';
 import {
 	ALL_VIEWS,
+	ALPACA_LIKE,
+	ALPACA_LIKE_CATEGORIES,
+	ALPACA_LIKE_ENDPOINTS,
 	TIERED,
 	TIERED_CATEGORIES,
 	TIERED_ENDPOINTS,
@@ -466,5 +469,109 @@ describe('Providers page: a provider with plans', () => {
 			.toHaveTextContent('limit must be at most 1000');
 		await expect.element(fetchButton()).toBeDisabled();
 		expect(queries(b as never)).toHaveLength(0);
+	});
+});
+
+describe('Providers page: a key and a secret, with tier-labelled choices', () => {
+	function alpaca(configured = false) {
+		const provider = { ...ALPACA_LIKE, configured };
+		return stubBackend({
+			'/api/datasets': () => json({ datasets: [] }),
+			'/api/providers/alpaca/catalog': () =>
+				json({ ...catalog(provider, ALPACA_LIKE_ENDPOINTS), categories: ALPACA_LIKE_CATEGORIES }),
+			'/api/providers/alpaca/query': () =>
+				json(failure('invalid_key', 'Alpaca refused the credentials (HTTP 403).')),
+			'/api/providers': () => json({ providers: [provider] })
+		});
+	}
+
+	beforeEach(() => {
+		route.page.params = { provider: 'alpaca', endpoint: undefined };
+	});
+
+	it('asks for both variables and says that both stay on the server', async () => {
+		alpaca();
+		await mount();
+		const help = page.getByTestId('key-help');
+		await expect.element(help).toHaveTextContent('ALPACA_API_KEY_ID');
+		await expect.element(help).toHaveTextContent('ALPACA_API_SECRET_KEY');
+		await expect.element(help).toHaveTextContent('The key and secret stay on the server');
+	});
+
+	it('lists both plans and says the higher one unlocks options rather than endpoints', async () => {
+		alpaca();
+		await mount();
+		await expect.element(page.getByTestId('plans')).toBeVisible();
+		const cards = [...document.querySelectorAll<HTMLElement>('[data-testid="plans"] li')];
+		expect(cards.map((c) => c.dataset.plan)).toEqual(['Basic', 'Algo Trader Plus']);
+		expect(cards[0].textContent).toContain('2 endpoints start here');
+		expect(cards[1].querySelector('[data-testid="plan-unlocks"]')?.textContent).toContain(
+			'No endpoint needs this plan outright'
+		);
+		expect(cards.map((c) => c.dataset.premium)).toEqual([undefined, 'true']);
+	});
+
+	it('tags only the endpoints that have premium options in the list, and shows no premium badge', async () => {
+		alpaca();
+		await mount();
+		await expect.element(page.getByTestId('endpoint-count')).toHaveTextContent('2 endpoints');
+		const rows = [...document.querySelectorAll<HTMLElement>('ul[aria-label="Endpoints"] button')];
+		expect(rows.map((r) => !!r.querySelector('[data-testid="premium-options-tag"]'))).toEqual([
+			true,
+			false
+		]);
+		expect(document.querySelectorAll('[data-testid="premium-badge"]').length).toBe(2); // the plan card and nothing in the list
+	});
+
+	it('labels the open endpoint with its plan and explains the tiers beside the choices', async () => {
+		route.page.params = { provider: 'alpaca', endpoint: 'stock_latest_quotes' };
+		alpaca();
+		await mount();
+		await expect.element(page.getByTestId('tier-badge')).toHaveTextContent('Basic');
+		const callout = page.getByTestId('premium-options-callout');
+		await expect.element(callout).toHaveTextContent('Basic endpoint with premium options');
+		await expect
+			.element(page.getByTestId('tier-note'))
+			.toHaveTextContent('Algo Trader Plus adds the SIP feed');
+		await expect
+			.element(page.getByTestId('premium-note'))
+			.toHaveTextContent('needs Algo Trader Plus');
+	});
+
+	it('labels each feed choice with the plan it belongs to and marks the paid one', async () => {
+		route.page.params = { provider: 'alpaca', endpoint: 'stock_latest_quotes' };
+		alpaca();
+		await mount();
+		await page.getByLabelText('feed').click();
+		const choices = [...document.querySelectorAll<HTMLElement>('[role="option"]')].filter((o) =>
+			/Basic|Algo Trader Plus/.test(o.textContent ?? '')
+		);
+		expect(choices.map((o) => o.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+			expect.stringContaining('IEX · Basic'),
+			expect.stringContaining('SIP, all US exchanges · Algo Trader Plus')
+		]);
+		expect(choices.map((o) => !!o.querySelector('[data-testid="premium-badge"]'))).toEqual([
+			false,
+			true
+		]);
+	});
+
+	it('blocks Fetch naming both variables, and names both when the credentials are rejected', async () => {
+		route.page.params = { provider: 'alpaca', endpoint: 'stock_latest_quotes' };
+		alpaca();
+		await mount();
+		await expect.element(fetchButton()).toBeDisabled();
+		await expect
+			.element(page.getByTestId('fetch-help'))
+			.toHaveTextContent(
+				'Set ALPACA_API_KEY_ID and ALPACA_API_SECRET_KEY on the backend to fetch.'
+			);
+		document.body.innerHTML = '';
+		alpaca(true);
+		await mount();
+		await fetchButton().click();
+		await expect
+			.element(page.getByTestId('status-notice'))
+			.toHaveTextContent('ALPACA_API_KEY_ID and ALPACA_API_SECRET_KEY');
 	});
 });
