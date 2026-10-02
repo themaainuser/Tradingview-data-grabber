@@ -16,7 +16,8 @@
 		variant?: 'translucent' | 'destructive' | 'ghost' | 'secondary';
 		size?: 'xs' | 'sm' | 'default';
 		disabled?: boolean;
-		onconfirm: () => void | Promise<void>;
+		/** Return `false` to say the action was refused: the box then stays open so its message can be read. */
+		onconfirm: () => void | boolean | Promise<void | boolean>;
 		/** Extra controls inside the open confirmation. */
 		children?: Snippet;
 	}
@@ -41,12 +42,15 @@
 	async function confirm() {
 		if (!ready || working) return;
 		working = true;
+		let refused = false;
 		try {
-			await onconfirm();
+			refused = (await onconfirm()) === false;
 		} finally {
 			working = false;
-			open = false;
-			typed = '';
+			if (!refused) {
+				open = false;
+				typed = '';
+			}
 		}
 	}
 </script>
@@ -72,7 +76,9 @@
 		{@render children?.()}
 		{#if realMoney}
 			<label class="grid gap-1 type-caption text-ink-muted">
-				This uses real money. Type <strong class="text-coral-ink">LIVE</strong> to continue.
+				<span
+					>This uses real money. Type <strong class="text-coral-ink">LIVE</strong> to continue.</span
+				>
 				<Input
 					bind:value={typed}
 					autocomplete="off"

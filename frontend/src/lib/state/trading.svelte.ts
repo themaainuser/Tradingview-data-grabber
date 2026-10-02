@@ -1,3 +1,4 @@
+import { SvelteMap } from 'svelte/reactivity';
 import type { ApiClient, TradingCall } from '$lib/api/client';
 import { isAbort, toApiError, type ApiError } from '$lib/api/errors';
 import {
@@ -109,7 +110,7 @@ const encodeSymbol = (symbol: string) => symbol.split('/').map(encodeURIComponen
 
 export class TradingStore {
 	readonly #api: ApiClient;
-	readonly #controllers = new Map<object, AbortController>();
+	readonly #controllers = new SvelteMap<object, AbortController>();
 
 	environments = $state.raw<TradingEnvironment[]>([]);
 	environmentsStatus = $state<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -316,6 +317,40 @@ export class TradingStore {
 		return this.env === env && envelope.status === 'ok' ? envelope.data : null;
 	}
 
+	/** One watchlist with its assets (the list leaves them out). Not kept in the store. */
+	async readWatchlist(id: string): Promise<Watchlist | null> {
+		const env = this.env;
+		if (!env || !this.usable) return null;
+		try {
+			const envelope = await this.#api.trading(
+				env,
+				{ method: 'GET', path: `/watchlists/${encodeURIComponent(id)}` },
+				parseWatchlist
+			);
+			return this.env === env && envelope.status === 'ok' ? envelope.data : null;
+		} catch {
+			return null;
+		}
+	}
+
+	/** Another page of activity. Not kept in the store: the panel appends it to what it shows. */
+	async readActivities(
+		query: Record<string, string>
+	): Promise<{ activities: Activity[]; next_page_token: string | null } | null> {
+		const env = this.env;
+		if (!env || !this.usable) return null;
+		try {
+			const envelope = await this.#api.trading(
+				env,
+				{ method: 'GET', path: '/account/activities', query: { page_size: '50', ...query } },
+				parseActivities
+			);
+			return this.env === env && envelope.status === 'ok' ? envelope.data : null;
+		} catch {
+			return null;
+		}
+	}
+
 	// --- changing things -----------------------------------------------------------------------------------
 
 	#tell(tone: Notice['tone'], text: string): void {
@@ -404,9 +439,12 @@ export class TradingStore {
 					unknown: null
 				};
 			if (envelope.status === 'ok') {
+				const placed = envelope.data;
 				this.#tell(
 					'success',
-					`Order placed: ${envelope.data?.side ?? ''} ${envelope.data?.symbol ?? ''} (${envelope.data?.status ?? 'sent'}).`
+					placed?.order_class === 'mleg'
+						? `Multi-leg order placed (${placed.status ?? 'sent'}).`
+						: `Order placed: ${placed?.side ?? ''} ${placed?.symbol ?? ''} (${placed?.status ?? 'sent'}).`
 				);
 				await Promise.all(this.#touchedByOrders().map((load) => load()));
 				return { ok: true, envelope, error: null, message: 'Order placed.', unknown: null };

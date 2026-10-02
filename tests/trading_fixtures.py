@@ -3,7 +3,8 @@
 ``build()`` drives the real service against the fake broker and returns one answer per shape. The result
 is committed as ``frontend/src/lib/testing/trading-fixtures.json``: the frontend parses every entry with its
 own parsers (``trading.spec.ts``) and ``tests/test_trading_fixtures.py`` fails when the file no longer
-matches what the backend produces. Regenerate it with ``python tests/trading_fixtures.py``.
+matches what the backend produces. Regenerate it with ``python tests/trading_fixtures.py`` and then
+run ``pnpm exec prettier --write src/lib/testing/trading-fixtures.json`` in ``frontend/`` (the lint step checks it).
 """
 
 from __future__ import annotations
