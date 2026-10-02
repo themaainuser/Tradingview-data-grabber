@@ -446,10 +446,16 @@ words in `message`; a request that is wrong before it leaves is a 422 with one p
   `X-Tvdata-Trading: 1` header, which a browser will not send from another site without the server's agreement.
   Without a login of its own, anyone you let in can trade your account: allow only addresses you control.
   Two things widen who is let in. A web page served from an origin you pass to `--cors-origin` can place orders from
-  your browser (the origin is what the browser is told to trust), so list only origins you control. And a reverse
-  proxy on the same machine makes every request arrive from `127.0.0.1` unless it sends `X-Forwarded-For` (uvicorn
-  then reports the real client, which is checked against the list); do not put a proxy that does not in front of
-  `tvdata serve` while trading is configured.
+  your browser (the origin is what the browser is told to trust), so list only origins you control. And a proxy:
+  uvicorn replaces the connecting address with the `X-Forwarded-For` value when the connection comes from a local
+  proxy, and a proxy that passes a caller's header through (Vite's dev proxy does, so `vite dev --host` would let any
+  caller claim `127.0.0.1`) would defeat the check. So **a request that carries `X-Forwarded-For`, `Forwarded` or
+  `X-Real-IP` is refused with a 403**; a browser talking to the dashboard directly, including through Vite on
+  `localhost`, sends none of them. If you run a reverse proxy of your own in front of `tvdata serve`, set
+  `TVDATA_TRADING_TRUST_PROXY=true`, and configure the proxy to **overwrite** `X-Forwarded-For` with the address it
+  saw (nginx: `proxy_set_header X-Forwarded-For $remote_addr;`, not `$proxy_add_x_forwarded_for`) and to discard
+  `Forwarded` and `X-Real-IP` from callers; the resolved address is then checked against the list as usual. Setting
+  it for a proxy that does not do that removes this protection.
 - **Not included.** Crypto funding (wallets, withdrawals, whitelisted addresses), tokenization, short locates (not
   available in paper), the activity event stream, Elite/DMA advanced routing, the deprecated corporate-action
   announcements (use the Providers page's Alpaca *Corporate actions*), and the order-update WebSocket (read orders
