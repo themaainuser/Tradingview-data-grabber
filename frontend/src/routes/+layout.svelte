@@ -13,6 +13,7 @@
 	import FlaskConical from '@lucide/svelte/icons/flask-conical';
 	import Scale from '@lucide/svelte/icons/scale';
 	import Gauge from '@lucide/svelte/icons/gauge';
+	import ArrowLeftRight from '@lucide/svelte/icons/arrow-left-right';
 	import PlugZap from '@lucide/svelte/icons/plug-zap';
 	import Menu from '@lucide/svelte/icons/menu';
 	import X from '@lucide/svelte/icons/x';
@@ -47,6 +48,7 @@
 			label: 'Providers',
 			icon: PlugZap
 		},
+		{ href: resolve('/trading/[[env]]/[[view]]', {}), label: 'Trading', icon: ArrowLeftRight },
 		{ href: resolve('/docs'), label: 'Docs', icon: BookOpen }
 	] as const;
 

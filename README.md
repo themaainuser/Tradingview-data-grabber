@@ -493,6 +493,16 @@ cd frontend && pnpm install && pnpm build
 tvdata serve --data-dir data --static-dir frontend/build   # http://127.0.0.1:8000
 ```
 
+The **Trading** page (`/trading`) is the screen for [Alpaca trading](#trading-alpaca-paper-or-live):
+the same page for a paper and a live account, with paper as the default. A banner always says which one
+you are on, red for live. It has an account overview with the equity curve, an order ticket (every order
+type, time in force, bracket/oto/oco exits, options and multi-leg options, crypto, fractional and
+dollar-sized orders, extended hours) that shows a review before anything is sent, the order and position
+lists with cancel, replace and close (all, a quantity or a percentage), watchlists, activity, and the account
+settings. With real money every order and bulk action also asks you to type `LIVE`. Paper needs
+`ALPACA_PAPER_API_KEY_ID` and `ALPACA_PAPER_API_SECRET_KEY` in `.env`; live stays off until
+`ALPACA_ENABLE_LIVE_TRADING=true`.
+
 ## Python API
 
 The modules can be used independently in another application:

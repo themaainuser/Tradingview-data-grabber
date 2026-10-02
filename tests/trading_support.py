@@ -12,7 +12,7 @@ import json
 import re
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 from urllib.parse import unquote, urlparse
 
@@ -120,7 +120,9 @@ class FakeBroker:
                 self.config.update(body)
             return reply(200, self.config)
         if path == "/v2/clock":
-            return reply(200, {"timestamp": self.stamp(), "is_open": self.market_open, "next_open": "2026-10-01T13:30:00Z", "next_close": "2026-09-30T20:00:00Z"})
+            close = self.now.replace(hour=20, minute=0, second=0, microsecond=0)
+            opens = (self.now + timedelta(days=1)).replace(hour=13, minute=30, second=0, microsecond=0)
+            return reply(200, {"timestamp": self.stamp(), "is_open": self.market_open, "next_open": opens.strftime("%Y-%m-%dT%H:%M:%SZ"), "next_close": close.strftime("%Y-%m-%dT%H:%M:%SZ")})
         if path == "/v2/calendar":
             return reply(200, [{"date": "2026-10-01", "open": "09:30", "close": "16:00", "settlement_date": "2026-10-02"}, {"date": "2026-10-02", "open": "09:30", "close": "13:00", "settlement_date": "2026-10-05"}])
         if path == "/v2/account/portfolio/history":

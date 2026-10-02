@@ -8,6 +8,7 @@ import { ResearchStore } from './research.svelte';
 import { SavedFilters } from './saved-filters.svelte';
 import { SentimentStore } from './sentiment.svelte';
 import { ThemeStore } from './theme.svelte';
+import { TradingStore } from './trading.svelte';
 import { VerdictStore } from './verdict.svelte';
 
 /**
@@ -27,6 +28,7 @@ export class AppState {
 	readonly sentiment: SentimentStore;
 	readonly verdict: VerdictStore;
 	readonly providers: ProvidersStore;
+	readonly trading: TradingStore;
 	readonly explorerFilters = new SavedFilters('explorer');
 	/** Created here but wired to the browser by `theme.attach()` in the root layout. */
 	readonly theme = new ThemeStore();
@@ -40,6 +42,7 @@ export class AppState {
 		this.sentiment = new SentimentStore(api);
 		this.verdict = new VerdictStore(api);
 		this.providers = new ProvidersStore(api);
+		this.trading = new TradingStore(api);
 	}
 }
 
