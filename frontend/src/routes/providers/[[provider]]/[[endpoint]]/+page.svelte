@@ -172,10 +172,10 @@
 				<div class="grid gap-2" data-testid="plans">
 					<h3 class="type-subhead">Plans</h3>
 					<p class="max-w-[72ch] type-caption text-pretty text-ink-muted">
-						Each premium endpoint names the cheapest plan that includes it, and a choice inside an
-						endpoint that only a higher plan unlocks is marked Premium option. The provider decides
-						what your key may use: a plan that lacks an endpoint or a choice is refused when you
-						fetch.
+						A premium endpoint names the cheapest plan that includes it when the provider says
+						which, and a choice inside an endpoint that only a higher plan unlocks is marked Premium
+						option. The provider decides what your key may use: a plan that lacks an endpoint or a
+						choice is refused when you fetch.
 					</p>
 					<ul class="grid gap-2 md:grid-cols-2 xl:grid-cols-4" aria-label="Subscription plans">
 						{#each providers.plans as plan (plan.name)}

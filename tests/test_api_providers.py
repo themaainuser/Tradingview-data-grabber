@@ -12,10 +12,12 @@ from fastapi.testclient import TestClient
 from tradingview_data.api import create_app
 from tradingview_data.providers.alphavantage import AlphaVantage
 from tradingview_data.providers.alpaca import Alpaca
+from tradingview_data.providers.fmp import FinancialModelingPrep
 from tradingview_data.providers.marketstack import Marketstack
 from tradingview_data.providers.base import Provider, ProviderInfo, ProviderRegistry
 
 import alpaca_support as alpaca_fixtures
+import fmp_support as fmp_fixtures
 from marketstack_support import SAMPLES, error
 from providers_support import DAILY, KEY, PLACEHOLDER, FakeHttp, ok
 from tradingview_data.providers.common import HttpResult
@@ -78,13 +80,14 @@ def test_the_provider_list_reports_counts_and_whether_a_key_is_set_but_never_the
     assert api.get("/api/providers").json()["providers"][0]["configured"] is False
 
 
-def test_the_default_registry_serves_alpha_vantage_then_marketstack_then_alpaca(tmp_path):
+def test_the_default_registry_serves_alpha_vantage_marketstack_alpaca_then_fmp(tmp_path):
     listed = TestClient(create_app(tmp_path)).get("/api/providers").json()["providers"]
-    assert [p["id"] for p in listed] == ["alphavantage", "marketstack", "alpaca"]
-    assert [p["key_env"] for p in listed] == ["ALPHAVANTAGE_API_KEY", "MARKETSTACK_API_KEY", "ALPACA_API_KEY_ID"]
-    assert [p["secret_env"] for p in listed] == [None, None, "ALPACA_API_SECRET_KEY"]
+    assert [p["id"] for p in listed] == ["alphavantage", "marketstack", "alpaca", "fmp"]
+    assert [p["key_env"] for p in listed] == ["ALPHAVANTAGE_API_KEY", "MARKETSTACK_API_KEY", "ALPACA_API_KEY_ID", "FMP_API_KEY"]
+    assert [p["secret_env"] for p in listed] == [None, None, "ALPACA_API_SECRET_KEY", None]
     assert [p["plans"] for p in listed][0] == [] and [x["name"] for x in listed[1]["plans"]] == ["Free", "Basic", "Professional", "Business"]
     assert [x["name"] for x in listed[2]["plans"]] == ["Basic", "Algo Trader Plus"]
+    assert [x["name"] for x in listed[3]["plans"]] == ["Basic", "Starter", "Premium", "Ultimate"]
 
 
 def test_two_providers_are_listed_in_order_each_with_its_own_catalog_and_key(tmp_path, monkeypatch):
@@ -228,6 +231,54 @@ def test_marketstack_provider_side_problems_are_http_200_with_a_status(tmp_path,
 def test_marketstack_errors(tmp_path, body, status):
     api = client(tmp_path, Marketstack(http_get=FakeHttp()))
     assert api.post("/api/providers/marketstack/query", json=body).status_code == status
+
+
+# --- Financial Modeling Prep ---------------------------------------------------------------------------------
+
+
+@pytest.fixture
+def fmp_keyed(monkeypatch):
+    monkeypatch.setenv("FMP_API_KEY", KEY)
+
+
+def test_fmp_serves_its_catalog_with_plans_and_premium_endpoints(tmp_path, fmp_keyed):
+    body = client(tmp_path, FinancialModelingPrep(http_get=fmp_fixtures.FakeHttp())).get("/api/providers/fmp/catalog").json()
+    assert set(body) == {"provider", "categories", "endpoints"}
+    assert body["provider"]["configured"] is True and body["provider"]["premium_count"] > 0 and body["provider"]["endpoint_count"] == len(body["endpoints"])
+    endpoints = {e["id"]: e for e in body["endpoints"]}
+    assert (endpoints["quote"]["plan"], endpoints["quote"]["premium"]) == ("Basic", False)
+    assert (endpoints["intraday"]["plan"], endpoints["intraday"]["premium"]) == ("Premium", True)
+    assert (endpoints["stock_list"]["plan"], endpoints["stock_list"]["premium"]) == (None, True)
+    assert KEY not in json.dumps(body)
+
+
+def test_an_fmp_query_returns_the_contract_response_and_never_the_key(tmp_path, fmp_keyed):
+    http = fmp_fixtures.FakeHttp(ok(fmp_fixtures.INCOME))
+    api = client(tmp_path, FinancialModelingPrep(http_get=http))
+    body = api.post("/api/providers/fmp/query", json={"endpoint": "income_statement", "params": {"symbol": "AAPL", "limit": "3"}}).json()
+    assert set(body) == {"provider", "endpoint", "title", "status", "message", "cached", "fetched_at", "elapsed_ms", "bytes", "params", "views", "raw", "raw_omitted", "notes"}
+    assert body["status"] == "ok" and "series" in [v["kind"] for v in body["views"]] and KEY not in json.dumps(body)
+    assert http.calls[0][0] == "https://financialmodelingprep.com/stable/income-statement" and http.headers[0] == {"apikey": KEY}
+
+
+def test_fmp_provider_side_problems_are_http_200_with_a_status(tmp_path, fmp_keyed):
+    response = client(tmp_path, FinancialModelingPrep(http_get=fmp_fixtures.FakeHttp(fmp_fixtures.RESTRICTED))).post("/api/providers/fmp/query", json={"endpoint": "intraday", "params": {"interval": "5min", "symbol": "AAPL"}})
+    assert response.status_code == 200 and response.json()["status"] == "premium_required" and response.json()["views"] == []
+
+
+@pytest.mark.parametrize(
+    ("body", "status"),
+    [
+        ({"endpoint": "nope"}, 404),
+        ({"endpoint": "quote", "params": {}}, 422),
+        ({"endpoint": "quote", "params": {"symbol": "AAPL", "apikey": "x"}}, 422),
+        ({"endpoint": "income_statement", "params": {"symbol": "AAPL", "limit": "0"}}, 422),
+        ({"endpoint": "historical_eod", "params": {"variant": "../quote", "symbol": "AAPL"}}, 422),
+    ],
+)
+def test_fmp_errors(tmp_path, body, status):
+    api = client(tmp_path, FinancialModelingPrep(http_get=fmp_fixtures.FakeHttp()))
+    assert api.post("/api/providers/fmp/query", json=body).status_code == status
 
 
 # --- Alpaca ----------------------------------------------------------------------------------------------

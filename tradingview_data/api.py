@@ -446,7 +446,7 @@ def create_app(
     replaces the CoinMarketCap-backed Fear & Greed service (tests inject a fake; by default nothing
     is fetched until the first request).  ``state_dir`` holds the verdict engine's ledger; it defaults
     to a hidden directory inside ``data_dir``, which the dataset scan ignores.  ``providers`` is the
-    registry of external data providers (Alpha Vantage, Marketstack and Alpaca by default); nothing is fetched until a query.
+    registry of external data providers (Alpha Vantage, Marketstack, Alpaca and Financial Modeling Prep by default); nothing is fetched until a query.
     ``trading`` is the Alpaca paper/live trading service; by default it keeps its audit log in a hidden
     directory inside ``data_dir`` and contacts no one until a request is made.
     """

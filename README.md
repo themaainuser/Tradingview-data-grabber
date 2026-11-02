@@ -325,7 +325,7 @@ funding, liquidation and regime analysis.
 
 ### Data providers
 
-The Providers page fetches from external data providers through the backend. There are three:
+The Providers page fetches from external data providers through the backend. There are four:
 
 - [Alpha Vantage](https://www.alphavantage.co/documentation/): 128 endpoints (stocks, indices, options,
   FX, crypto, commodities, economic indicators, fundamentals, news sentiment, 50+ technical
@@ -358,11 +358,30 @@ The Providers page fetches from external data providers through the backend. The
   orders and no account data, and the Broker API (a different login) is not supported. The logo image
   and the corporate-actions event stream are left out because they are not a request with an answer.
   Real-time data and per-minute limits mean results are cached for 30 seconds, not five minutes.
+- [Financial Modeling Prep](https://site.financialmodelingprep.com/developer/docs) (FMP): 151 endpoints of
+  its stable API (search and screener, profiles, quotes for stocks, indices, forex, crypto and
+  commodities, income statements, balance sheets, cash flows, ratios and growth, end-of-day and
+  intraday prices, technical indicators, analyst estimates and ratings, earnings, dividend and IPO
+  calendars, economic data, sector and industry performance, news, transcripts, ETF and fund holdings,
+  13F filings, insider trades, SEC filings, index members, market hours and DCF valuations), 68 of
+  which a free key is refused (**premium**). Endpoints that differ only by a path segment (the four
+  price-history variants, the intraday intervals, the nine technical indicators) are one endpoint with
+  a dropdown. FMP's plans are **Basic** (free, 250 requests a day), **Starter**, **Premium** and
+  **Ultimate**. FMP does not say which plan an endpoint needs, so every endpoint was called with a
+  free key to see what it refuses (HTTP 402, reported as `premium_required` with FMP's own message),
+  and a premium badge names a plan only where the
+  [pricing page](https://site.financialmodelingprep.com/pricing-plans) names the feature group (news
+  is Starter; intraday charts and technical indicators are Premium; transcripts, ETF and fund
+  holdings, 13F and batch quotes are Ultimate); the others say **Premium** alone. A free key is limited to
+  US-listed symbols (another symbol is refused as premium) and to 5 periods per statement request,
+  which the form notes. The key is sent in the `apikey` header, so it appears in no URL. Government
+  trading, ESG, Commitment of Traders, fundraisers and the as-reported statements are not in the
+  catalog, nor are the bulk CSV and partner endpoints.
 
 All of them share these rules:
 
-- **The key stays on the server.** Put `ALPHAVANTAGE_API_KEY=your_key`, `MARKETSTACK_API_KEY=your_key`
-  and/or `ALPACA_API_KEY_ID=your_key_id` with `ALPACA_API_SECRET_KEY=your_secret` in the backend's environment
+- **The key stays on the server.** Put `ALPHAVANTAGE_API_KEY=your_key`, `MARKETSTACK_API_KEY=your_key`,
+  `FMP_API_KEY=your_key` and/or `ALPACA_API_KEY_ID=your_key_id` with `ALPACA_API_SECRET_KEY=your_secret` in the backend's environment
   or in a `.env` file where you run `tvdata serve` (or pass `--env-file PATH`), then restart it.
   `.env.example` shows the format; `.env` is git-ignored. The key (for Alpaca, the key ID and the secret, sent as headers) is only ever placed in the upstream
   request: it is never returned, logged, cached or shown in a message, and any text echoing it is
@@ -384,9 +403,12 @@ All of them share these rules:
   in that module, because the OpenAPI document does not state it) or
   `python -m tradingview_data.providers.alpaca_docs` (it reads the OpenAPI definition embedded in each
   Market Data reference page listed in Alpaca's `llms.txt`; the tier rules are in `alpaca_docs.py`,
-  taken from Alpaca's "Subscription Plans" section).
+  taken from Alpaca's "Subscription Plans" section). FMP's catalog is not generated: FMP publishes no
+  machine-readable spec, so `tradingview_data/providers/fmp_catalog.py` is a hand-written table whose
+  paths and plans were checked against the live API (`PAID_PLANS` lists what a free key is refused).
 - **Times are UTC.** Intraday timestamps are converted from the provider's time zone (US/Eastern) and
-  the response says so.
+  the response says so. The exception is FMP, whose intraday timestamps carry no time zone: they are
+  shown as returned and the chart says so.
 
 To add a provider: (1) write a module with a `Provider` subclass (`tradingview_data/providers/base.py`):
 `info`, `configured()`, `catalog()` and `query()`; (2) have `query` return the response shape above,
