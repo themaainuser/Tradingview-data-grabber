@@ -26,7 +26,7 @@ import requests
 
 from .base import Params, Plan, Provider, ProviderInfo
 from .common import HttpGet, HttpResult, ResponseCache, default_http_get, first_sentence, key_fingerprint, request_target, scrub, validate_params as _validate
-from .fmp_catalog import CATEGORIES, DOCS_ROOT, ENDPOINTS, PAID_PLANS, fill_dates, plan_of
+from .fmp_catalog import CATEGORIES, DOCS_ROOT, ENDPOINTS, PAID_PLANS, RECENT_30, RECENT_YEAR, SYMBOL_LIMITED, US_SYMBOL_ONLY, fill_dates, plan_of
 from .fmp_views import build_views
 
 BASE_URL = "https://financialmodelingprep.com/stable"
@@ -46,11 +46,6 @@ _PREMIUM = re.compile(r"restricted endpoint|premium|subscription|upgrade|exclusi
 _REFUSED_VALUE = re.compile(r"value set for '(\w+)'", re.I)
 _REFUSED_RANGE = re.compile(r"values for '(\w+)' must be between (\d+) and (\d+)", re.I)
 _BOILERPLATE = re.compile(r"[\s.]*please visit our subscription page.*$", re.I)
-_VALUE_HELP = {
-    "symbol": "Your plan can query only a fixed list of symbols, and this one is not on it (a free Basic key has a short list of well-known ones).",
-    "from": "Your plan can only start this far back: a free Basic key allows 30 days on calendars and latest SEC filings, and a year on SEC filings of one company. Use a later start date.",
-    "date": "Your plan can only use a recent date here: a free Basic key allows the last 30 days.",
-}
 _HTTP_STATUSES = {400: "invalid_request", 401: "invalid_key", 402: "premium_required", 403: "premium_required", 404: "invalid_request", 422: "invalid_request", 429: "rate_limited"}
 
 INFO = ProviderInfo(
@@ -115,26 +110,46 @@ def _message_of(http_status: int, body: bytes, payload: Any) -> str:
     return text if text and not text.startswith("<") else f"FMP answered with HTTP {http_status}."  # an HTML error page is no message
 
 
-def explain(message: str) -> str:
+def _value_help(parameter: str, endpoint_id: Optional[str]) -> Optional[str]:
+    """Why this endpoint refuses this parameter's value on a free key, or ``None`` when we do not know: advice for a
+    restriction that does not apply to the endpoint would mislead, so an unknown cause keeps FMP's message alone."""
+
+    if parameter == "symbol":
+        if endpoint_id in US_SYMBOL_ONLY:
+            return "Your plan can query only US-traded symbols on this endpoint, and this one is listed on another exchange."
+        if endpoint_id in SYMBOL_LIMITED:
+            return "Your plan can query only a fixed list of symbols on this endpoint, and this one is not on it (a free Basic key has a short list of well-known ones)."
+    elif RECENT_30.get(endpoint_id or "") == parameter:
+        return f"Your plan can only use a {'start date' if parameter == 'from' else 'date'} from the last 30 days on this endpoint (a free Basic key). Use a more recent one."
+    elif RECENT_YEAR.get(endpoint_id or "") == parameter:
+        return "Your plan can only start up to a year (365 days) back on this endpoint (a free Basic key). Use a later start date."
+    return None
+
+
+def explain(message: str, endpoint_id: Optional[str] = None) -> str:
     """For a refused parameter value, what that means in plain words, then FMP's own message in brackets."""
 
-    if (match := _REFUSED_RANGE.search(message)) and "Premium Query Parameter" in message:
-        plain = f"Your plan allows at most {match.group(3)} {'row' if match.group(3) == '1' else 'rows'} for '{match.group(1)}' on this endpoint."
-    elif (match := _REFUSED_VALUE.search(message)) and "Premium Query Parameter" in message and match.group(1) in _VALUE_HELP:
-        plain = _VALUE_HELP[match.group(1)]
+    if "Premium Query Parameter" not in message:
+        return message
+    if match := _REFUSED_RANGE.search(message):
+        plain: Optional[str] = f"Your plan allows at most {match.group(3)} {'row' if match.group(3) == '1' else 'rows'} for '{match.group(1)}' on this endpoint."
+    elif match := _REFUSED_VALUE.search(message):
+        plain = _value_help(match.group(1), endpoint_id)
     else:
+        plain = None
+    if plain is None:
         return message
     return f"{plain} (Original message: {_BOILERPLATE.sub('', message).rstrip('.')}.)"
 
 
-def classify_error(http_status: int, body: bytes, payload: Any) -> Optional[tuple[str, str]]:
+def classify_error(http_status: int, body: bytes, payload: Any, endpoint_id: Optional[str] = None) -> Optional[tuple[str, str]]:
     """``(status, message)`` when the response is an FMP error, ``None`` when it is data."""
 
     failed = http_status != 200 or (isinstance(payload, dict) and "Error Message" in payload)
     if not failed:
         return None
     message = _message_of(http_status, body, payload)
-    plain = explain(message)
+    plain = explain(message, endpoint_id)
     for pattern, status in ((_KEY_PROBLEM, "invalid_key"), (_RATE_LIMIT, "rate_limited"), (_PREMIUM, "premium_required")):
         if pattern.search(message):
             return status, plain
@@ -231,7 +246,7 @@ class FinancialModelingPrep(Provider):
             payload = None
             if result.status == 200:
                 return self._response(endpoint, sent, "upstream_error", "Financial Modeling Prep returned a response that could not be read.", key=key, elapsed=elapsed, size=size)
-        failure = classify_error(result.status, result.body, payload)
+        failure = classify_error(result.status, result.body, payload, endpoint["id"])
         if failure:
             return self._response(endpoint, sent, failure[0], failure[1], key=key, elapsed=elapsed, size=size)
         if not has_data(payload):

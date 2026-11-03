@@ -466,24 +466,53 @@ def test_the_provider_card_describes_the_three_limits_and_does_not_claim_us_list
 # --- refusals explained -------------------------------------------------------------------------------------------------------
 
 
+FROM_REFUSED = raw(402, "Premium Query Parameter: 'Special Endpoint : This value set for 'from' is not available under your current subscription please visit our subscription page")
+DATE_REFUSED = raw(402, "Premium Query Parameter: 'Special Endpoint : This value set for 'date' is not available under your current subscription please visit our subscription page")
+
+
 @pytest.mark.parametrize(
-    ("result", "plain"),
+    ("endpoint", "params", "result", "plain"),
     [
-        (fx.PREMIUM_PARAMETER, "Your plan can query only a fixed list of symbols, and this one is not on it"),
-        (fx.LIMIT_BEYOND_PLAN, "Your plan allows at most 5 rows for 'limit' on this endpoint."),
-        (raw(402, "Premium Query Parameter: 'Special Endpoint : This value set for 'from' is not available under your current subscription please visit our subscription page"), "30 days on calendars and latest SEC filings"),
-        (raw(402, "Premium Query Parameter: 'Special Endpoint : This value set for 'date' is not available under your current subscription please visit our subscription page"), "allows the last 30 days"),
-        (raw(402, "Premium Query Parameter: 'Special Parameters : The values for 'limit' must be between 0 and 1 based on your current subscription."), "at most 1 row for 'limit'"),
+        ("quote", {"symbol": "ORCL"}, fx.PREMIUM_PARAMETER, "fixed list of symbols on this endpoint"),
+        ("income_statement", {"symbol": "ORCL"}, fx.PREMIUM_PARAMETER, "fixed list of symbols on this endpoint"),
+        ("profile", {"symbol": "SAP.DE"}, fx.PREMIUM_PARAMETER, "only US-traded symbols on this endpoint, and this one is listed on another exchange"),
+        ("income_statement", {"symbol": "AAPL", "limit": "6"}, fx.LIMIT_BEYOND_PLAN, "Your plan allows at most 5 rows for 'limit' on this endpoint."),
+        ("insider_latest", {"limit": "100"}, raw(402, "Premium Query Parameter: 'Special Parameters : The values for 'limit' must be between 0 and 1 based on your current subscription."), "at most 1 row for 'limit'"),
+        ("earnings_calendar", {"from": "2026-01-01"}, FROM_REFUSED, "start date from the last 30 days on this endpoint"),
+        ("sec_by_symbol", {"symbol": "AAPL", "from": "2020-01-01", "to": "2020-02-01"}, FROM_REFUSED, "up to a year (365 days) back on this endpoint"),
+        ("sector_performance", {"date": "2026-01-02"}, DATE_REFUSED, "date from the last 30 days on this endpoint"),
     ],
 )
-def test_a_refused_value_is_explained_in_plain_words_and_keeps_fmps_own_message(keyed, result, plain):
-    response = provider(result)[0].query(*QUOTE_ARGS)
+def test_a_refused_value_is_explained_for_the_endpoint_that_refused_it_and_keeps_fmps_own_message(keyed, endpoint, params, result, plain):
+    response = provider(result)[0].query(endpoint, params)
     assert response["status"] == "premium_required" and plain in response["message"] and "(Original message: Premium Query Parameter" in response["message"]
     assert len(response["message"]) < 400 and "please visit our subscription page" not in response["message"].lower()
+
+
+def test_a_profile_refusal_never_talks_about_a_fixed_symbol_list(keyed):
+    message = provider(fx.PREMIUM_PARAMETER)[0].query("profile", {"symbol": "RY.TO"})["message"]
+    assert "fixed list" not in message and "short list of well-known" not in message and "US-traded" in message
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "params", "result"),
+    [
+        ("stock_peers", {"symbol": "ORCL"}, fx.PREMIUM_PARAMETER),  # full access: not a documented cause, so no advice
+        ("exchange_quotes", {"exchange": "NASDAQ", "short": "true"}, raw(402, "Premium Query Parameter: 'Special Endpoint : This value set for 'short' is not available under your current subscription")),
+        ("quote", {"symbol": "AAPL"}, FROM_REFUSED),  # quote has no start date: a 'from' refusal here is unexplained
+        ("historical_eod", {"variant": "full", "symbol": "AAPL"}, DATE_REFUSED),
+        ("quote", {"symbol": "AAPL"}, raw(402, "Premium Query Parameter: 'Something else entirely.")),
+    ],
+)
+def test_when_the_cause_is_not_known_for_that_endpoint_the_message_is_fmps_alone(keyed, endpoint, params, result):
+    message = provider(result)[0].query(endpoint, params)["message"]
+    assert message.startswith("Premium Query Parameter") and "Original message" not in message and "Your plan" not in message
 
 
 def test_an_endpoint_refusal_and_other_errors_keep_fmps_message_untouched(keyed):
     assert provider(fx.RESTRICTED)[0].query(*QUOTE_ARGS)["message"].startswith("Restricted Endpoint: This endpoint is not available")
     assert explain("Query Error: Invalid or missing query parameter - symbol") == "Query Error: Invalid or missing query parameter - symbol"
-    assert explain("Premium Query Parameter: 'Special Endpoint : This value set for 'exchange' is not available") == "Premium Query Parameter: 'Special Endpoint : This value set for 'exchange' is not available"
-    assert explain("Invalid API KEY.") == "Invalid API KEY."
+    assert explain("Premium Query Parameter: 'Special Endpoint : This value set for 'exchange' is not available", "quote") == "Premium Query Parameter: 'Special Endpoint : This value set for 'exchange' is not available"
+    assert explain("Invalid API KEY.", "quote") == "Invalid API KEY."
+    symbol = "Premium Query Parameter: 'Special Endpoint : This value set for 'symbol' is not available under your current subscription"
+    assert explain(symbol) == symbol and explain(symbol, "nope") == symbol  # no endpoint, or one we know nothing about

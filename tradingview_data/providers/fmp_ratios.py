@@ -9,6 +9,7 @@ A field is listed only when its definition is settled; an unlisted ratio is show
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import NamedTuple, Optional
 
 
@@ -110,6 +111,12 @@ def lookup(field: str) -> Optional[Ratio]:
     return spec
 
 
+def original(value: float) -> str:
+    """FMP's figure with every digit it sent, never in exponent form: ``repr`` is the shortest text that reads back as the same number."""
+
+    return "0" if value == 0 else format(Decimal(repr(float(value))).normalize(), "f")
+
+
 def percent(field: str, value: float) -> Optional[float]:
     spec = lookup(field)
     return None if spec is None else value * spec.scale
@@ -122,7 +129,7 @@ def short_text(field: str, value: float) -> Optional[str]:
     if spec is None:
         return None
     shown = value * spec.scale
-    return f"{shown:+.2f}% ({value:.6g})" if spec.signed else f"{shown:.2f}% ({value:.6g})"
+    return f"{shown:+.2f}% ({original(value)})" if spec.signed else f"{shown:.2f}% ({original(value)})"
 
 
 def text(field: str, value: float) -> Optional[str]:

@@ -52,6 +52,37 @@ def test_a_fraction_is_a_percentage_that_names_its_base_with_the_original_figure
     assert R.percent(field, value) == pytest.approx(value * R.lookup(field).scale)
 
 
+@pytest.mark.parametrize(
+    ("value", "shown"),
+    [
+        (0.0642551178283274, "0.0642551178283274"),  # a real FMP figure: 16 digits, not the 6 that ``:.6g`` kept
+        (0.469051234567, "0.469051234567"),
+        (0.06425512, "0.06425512"),
+        (1.0, "1"),
+        (-0.0923, "-0.0923"),
+        (0.0, "0"),
+        (-0.0, "0"),
+        (5e-05, "0.00005"),
+        (1e-10, "0.0000000001"),
+        (1234567.891, "1234567.891"),
+        (0.30000000000000004, "0.30000000000000004"),
+    ],
+)
+def test_the_figure_in_brackets_keeps_every_digit_fmp_sent_and_never_uses_an_exponent(value, shown):
+    assert R.original(value) == shown and float(R.original(value)) == value
+    assert R.short_text("netProfitMargin", value).endswith(f"({shown})") and R.text("revenueGrowth", value).endswith(f"({shown})")
+
+
+def test_only_the_percentage_is_rounded_and_the_bracket_is_the_whole_figure():
+    assert R.short_text("revenueGrowth", 0.0642551178283274) == "+6.43% (0.0642551178283274)"
+    assert R.text("grossProfitMargin", 0.469051234567) == "46.91% of revenue (0.469051234567)"
+    row = fx.statement(2025, revenueGrowth=0.0642551178283274)
+    table = one(build("financial_growth", [row, fx.statement(2024, revenueGrowth=0.0202199)])[0], "financial-growth-percent-table")
+    assert cells(table)["Revenue growth (% vs prior period)"][0] == "+6.43% (0.0642551178283274)"
+    card = facts(build("ratios_ttm", [{"symbol": "AAPL", "grossProfitMarginTTM": 0.486529123456789}])[0][0])["grossProfitMarginTTM"]
+    assert card["value"] == "48.65% of revenue (0.486529123456789)"
+
+
 def test_a_field_already_sent_as_a_percentage_is_not_multiplied_again():
     assert R.percent("dividendYieldPercentage", 0.31) == 0.31 and R.percent("dividendYield", 0.0031) == pytest.approx(0.31)
 
