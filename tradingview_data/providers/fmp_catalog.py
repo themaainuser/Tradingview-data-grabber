@@ -419,12 +419,12 @@ endpoint(
     "Economic indicators",
     "A US economic indicator over time, such as GDP, CPI, unemployment or the federal funds rate.",
     (
-        param("name", "Indicator name.", required=True, example="GDP", suggestions=("GDP", "realGDP", "CPI", "inflationRate", "federalFunds", "unemploymentRate", "retailSales", "consumerSentiment", "durableGoods", "totalNonfarmPayroll", "initialClaims", "industrialProductionTotalIndex", "totalVehicleSales", "30YearFixedRateMortgageAverage", "15YearFixedRateMortgageAverage")),
+        param("name", "Indicator name.", required=True, example="CPI", suggestions=("GDP", "realGDP", "CPI", "inflationRate", "federalFunds", "unemploymentRate", "retailSales", "consumerSentiment", "durableGoods", "totalNonfarmPayroll", "initialClaims", "industrialProductionTotalIndex", "totalVehicleSales", "30YearFixedRateMortgageAverage", "15YearFixedRateMortgageAverage")),
         _from(example=YEAR_AGO),
         _to(example=DAY),
     ),
     slug="economics-indicators",
-    examples=(_example("Consumer price index", name="CPI", **{"from": YEAR_AGO, "to": DAY}), _example("Unemployment rate", name="unemploymentRate", **{"from": YEAR_AGO, "to": DAY})),
+    examples=(_example("Consumer price index over a year", name="CPI", **{"from": YEAR_AGO, "to": DAY}), _example("Unemployment rate", name="unemploymentRate", **{"from": YEAR_AGO, "to": DAY}), _example("Real GDP", name="realGDP", **{"from": YEAR_AGO, "to": DAY})),
 )
 endpoint("economic_calendar", "/economic-calendar", "economics", "Economic calendar", "Scheduled economic releases with their previous, estimated and actual values.", (_from(example=DAY), _to(example=WEEK_AHEAD)), slug="economics-calendar")
 endpoint("market_risk_premium", "/market-risk-premium", "economics", "Market risk premium", "The market risk premium and country risk premium for each country.", slug="market-risk-premium")
