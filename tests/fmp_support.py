@@ -104,3 +104,17 @@ EARNINGS = [
     {"symbol": "AAPL", "date": "2026-07-30", "epsActual": 1.8, "epsEstimated": 1.7, "revenueActual": 100000000000, "revenueEstimated": 98000000000, "lastUpdated": "2026-08-01"},
     {"symbol": "AAPL", "date": "2026-04-30", "epsActual": 1.6, "epsEstimated": 1.5, "revenueActual": 95000000000, "revenueEstimated": 94000000000, "lastUpdated": "2026-05-01"},
 ]
+
+EXECUTIVES = [
+    {"title": "Chief Executive Officer", "name": "Timothy D. Cook", "pay": 16520856, "currencyPay": "USD", "gender": "male", "yearBorn": 1961, "titleSince": None, "active": True},
+    {"title": "Former CFO", "name": "Luca Maestri", "pay": 7000000, "currencyPay": "USD", "gender": "male", "yearBorn": 1964, "titleSince": None, "active": False},
+]
+INSIDER = [
+    {"symbol": "AAPL", "filingDate": "2026-10-30", "transactionDate": "2026-10-28", "reportingCik": "0001214156", "companyCik": "0000320193", "transactionType": "S-Sale", "formType": "4", "securitiesTransacted": 1000, "price": 330.1, "reportingName": "Cook Timothy D"},
+    {"symbol": "AAPL", "filingDate": "2026-10-29", "transactionDate": "2026-10-27", "reportingCik": "0001214155", "companyCik": "0000320193", "transactionType": "P-Purchase", "formType": "3/A", "securitiesTransacted": 10, "price": 0, "reportingName": "Parekh Kevan"},
+]
+FILINGS = [
+    {"symbol": "AAPL", "cik": "0000320193", "filingDate": "2026-10-31 00:00:00", "acceptedDate": "2026-10-31 06:01:36", "formType": "8-K", "hasFinancials": True, "link": "https://www.sec.gov/a", "finalLink": "https://www.sec.gov/b"},
+    {"symbol": "MSFT", "cik": "0000789019", "filingDate": "2026-10-30 00:00:00", "acceptedDate": "2026-10-30 06:01:36", "formType": "10-Q", "hasFinancials": False, "link": "https://www.sec.gov/c", "finalLink": "https://www.sec.gov/d"},
+]
+SEC_PROFILE = [{"symbol": "AAPL", "cik": "0000320193", "registrantName": "Apple Inc.", "sicCode": "3571", "sicDescription": "Electronic Computers", "postalCode": "95014", "phone": "4089961010", "employees": "166000", "isEtf": False}]

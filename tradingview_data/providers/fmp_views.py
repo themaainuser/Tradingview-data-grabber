@@ -31,6 +31,8 @@ _LABELS = {
     "ytd": "Year to date", "1D": "1 day", "5D": "5 days", "1M": "1 month", "3M": "3 months", "6M": "6 months", "1Y": "1 year", "3Y": "3 years", "5Y": "5 years", "10Y": "10 years",
     "max": "Since listing", "changePercentage": "Change (%)", "changesPercentage": "Change (%)", "priceAvg50": "50-day average", "priceAvg200": "200-day average", "averageChange": "Average change (%)",
 }
+# Codes and labels that are digits only by accident: shown as sent, never as a number (0000320193 keeps its zeros, 3/A is not lost, 2025 is not 2,025).
+_IDENTIFIERS = {"cik", "reportingCik", "companyCik", "targetedCik", "sicCode", "fiscalYear", "calendarYear", "yearBorn", "formType", "transactionType", "postalCode", "zip", "phone", "cusip", "isin"}
 _CHART_FIELDS = {
     "income_statement": ["revenue", "grossProfit", "operatingIncome", "netIncome"],
     "balance_sheet": ["totalAssets", "totalLiabilities", "totalStockholdersEquity"],
@@ -82,11 +84,40 @@ def utc(seconds: float) -> str:
     return datetime.fromtimestamp(seconds, timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
+def verbatim(value: Any) -> Optional[str]:
+    """A cell or fact as FMP sent it: flags as Yes/No, everything else as text; nothing for a missing or nested value."""
+
+    if V.is_missing(value) or isinstance(value, (dict, list)):
+        return None
+    if isinstance(value, bool):
+        return "Yes" if value else "No"
+    return str(int(value)) if isinstance(value, float) and value.is_integer() else str(value)
+
+
+def patch_table(view: Optional[dict[str, Any]], records: list[Any]) -> Optional[dict[str, Any]]:
+    """Redo the cells of identifier and flag columns from the raw ``records`` the table was built from. The generic column
+    typing would read ``4`` and ``0000320193`` as numbers (losing ``3/A`` and the zeros) and pass booleans on, which the
+    frontend rejects."""
+
+    if not view:
+        return view
+    objects = [r for r in records if isinstance(r, dict)]
+    for index, column in enumerate(view["columns"]):
+        sources = [r.get(column["key"]) for r in objects[: len(view["rows"])]]
+        if column["key"] in _IDENTIFIERS or any(isinstance(s, bool) for s in sources):
+            column["type"] = "text"
+            for row, source in zip(view["rows"], sources):
+                row[index] = verbatim(source)
+    return view
+
+
 def fact_of(key: str, value: Any) -> Optional[dict[str, Any]]:
     """One fact for a record field: percentages as such, epoch timestamps as UTC times, the rest by ``smart_fact``."""
 
     if V.is_missing(value) or isinstance(value, (dict, list)):
         return None
+    if key in _IDENTIFIERS:
+        return V.fact(key, _LABELS.get(key) or V.humanize(key), verbatim(value))
     number = num(value)
     if key in _PERCENT_FIELDS and number is not None:
         item = V.fact(key, _LABELS.get(key) or V.humanize(key), number, "percent", "positive" if number > 0 else "negative" if number < 0 else None)
@@ -107,7 +138,7 @@ def facts_of(view_id: str, title: str, record: dict[str, Any], groups: Optional[
 def table_of(view_id: str, title: str, records: list[dict[str, Any]], keys: Optional[list[str]] = None, subtitle: Optional[str] = None) -> Optional[dict[str, Any]]:
     if keys:
         keys = [k for k in keys if any(r.get(k) not in (None, "") for r in records)] or None
-    return V.table_view(view_id, title, records, keys=keys, subtitle=subtitle)
+    return patch_table(V.table_view(view_id, title, records, keys=keys, subtitle=subtitle), records)
 
 
 def subtitle_of(row: dict[str, Any]) -> Optional[str]:
@@ -121,7 +152,11 @@ def _generic(endpoint_id: str, label: str, payload: Any) -> Built:
     rows = rows_of(payload) if isinstance(payload, list) else []
     if len(rows) == 1 and len(payload) == 1:
         return [facts_of(V.slug(endpoint_id), label, rows[0], subtitle=rows[0].get("symbol"))], []
-    return V.analyze(payload, label, V.slug(endpoint_id)), []
+    views = V.analyze(payload, label, V.slug(endpoint_id))
+    for view in views:
+        if view and view["kind"] == "table" and isinstance(payload, list):
+            patch_table(view, payload)
+    return views, []
 
 
 def _quote(endpoint_id: str, label: str, payload: Any) -> Built:
@@ -155,15 +190,16 @@ def _period_labels(rows: list[dict[str, Any]]) -> list[str]:
     return labels
 
 
-def _pivot(view_id: str, title: str, columns: list[tuple[str, dict[str, Any]]], subtitle: Optional[str]) -> tuple[Optional[dict[str, Any]], list[str]]:
-    """A table whose rows are fields and whose columns are periods, most recent first."""
+def _pivot(view_id: str, title: str, columns: list[tuple[str, dict[str, Any]]], subtitle: Optional[str], *, names_as_sent: bool = False) -> tuple[Optional[dict[str, Any]], list[str]]:
+    """A table whose rows are fields and whose columns are periods, most recent first. Field names are made readable
+    unless they are data (segment names such as ``iPhone``), which stay as sent."""
 
     shown = columns[:MAX_PERIODS]
     fields: dict[str, None] = {}
     for _, values in shown:
         for key in values:
             fields.setdefault(key)
-    records = [{"item": V.humanize(field), **{label: values.get(field) for label, values in shown}} for field in fields]
+    records = [{"item": field if names_as_sent else V.humanize(field), **{label: values.get(field) for label, values in shown}} for field in fields]
     view = V.table_view(view_id, title, records, keys=["item", *(label for label, _ in shown)], subtitle=subtitle)
     if view:
         for column, (label, _) in zip(view["columns"][1:], shown):
@@ -195,7 +231,7 @@ def _segments(endpoint_id: str, label: str, payload: Any) -> Built:
     if not rows:
         return _generic(endpoint_id, label, payload)
     columns = [(name, {k: n for k, v in row["data"].items() if (n := num(v)) is not None}) for name, row in zip(_period_labels(rows), rows)]
-    table, notes = _pivot(V.slug(endpoint_id), label, columns, subtitle_of(rows[0]))
+    table, notes = _pivot(V.slug(endpoint_id), label, columns, subtitle_of(rows[0]), names_as_sent=True)
     return [table], notes
 
 
@@ -229,7 +265,7 @@ def _prices(endpoint_id: str, label: str, payload: Any) -> Built:
         for key in first:
             if key not in known and any(num(r.get(key)) is not None for r in ordered):
                 views.append(V.series_view("indicator", V.humanize(key), times, [{"key": key, "label": V.humanize(key), "values": [num(r.get(key)) for r in ordered], "role": "value", "unit": None}], subtitle=subtitle, intraday=clock, time_note=note))
-    views.append(V.table_view(f"{V.slug(endpoint_id)}-table", label, ordered, subtitle=subtitle))
+    views.append(patch_table(V.table_view(f"{V.slug(endpoint_id)}-table", label, ordered, subtitle=subtitle), ordered))
     return views, []
 
 
