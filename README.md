@@ -363,8 +363,8 @@ The Providers page fetches from external data providers through the backend. The
   commodities, income statements, balance sheets, cash flows, ratios and growth, end-of-day and
   intraday prices, technical indicators, analyst estimates and ratings, earnings, dividend and IPO
   calendars, economic data, sector and industry performance, news, transcripts, ETF and fund holdings,
-  13F filings, insider trades, SEC filings, index members, market hours and DCF valuations), 68 of
-  which a free key is refused (**premium**). Endpoints that differ only by a path segment (the four
+  13F filings, insider trades, SEC filings, index members, market hours and DCF valuations), 67 of
+  which a free key is refused outright (**premium**). Endpoints that differ only by a path segment (the four
   price-history variants, the intraday intervals, the nine technical indicators) are one endpoint with
   a dropdown. FMP's plans are **Basic** (free, 250 requests a day), **Starter**, **Premium** and
   **Ultimate**. FMP does not say which plan an endpoint needs, so every endpoint was called with a
@@ -372,11 +372,54 @@ The Providers page fetches from external data providers through the backend. The
   and a premium badge names a plan only where the
   [pricing page](https://site.financialmodelingprep.com/pricing-plans) names the feature group (news
   is Starter; intraday charts and technical indicators are Premium; transcripts, ETF and fund
-  holdings, 13F and batch quotes are Ultimate); the others say **Premium** alone. A free key is limited to
-  US-listed symbols (another symbol is refused as premium) and to 5 periods per statement request,
-  which the form notes. The key is sent in the `apikey` header, so it appears in no URL. Government
-  trading, ESG, Commitment of Traders, fundraisers and the as-reported statements are not in the
-  catalog, nor are the bulk CSV and partner endpoints.
+  holdings, 13F and batch quotes are Ultimate); the others say **Premium** alone. The rest of the free plan is
+  *limited* access, described below. The key is sent in the `apikey` header, so it appears in no URL.
+  Government trading, ESG, Commitment of Traders, the as-reported statements and the statement-growth
+  variants are not in the catalog, nor are the bulk CSV and partner endpoints. FMP's Market Data page
+  shows that the fundraiser endpoints are open on the free plan too; they are not added yet.
+
+  **What a free (Basic) key can and cannot do.** FMP's Market Data page marks each endpoint *Full*,
+  *Limited* or *No access* on the free plan and does not say what *Limited* means. Calling the live API
+  with a free key showed three limits, each refused with HTTP 402 (`premium_required`) and each noted
+  beside the field it concerns in the form:
+
+  - **Which symbols.** 39 endpoints (quotes, prices, statements, ratios, key metrics, analyst data,
+    dividends, earnings, DCF and more) accept only a fixed list of 87 stocks and ETFs (`AAPL`, `MSFT`,
+    `NVDA`, `TSLA`, `SPY`, `TSM`, `SHOP`... the list is what *All Shares Float* returns on a free key;
+    it is `BASIC_SYMBOLS` in `fmp_catalog.py`) plus a few indices, currency pairs, cryptocurrencies and
+    commodities (`^GSPC`, `EURUSD`, `BTCUSD`, `GCUSD`...). Any other symbol is refused, even a large
+    US company (`ORCL`, `PLUG`, `GME`, `QQQ`). *Company profile* accepts any US-traded symbol, OTC
+    included, and refuses other exchanges (`SAP.DE`, `RY.TO`). Endpoints that list many symbols at once
+    do not refuse anything: the earnings, dividends and splits calendars and *All Shares Float* quietly
+    return only the rows of that list, so they are a part of the market, not all of it (the endpoint
+    descriptions say so). The full-access endpoints take any symbol: search by symbol, name or CIK,
+    profile by CIK, stock peers, SEC company profile, financial report dates, the biggest gainers,
+    losers and most active stocks, market hours and the symbol lists of forex, crypto, commodities and
+    indices.
+  - **How many rows.** `limit` has a cap per endpoint: 5 on statements, key metrics, ratios, growth,
+    enterprise values, owner earnings, dividends, earnings, splits, employee counts and the latest
+    mergers (so a statement reaches back five periods, annual or quarterly); 10 on analyst estimates
+    and historical grades; 1 on historical ratings; 20 on the SEC filing searches; 100 on insider
+    trades. `ROW_CAPS` has the list.
+  - **How far back.** A start date (`from`, or `date` for the sector and industry snapshots) must be
+    within the last 30 days on the earnings, dividends and splits calendars, the latest 8-K and
+    financial filings, SEC filings by form type, and the sector and industry performance and PE
+    snapshots; within a year on SEC filings by symbol or CIK. How far forward a calendar looks is not
+    limited. Price history, treasury rates, sector history and economic indicators are not limited
+    this way: daily prices for `AAPL` go back to 1985.
+
+  The same plan allows 250 requests a day and 500 MB of data over a rolling 30 days. Quarterly
+  periods are not restricted. The limits were measured in November 2026 and FMP does not publish them,
+  so the lists are `fmp_catalog.py` data (`SYMBOL_LIMITED`, `ROW_CAPS`, `RECENT_30`, `RECENT_YEAR`) to
+  update when FMP changes them; a paid key is never held to them, because the form only notes a limit
+  and does not enforce it.
+
+  **Ratios and growth** (ratios, key metrics, financial growth and their trailing-twelve-month
+  versions) are fractions in FMP's data (`0.469`). The page shows each as a percentage that says what
+  it is a share of or a change against, with FMP's own figure in brackets: `46.91% of revenue (0.4691)`,
+  `151.91% of shareholders' equity (1.5191)`, `+6.43% vs prior period (0.0643)`. Multiples (price to
+  earnings, turnover, coverage, days, per-share amounts) are not shares of anything and stay numbers.
+  The bases are listed in `fmp_ratios.py`; a ratio that is not listed is shown as FMP sent it.
 
 All of them share these rules:
 

@@ -42,6 +42,15 @@ _PUBLIC_PARAM_KEYS = ("name", "required", "type", "description", "enum", "enum_l
 _KEY_PROBLEM = re.compile(r"invalid api ?key|missing api ?key|api ?key.{0,20}(invalid|missing|required)", re.I)
 _RATE_LIMIT = re.compile(r"limit reach|rate limit|too many requests|requests? per (day|minute)|bandwidth", re.I)
 _PREMIUM = re.compile(r"restricted endpoint|premium|subscription|upgrade|exclusive|special (endpoint|parameter)", re.I)
+# FMP's "Premium Query Parameter" refusals name the parameter: the value is outside what the plan allows.
+_REFUSED_VALUE = re.compile(r"value set for '(\w+)'", re.I)
+_REFUSED_RANGE = re.compile(r"values for '(\w+)' must be between (\d+) and (\d+)", re.I)
+_BOILERPLATE = re.compile(r"[\s.]*please visit our subscription page.*$", re.I)
+_VALUE_HELP = {
+    "symbol": "Your plan can query only a fixed list of symbols, and this one is not on it (a free Basic key has a short list of well-known ones).",
+    "from": "Your plan can only start this far back: a free Basic key allows 30 days on calendars and latest SEC filings, and a year on SEC filings of one company. Use a later start date.",
+    "date": "Your plan can only use a recent date here: a free Basic key allows the last 30 days.",
+}
 _HTTP_STATUSES = {400: "invalid_request", 401: "invalid_key", 402: "premium_required", 403: "premium_required", 404: "invalid_request", 422: "invalid_request", 429: "rate_limited"}
 
 INFO = ProviderInfo(
@@ -52,9 +61,9 @@ INFO = ProviderInfo(
     docs_url="https://site.financialmodelingprep.com/developer/docs",
     key_env="FMP_API_KEY",
     key_url="https://site.financialmodelingprep.com/register",
-    limits_note="Free (Basic) keys allow 250 requests per day and cover US-listed symbols: another symbol is refused as premium, and statements accept at most 5 periods per request. Paid plans are limited per minute instead and unlock the premium endpoints.",
+    limits_note="Free (Basic) keys allow 250 requests per day and 500 MB of data over a rolling 30 days. Beyond that, many endpoints are only partly open: a fixed list of well-known symbols, a cap on the rows per request (5 on statements) and a start date no more than 30 days back on calendars and latest SEC filings. A request outside a limit is refused as premium, and the form notes each limit beside its field. Paid plans are limited per minute instead and unlock the premium endpoints.",
     plans=(
-        Plan("Basic", "The free plan: 250 requests a day. End-of-day prices, quotes, company profiles, annual statements, ratios, analyst data and reference data for US-listed companies."),
+        Plan("Basic", "The free plan: 250 requests a day. End-of-day prices, quotes, profiles, statements, ratios and analyst data for a fixed list of well-known symbols, with at most 5 statement periods per request; profiles for any US-traded symbol; search and some reference data for all."),
         Plan("Starter", "300 requests a minute and up to 5 years of history for US companies, with financial market news, crypto and forex."),
         Plan("Premium", "750 requests a minute and up to 30 years of history. Adds UK and Canadian coverage, intraday charts, technical indicators and corporate calendars."),
         Plan("Ultimate", "3,000 requests a minute and full history with global coverage. Adds earnings call transcripts, ETF and mutual fund holdings, 13F institutional holdings, 1-minute intraday charts and batch delivery."),
@@ -106,6 +115,18 @@ def _message_of(http_status: int, body: bytes, payload: Any) -> str:
     return text if text and not text.startswith("<") else f"FMP answered with HTTP {http_status}."  # an HTML error page is no message
 
 
+def explain(message: str) -> str:
+    """For a refused parameter value, what that means in plain words, then FMP's own message in brackets."""
+
+    if (match := _REFUSED_RANGE.search(message)) and "Premium Query Parameter" in message:
+        plain = f"Your plan allows at most {match.group(3)} {'row' if match.group(3) == '1' else 'rows'} for '{match.group(1)}' on this endpoint."
+    elif (match := _REFUSED_VALUE.search(message)) and "Premium Query Parameter" in message and match.group(1) in _VALUE_HELP:
+        plain = _VALUE_HELP[match.group(1)]
+    else:
+        return message
+    return f"{plain} (Original message: {_BOILERPLATE.sub('', message).rstrip('.')}.)"
+
+
 def classify_error(http_status: int, body: bytes, payload: Any) -> Optional[tuple[str, str]]:
     """``(status, message)`` when the response is an FMP error, ``None`` when it is data."""
 
@@ -113,10 +134,11 @@ def classify_error(http_status: int, body: bytes, payload: Any) -> Optional[tupl
     if not failed:
         return None
     message = _message_of(http_status, body, payload)
+    plain = explain(message)
     for pattern, status in ((_KEY_PROBLEM, "invalid_key"), (_RATE_LIMIT, "rate_limited"), (_PREMIUM, "premium_required")):
         if pattern.search(message):
-            return status, message
-    return _HTTP_STATUSES.get(http_status) or ("upstream_error" if http_status >= 500 else "invalid_request"), message
+            return status, plain
+    return _HTTP_STATUSES.get(http_status) or ("upstream_error" if http_status >= 500 else "invalid_request"), plain
 
 
 def has_data(payload: Any) -> bool:

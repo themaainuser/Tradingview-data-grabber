@@ -63,7 +63,7 @@ INCOME = [
     statement(2024, revenue=391035000000, grossProfit=180683000000, operatingIncome=123216000000, netIncome=93736000000, epsDiluted=6.08),
     statement(2023, revenue=383285000000, grossProfit=169148000000, operatingIncome=114301000000, netIncome=96995000000, epsDiluted=6.13),
 ]
-RATIOS = [statement(2025, grossProfitMargin=0.469, operatingProfitMargin=0.32, netProfitMargin=0.269), statement(2024, grossProfitMargin=0.462, operatingProfitMargin=0.315, netProfitMargin=0.24)]
+RATIOS = [statement(2025, grossProfitMargin=0.469, operatingProfitMargin=0.32, netProfitMargin=0.269, debtToEquityRatio=1.52, priceToEarningsRatio=34.11, receivablesTurnover=5.7), statement(2024, grossProfitMargin=0.462, operatingProfitMargin=0.315, netProfitMargin=0.24, debtToEquityRatio=1.87, priceToEarningsRatio=28.9, receivablesTurnover=6.1)]
 SEGMENTS = [
     {"symbol": "AAPL", "fiscalYear": 2025, "period": "FY", "reportedCurrency": "USD", "date": "2025-09-27", "data": {"iPhone": 209586000000, "Mac": 33708000000, "Service": 109158000000}},
     {"symbol": "AAPL", "fiscalYear": 2024, "period": "FY", "reportedCurrency": "USD", "date": "2024-09-28", "data": {"iPhone": 201183000000, "Mac": 29984000000, "Service": 96169000000}},
@@ -118,3 +118,13 @@ FILINGS = [
     {"symbol": "MSFT", "cik": "0000789019", "filingDate": "2026-10-30 00:00:00", "acceptedDate": "2026-10-30 06:01:36", "formType": "10-Q", "hasFinancials": False, "link": "https://www.sec.gov/c", "finalLink": "https://www.sec.gov/d"},
 ]
 SEC_PROFILE = [{"symbol": "AAPL", "cik": "0000320193", "registrantName": "Apple Inc.", "sicCode": "3571", "sicDescription": "Electronic Computers", "postalCode": "95014", "phone": "4089961010", "employees": "166000", "isEtf": False}]
+
+KEY_METRICS = [
+    statement(2025, marketCap=3.8e12, enterpriseValue=3.9e12, currentRatio=0.893293, returnOnAssets=0.311796, returnOnEquity=1.5191, returnOnInvestedCapital=0.5197, returnOnCapitalEmployed=0.6872, earningsYield=0.0262, evToSales=9.4, cashConversionCycle=-42.0, daysOfSalesOutstanding=46.1),
+    statement(2024, marketCap=3.4e12, enterpriseValue=3.5e12, currentRatio=0.867313, returnOnAssets=0.256825, returnOnEquity=1.6459, returnOnInvestedCapital=0.5, returnOnCapitalEmployed=0.6, earningsYield=0.0275, evToSales=8.9, cashConversionCycle=-45.0, daysOfSalesOutstanding=45.0),
+]
+GROWTH = [
+    statement(2025, revenueGrowth=0.0642551, netIncomeGrowth=0.195, epsgrowth=0.2259, freeCashFlowGrowth=-0.0923, tenYRevenueGrowthPerShare=1.7413, fiveYRevenueGrowthPerShare=0.76),
+    statement(2024, revenueGrowth=0.0202199, netIncomeGrowth=-0.0336, epsgrowth=0.1, freeCashFlowGrowth=0.0, tenYRevenueGrowthPerShare=1.5, fiveYRevenueGrowthPerShare=0.7),
+]
+RATIOS_TTM = [{"symbol": "AAPL", "grossProfitMarginTTM": 0.486529, "netProfitMarginTTM": 0.276186, "currentRatioTTM": 1.00329, "debtToEquityRatioTTM": 0.78, "priceToEarningsRatioTTM": 38.61, "dividendYieldTTM": 0.00313721, "dividendYieldPercentageTTM": 0.31, "interestCoverageRatioTTM": None, "effectiveTaxRateTTM": -0.02}]
