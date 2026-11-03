@@ -13,6 +13,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Callable, Optional
 
+from . import fmp_ratios as R
 from . import views as V
 
 Built = tuple[list[Optional[dict[str, Any]]], list[str]]
@@ -190,16 +191,30 @@ def _period_labels(rows: list[dict[str, Any]]) -> list[str]:
     return labels
 
 
-def _pivot(view_id: str, title: str, columns: list[tuple[str, dict[str, Any]]], subtitle: Optional[str], *, names_as_sent: bool = False) -> tuple[Optional[dict[str, Any]], list[str]]:
+def _pivot(
+    view_id: str,
+    title: str,
+    columns: list[tuple[str, dict[str, Any]]],
+    subtitle: Optional[str],
+    *,
+    names_as_sent: bool = False,
+    fields: Optional[list[str]] = None,
+    item: Optional[Callable[[str], str]] = None,
+    cell: Optional[Callable[[str, float], Any]] = None,
+) -> tuple[Optional[dict[str, Any]], list[str]]:
     """A table whose rows are fields and whose columns are periods, most recent first. Field names are made readable
-    unless they are data (segment names such as ``iPhone``), which stay as sent."""
+    unless they are data (segment names such as ``iPhone``), which stay as sent. ``fields`` picks the rows, ``item``
+    names them and ``cell`` writes a value."""
 
     shown = columns[:MAX_PERIODS]
-    fields: dict[str, None] = {}
+    seen: dict[str, None] = {}
     for _, values in shown:
         for key in values:
-            fields.setdefault(key)
-    records = [{"item": field if names_as_sent else V.humanize(field), **{label: values.get(field) for label, values in shown}} for field in fields]
+            seen.setdefault(key)
+    chosen = [f for f in seen if fields is None or f in fields]
+    name_of = item or (lambda f: f if names_as_sent else V.humanize(f))
+    write = cell or (lambda f, v: v)
+    records = [{"item": name_of(f), **{label: (write(f, values[f]) if f in values else None) for label, values in shown}} for f in chosen]
     view = V.table_view(view_id, title, records, keys=["item", *(label for label, _ in shown)], subtitle=subtitle)
     if view:
         for column, (label, _) in zip(view["columns"][1:], shown):
@@ -222,6 +237,74 @@ def _periodic(endpoint_id: str, label: str, payload: Any) -> Built:
     chart = V.series_view(f"{V.slug(endpoint_id)}-chart", label, [t for t, _ in stamped], series, subtitle=subtitle_of(rows[0]))
     table, notes = _pivot(f"{V.slug(endpoint_id)}-table", label, columns, subtitle_of(rows[0]))
     return [chart, table], notes
+
+
+_PERCENT_NOTE = "Percentages are FMP's fractions times 100, with FMP's own figure in brackets (0.469 is 46.9%). Each row says what it is a share of or a change against; multiples such as price to earnings are left as numbers."
+
+
+def _ratio_summary(times: list[int], series: list[dict[str, Any]]) -> Optional[dict[str, Any]]:
+    """Latest, change, high and low of the first chart line, in percent (the generic summary would show a bare number)."""
+
+    pairs = sorted((t, v) for t, v in zip(times, series[0]["values"]) if v is not None) if series else []
+    if len(pairs) < 2:
+        return None
+    values = [v for _, v in pairs]
+    step = values[-1] - values[-2]
+    day = lambda t: datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%d")  # noqa: E731
+    items = [
+        V.fact("latest", f"Latest {series[0]['label'][:1].lower()}{series[0]['label'][1:]}", values[-1], "percent"),
+        V.fact("change", "Change vs previous (percentage points)", round(step, 4), "number", "positive" if step > 0 else "negative" if step < 0 else None),
+        V.fact("high", "Period high", max(values), "percent"),
+        V.fact("low", "Period low", min(values), "percent"),
+        V.fact("points", "Data points", len(pairs), "integer"),
+        V.fact("range", "Range (UTC)", f"{day(pairs[0][0])} to {day(pairs[-1][0])}"),
+    ]
+    return V.facts_view("summary", "Summary", [(None, items)], subtitle=None)
+
+
+def _ratio_periods(endpoint_id: str, label: str, payload: Any) -> Built:
+    """Ratios, key metrics and growth: the fractions as percentages that name their base, the multiples as numbers."""
+
+    rows = [r for r in rows_of(payload) if r.get("date") or r.get("fiscalYear")]
+    if not rows:
+        return [], []
+    columns = [(name, {k: n for k, v in row.items() if k not in _PERIOD_FIELDS and (n := num(v)) is not None}) for name, row in zip(_period_labels(rows), rows)]
+    stamped = [(t, i) for i, row in enumerate(rows) if (t := V.epoch(str(row.get("date") or ""))) is not None]
+    series = [
+        {"key": key, "label": R.item_label(key), "values": [(None if (v := columns[i][1].get(key)) is None else R.percent(key, v)) for _, i in stamped], "role": "value", "unit": "%"}
+        for key in _CHART_FIELDS.get(endpoint_id, [])
+        if any(key in values for _, values in columns)
+    ]
+    subtitle = subtitle_of(rows[0])
+    slug = V.slug(endpoint_id)
+    chart = V.series_view(f"{slug}-chart", label, [t for t, _ in stamped], series, subtitle=subtitle)
+    names = {f for _, values in columns for f in values}
+    percentages, notes = _pivot(f"{slug}-percent-table", f"{label}: percentages", columns, subtitle, fields=[f for f in names if R.lookup(f)], item=R.item_label, cell=lambda f, v: R.short_text(f, v))
+    others, more = _pivot(f"{slug}-table", f"{label}: other figures", columns, subtitle, fields=[f for f in names if not R.lookup(f)])
+    summary = _ratio_summary([t for t, _ in stamped], series)
+    return [summary, chart, percentages, others], [*([_PERCENT_NOTE] if percentages else []), *notes, *more]
+
+
+def _ratio_snapshot(endpoint_id: str, label: str, payload: Any) -> Built:
+    """Trailing-twelve-month ratios and key metrics: one card per figure, percentages first with what they are a share of."""
+
+    rows = rows_of(payload)
+    if len(rows) != 1:
+        return _generic(endpoint_id, label, payload)
+    row = rows[0]
+    shares: list[dict[str, Any]] = []
+    others: list[dict[str, Any]] = []
+    for key, value in row.items():
+        if key in _PERIOD_FIELDS or V.is_missing(value) or isinstance(value, (dict, list)):
+            continue
+        spec, number = R.lookup(key), num(value)
+        if spec and number is not None:
+            tone = ("positive" if number > 0 else "negative" if number < 0 else None) if spec.signed else ("negative" if number < 0 else None)
+            shares.append(V.fact(key, spec.label, R.text(key, number), "text", tone))
+        elif item := fact_of(key, value):
+            others.append(item)
+    view = V.facts_view(V.slug(endpoint_id), label, [("Percentages and what each is a share of", shares), ("Other figures", others)], subtitle=row.get("symbol"))
+    return [view], [_PERCENT_NOTE] if shares else []
 
 
 def _segments(endpoint_id: str, label: str, payload: Any) -> Built:
@@ -361,7 +444,10 @@ _HANDLERS: dict[str, Callable[[str, str, Any], Built]] = {
     "industry_pe": _snapshot("industry", "pe", "Price to earnings", "number", False),
     "treasury_rates": _treasury,
     "transcript": _transcript,
-    **{endpoint_id: _periodic for endpoint_id in _CHART_FIELDS},
+    **{endpoint_id: _periodic for endpoint_id in _CHART_FIELDS if endpoint_id not in ("ratios", "key_metrics", "financial_growth")},
+    **{endpoint_id: _ratio_periods for endpoint_id in ("ratios", "key_metrics", "financial_growth")},
+    "ratios_ttm": _ratio_snapshot,
+    "key_metrics_ttm": _ratio_snapshot,
     **{endpoint_id: _news for endpoint_id in ("fmp_articles", "general_news", "press_releases_latest", "stock_news_latest", "crypto_news_latest", "forex_news_latest", "press_releases_search", "stock_news_search", "crypto_news_search", "forex_news_search")},
 }
 

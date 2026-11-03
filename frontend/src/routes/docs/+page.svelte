@@ -657,8 +657,21 @@ tvdata serve --data-dir data --static-dir frontend/build`;
 						premium badge names a plan only where FMP's pricing page names the feature group (news,
 						intraday charts, technical indicators, transcripts, ETF holdings, 13F filings); for the
 						other endpoints a free key is refused, FMP does not say which paid plan adds them, and
-						the badge says <strong>Premium</strong> alone. A free key is also limited to US-listed symbols:
-						any other symbol is refused as premium.
+						the badge says <strong>Premium</strong> alone.
+					</li>
+					<li>
+						Most of the free plan is <em>limited</em> access, and the form notes each limit beside its
+						field. A free key can query only a fixed list of well-known symbols on quotes, prices, statements,
+						ratios and analyst data (anything else is refused as premium), can ask for at most 5 rows
+						on statements and similar endpoints, and can start a calendar or the latest SEC filings no
+						more than 30 days back. Calendars and the symbol lists return only the rows of that fixed
+						list, so they show part of the market.
+					</li>
+					<li>
+						Ratios and growth figures are shown as a percentage that says what it is a share of or a
+						change against, with the provider's own figure in brackets, for example
+						<strong>46.91% of revenue (0.4691)</strong>. Multiples such as price to earnings stay
+						numbers.
 					</li>
 					<li>
 						Some choices are premium on their own. Intraday intervals below 15 minutes are marked

@@ -407,7 +407,7 @@ endpoint("ipos_calendar", "/ipos-calendar", "calendar", "IPO calendar", "Upcomin
 endpoint("ipos_disclosure", "/ipos-disclosure", "calendar", "IPO disclosures", "SEC disclosure filings related to IPOs.", (_from(example=MONTH_AGO), _to(example=DAY)), slug="ipos-disclosure")
 endpoint("ipos_prospectus", "/ipos-prospectus", "calendar", "IPO prospectuses", "IPO prospectus filings with the offering price and proceeds.", (_from(example=MONTH_AGO), _to(example=DAY)), slug="ipos-prospectus")
 endpoint("splits", "/splits", "calendar", "Stock splits", "A company's stock split history.", (_symbol(), _limit()), slug="splits-company")
-endpoint("splits_calendar", "/splits-calendar", "calendar", "Splits calendar", "Upcoming and recent stock splits across all companies.", (_from(example=MONTH_AGO), _to(example=WEEK_AHEAD)), slug="splits-calendar")
+endpoint("splits_calendar", "/splits-calendar", "calendar", "Splits calendar", "Upcoming and recent stock splits across all companies.", (_from(example=WEEK_AGO), _to(example=WEEK_AHEAD)), slug="splits-calendar")
 
 # --- economics --------------------------------------------------------------------------------------------------------
 
@@ -497,8 +497,8 @@ endpoint("beneficial_ownership", "/acquisition-of-beneficial-ownership", "inside
 
 # --- SEC filings ------------------------------------------------------------------------------------------------------------------
 
-_FILING_DATES = (_from("Start date, YYYY-MM-DD.", MONTH_AGO), _to("End date, YYYY-MM-DD.", DAY))
-_FILING_RANGE = (_from("Start date, YYYY-MM-DD.", MONTH_AGO, required=True), _to("End date, YYYY-MM-DD.", DAY, required=True))
+_FILING_DATES = (_from("Start date, YYYY-MM-DD.", WEEK_AGO), _to("End date, YYYY-MM-DD.", DAY))
+_FILING_RANGE = (_from("Start date, YYYY-MM-DD.", WEEK_AGO, required=True), _to("End date, YYYY-MM-DD.", DAY, required=True))
 endpoint("sec_8k_latest", "/sec-filings-8k", "sec-filings", "Latest 8-K filings", "The latest Form 8-K current reports.", (*_FILING_DATES, _page(), _limit()), slug="8k-latest")
 endpoint("sec_financials_latest", "/sec-filings-financials", "sec-filings", "Latest financial filings", "The latest 10-K and 10-Q reports.", (*_FILING_DATES, _page(), _limit()), slug="financials-latest")
 endpoint("sec_by_form_type", "/sec-filings-search/form-type", "sec-filings", "Filings by form type", "Filings of one form type, such as 10-K or 8-K.", (param("formType", "SEC form type.", required=True, example="8-K"), *_FILING_RANGE, _page(), _limit()), slug="search-by-form-type")
@@ -538,7 +538,7 @@ endpoint("levered_dcf", "/levered-discounted-cash-flow", "valuation", "Levered d
 # feature group, or None where the page does not say which paid plan adds it. Every endpoint not
 # listed is on Basic.
 PAID_PLANS: dict[str, Optional[str]] = {
-    **{id_: None for id_ in ("search_cusip", "search_isin", "search_exchange_variants", "company_screener", "search_mergers", "executive_compensation_benchmark", "stock_list", "financial_statement_symbols", "cik_list", "symbol_changes", "etf_list", "actively_trading", "available_exchanges", "available_sectors", "available_industries", "available_countries", "latest_financial_statements", "income_statement_ttm", "balance_sheet_ttm", "cash_flow_ttm", "economic_calendar", "insider_search", "insider_by_name", "insider_statistics", "beneficial_ownership", "sec_by_form_type", "sp500_constituents", "nasdaq_constituents", "dowjones_constituents")},
+    **{id_: None for id_ in ("search_cusip", "search_isin", "search_exchange_variants", "company_screener", "search_mergers", "executive_compensation_benchmark", "stock_list", "financial_statement_symbols", "cik_list", "symbol_changes", "etf_list", "actively_trading", "available_exchanges", "available_sectors", "available_industries", "available_countries", "latest_financial_statements", "income_statement_ttm", "balance_sheet_ttm", "cash_flow_ttm", "economic_calendar", "insider_search", "insider_by_name", "insider_statistics", "beneficial_ownership", "sp500_constituents", "nasdaq_constituents", "dowjones_constituents")},
     **{id_: "Starter" for id_ in ("general_news", "press_releases_latest", "stock_news_latest", "crypto_news_latest", "forex_news_latest", "press_releases_search", "stock_news_search", "crypto_news_search", "forex_news_search")},
     **{id_: "Premium" for id_ in ("intraday", "technical_indicator", "ipos_calendar", "ipos_disclosure", "ipos_prospectus")},
     **{id_: "Ultimate" for id_ in ("batch_quote", "batch_quote_short", "exchange_quotes", "etf_quotes", "crypto_quotes", "forex_quotes", "commodity_quotes", "index_quotes", "transcripts_latest", "transcript", "transcript_dates", "transcript_symbols", "etf_holdings", "etf_info", "etf_country_weightings", "etf_asset_exposure", "etf_sector_weightings", "funds_disclosure_latest", "funds_disclosure", "funds_disclosure_search", "funds_disclosure_dates", "institutional_latest", "institutional_extract", "institutional_holder_analytics", "institutional_positions")},
@@ -547,3 +547,106 @@ PAID_PLANS: dict[str, Optional[str]] = {
 
 def plan_of(endpoint_id: str) -> Optional[str]:
     return PAID_PLANS.get(endpoint_id, PLAN_NAMES[0])
+
+
+# --- what a Basic (free) key may do with the endpoints it can reach -----------------------------------------------------
+#
+# FMP's Market Data page marks each endpoint Full, Limited or No access on the free plan but documents nothing about
+# what "Limited" is. This is what calling the live API with a free key showed (November 2026). A request beyond a limit
+# is refused with HTTP 402 "Premium Query Parameter ...", which the provider reports as ``premium_required``.
+#
+# 1. Which symbols. On SYMBOL_LIMITED a free key may query only BASIC_SYMBOLS (plus a few indices, currency pairs,
+#    cryptocurrencies and commodities, BASIC_OTHER_SYMBOLS); anything else is refused, even a large US company
+#    (ORCL, PLUG, GME). Endpoints that list or calendar many symbols (earnings and dividends calendars, All Shares
+#    Float) are not refused: they quietly return only the rows of those symbols.
+# 2. How many rows. ``limit`` is capped per endpoint (ROW_CAPS), so a statement reaches back five periods.
+# 3. How far back. A start date (``from``, or ``date`` for the sector and industry snapshots) must be within 30 days on
+#    RECENT_30 and within a year on RECENT_YEAR. Price history, treasury rates and sector history are not limited this way.
+# Full-access endpoints (search, profile by CIK, stock peers, SEC profile, movers, market hours...) take any symbol.
+
+# The symbols "All Shares Float" returns on a free key. All 31 of the ones tried on the endpoints below were accepted and
+# none of the 13 that are not on the list.
+BASIC_SYMBOLS = (
+    "AAL", "AAPL", "ABBV", "ADBE", "AMD", "AMZN", "ATVI", "BA", "BABA", "BAC", "BIDU", "BILI", "C", "CARR", "CCL",
+    "COIN", "COST", "CPRX", "CSCO", "CVX", "DAL", "DIS", "DOCU", "ET", "ETSY", "F", "FDX", "FUBO", "GE", "GM",
+    "GOOGL", "GS", "HCA", "HOOD", "INTC", "JNJ", "JPM", "KO", "LCID", "LMT", "META", "MGM", "MRNA", "MRO", "MSFT",
+    "NFLX", "NIO", "NKE", "NOK", "NVDA", "PEP", "PFE", "PINS", "PLTR", "PYPL", "RBLX", "RIOT", "RIVN", "RKT", "ROKU",
+    "SBUX", "SHOP", "SIRI", "SNAP", "SOFI", "SONY", "SPY", "SPYG", "SQ", "T", "TGT", "TLRY", "TSLA", "TSM", "TWTR",
+    "UAL", "UBER", "UNH", "V", "VIAC", "VWO", "VZ", "WBA", "WFC", "WMT", "XOM", "ZM",
+)
+# Seen accepted on a free key (the list of other asset classes is not published); CLUSD (WTI crude) was refused.
+BASIC_OTHER_SYMBOLS = ("^GSPC", "^DJI", "^IXIC", "EURUSD", "GBPUSD", "BTCUSD", "ETHUSD", "GCUSD", "SIUSD")
+
+# Endpoints that refuse a symbol outside the list above (every one was called with ORCL, which is not on it).
+SYMBOL_LIMITED = (
+    "employee_count", "historical_employee_count", "market_cap", "historical_market_cap", "shares_float",
+    "key_executives", "executive_compensation", "quote", "quote_short", "aftermarket_trade", "aftermarket_quote",
+    "price_change", "income_statement", "balance_sheet", "cash_flow", "key_metrics", "ratios", "key_metrics_ttm",
+    "ratios_ttm", "financial_scores", "owner_earnings", "enterprise_values", "financial_growth",
+    "revenue_product_segmentation", "revenue_geographic_segmentation", "historical_eod", "analyst_estimates",
+    "ratings_snapshot", "ratings_historical", "price_target_summary", "price_target_consensus", "grades",
+    "grades_historical", "grades_consensus", "dividends", "earnings", "splits", "dcf", "levered_dcf",
+)
+# ``profile`` takes any US-traded symbol, OTC included (ORCL, PLUG, GME, BRK-B, ASML, RANJY) but not one on another exchange.
+US_SYMBOL_ONLY = ("profile",)
+
+# The ``limit`` a free key may ask for: the refusal says "must be between 0 and N". Not capped: the three searches, delisted
+# companies, historical market capitalisation, All Shares Float, analyst grades and FMP articles.
+ROW_CAPS: dict[str, int] = {
+    **dict.fromkeys(("employee_count", "historical_employee_count", "latest_mergers", "income_statement", "balance_sheet", "cash_flow", "key_metrics", "ratios", "owner_earnings", "enterprise_values", "financial_growth", "dividends", "earnings", "splits"), 5),
+    **dict.fromkeys(("analyst_estimates", "grades_historical"), 10),
+    "ratings_historical": 1,
+    **dict.fromkeys(("sec_8k_latest", "sec_financials_latest", "sec_by_symbol", "sec_by_cik"), 20),
+    "insider_latest": 100,
+}
+
+# Endpoints whose start date a free key may not set further back than 30 days (the date parameter is named), or a year.
+RECENT_30: dict[str, str] = {
+    **dict.fromkeys(("earnings_calendar", "dividends_calendar", "splits_calendar", "sec_8k_latest", "sec_financials_latest", "sec_by_form_type"), "from"),
+    **dict.fromkeys(("sector_performance", "industry_performance", "sector_pe", "industry_pe"), "date"),
+}
+RECENT_YEAR: dict[str, str] = dict.fromkeys(("sec_by_symbol", "sec_by_cik"), "from")
+
+# Shown beside the symbol field of the endpoints above; the examples are the first picks of the list.
+SYMBOL_NOTE = (
+    f"A Basic key can query only a fixed list of well-known symbols ({len(BASIC_SYMBOLS)} stocks and ETFs, such as AAPL, MSFT, NVDA, TSLA and SPY, "
+    "plus a few indices, currency pairs, cryptocurrencies and commodities). Any other symbol is refused."
+)
+US_SYMBOL_NOTE = "A Basic key can query US-traded symbols, OTC included. A symbol on another exchange, such as SAP.DE or RY.TO, is refused."
+SYMBOL_SUGGESTIONS = ("AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "NFLX", "JPM", "V", "WMT", "DIS", "KO", "PEP", "INTC", "AMD", "BA", "NKE", "XOM", "SPY")
+# Added to the description of an endpoint that returns many symbols at once.
+SUBSET_NOTE = "A Basic key sees only the rows of its fixed symbol list, so this is a part of the market, not all of it."
+SUBSET_ENDPOINTS = ("earnings_calendar", "dividends_calendar", "splits_calendar", "shares_float_all")
+
+
+def _note_param(item: dict[str, Any], name: str, note: str, suggestions: tuple[str, ...] = ()) -> None:
+    for p in item["params"]:
+        if p["name"] == name:
+            p["premium_note"] = note
+            if suggestions and not p["suggestions"]:
+                p["suggestions"] = list(suggestions)
+            return
+    raise ValueError(f"{item['id']} has no {name} parameter to describe a limit on")
+
+
+def apply_basic_limits() -> None:
+    """Writes what a free key may not do next to the parameter it concerns, so the form says so before a fetch."""
+
+    for item in ENDPOINTS:
+        id_ = item["id"]
+        if id_ in SYMBOL_LIMITED:
+            _note_param(item, "symbol", SYMBOL_NOTE, SYMBOL_SUGGESTIONS)
+        if id_ in US_SYMBOL_ONLY:
+            _note_param(item, "symbol", US_SYMBOL_NOTE)
+        if id_ in ROW_CAPS:
+            cap = ROW_CAPS[id_]
+            _note_param(item, "limit", f"A Basic key can ask for at most {cap} {'row' if cap == 1 else 'rows'} at a time.")
+        if id_ in RECENT_30:
+            _note_param(item, RECENT_30[id_], f"A Basic key can only use a {'start date' if RECENT_30[id_] == 'from' else 'date'} from the last 30 days.")
+        if id_ in RECENT_YEAR:
+            _note_param(item, RECENT_YEAR[id_], "A Basic key can only start up to a year (365 days) back.")
+        if id_ in SUBSET_ENDPOINTS:
+            item["description"] += " " + SUBSET_NOTE
+
+
+apply_basic_limits()
