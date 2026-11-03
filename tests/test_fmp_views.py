@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 import pytest
 
 from tradingview_data.providers.fmp_catalog import ENDPOINTS
-from tradingview_data.providers.fmp_views import build_views, clean, fact_of, rows_of
+from tradingview_data.providers.fmp_views import build_views, clean, fact_of, patch_table, rows_of, verbatim
 
 import fmp_support as fx
 
@@ -136,7 +136,7 @@ def test_revenue_segments_are_a_table_of_segments_by_period():
     views, _ = build("revenue_product_segmentation", fx.SEGMENTS)
     table = one(views, "table")
     assert [c["label"] for c in table["columns"]] == ["Item", "2025 FY", "2024 FY"]
-    assert sorted(table["rows"], key=lambda r: r[0]) == [["I Phone", 209586000000, 201183000000], ["Mac", 33708000000, 29984000000], ["Service", 109158000000, 96169000000]]
+    assert sorted(table["rows"], key=lambda r: r[0]) == [["Mac", 33708000000, 29984000000], ["Service", 109158000000, 96169000000], ["iPhone", 209586000000, 201183000000]]
     check_valid(views)
 
 
@@ -263,3 +263,58 @@ def test_garbage_never_raises_and_always_yields_valid_views(endpoint_id, payload
     views, notes = build(endpoint_id, payload)
     assert isinstance(views, list) and isinstance(notes, list)
     json.dumps(views, allow_nan=False)
+
+
+# --- what the frontend accepts, and values shown as sent ------------------------------------------------------------
+
+
+def cells(view):
+    return {c["key"]: [row[i] for row in view["rows"]] for i, c in enumerate(view["columns"])}
+
+
+def column(view, key):
+    return next(c for c in view["columns"] if c["key"] == key)
+
+
+def test_flags_in_a_table_are_yes_or_no_because_the_frontend_rejects_a_boolean_cell():
+    for endpoint_id, payload, key, expected in (("key_executives", fx.EXECUTIVES, "active", ["Yes", "No"]), ("sec_8k_latest", fx.FILINGS, "hasFinancials", ["Yes", "No"])):
+        views, _ = build(endpoint_id, payload)
+        table = one(views, "table")
+        assert cells(table)[key] == expected and column(table, key)["type"] == "text"
+        check_valid(views)
+
+
+def test_identifiers_keep_their_leading_zeros_and_codes_that_are_not_numbers_survive():
+    table = one(build("insider_latest", fx.INSIDER)[0], "table")
+    assert cells(table)["reportingCik"] == ["0001214156", "0001214155"] and cells(table)["companyCik"] == ["0000320193", "0000320193"]
+    assert cells(table)["formType"] == ["4", "3/A"] and cells(table)["transactionType"] == ["S-Sale", "P-Purchase"]
+    assert all(column(table, k)["type"] == "text" for k in ("reportingCik", "formType")) and column(table, "price")["type"] == "number"
+    assert cells(table)["securitiesTransacted"] == [1000, 10]
+
+
+def test_identifiers_in_facts_are_text_not_formatted_numbers():
+    items = facts(one(build("sec_profile", fx.SEC_PROFILE)[0], "facts"))
+    assert (items["sicCode"]["value"], items["sicCode"]["format"]) == ("3571", "text") and items["postalCode"]["value"] == "95014" and items["cik"]["value"] == "0000320193"
+    assert items["isEtf"]["value"] == "No" and items["employees"]["format"] == "integer"
+    profile = facts(one(build("profile", fx.PROFILE)[0], "facts"))
+    assert profile["cik"]["value"] == "0000320193" and profile["zip"]["value"] == "95014"
+
+
+def test_a_table_built_from_a_year_column_shows_it_without_a_thousands_separator():
+    table = one(build("financial_reports_dates", [{"symbol": "AAPL", "fiscalYear": "2025", "period": "FY", "linkJson": "https://x/a", "linkXlsx": "https://x/b"}, {"symbol": "AAPL", "fiscalYear": 2024, "period": "FY", "linkJson": "https://x/c", "linkXlsx": "https://x/d"}])[0], "table")
+    assert cells(table)["fiscalYear"] == ["2025", "2024"] and column(table, "fiscalYear")["type"] == "text"
+
+
+def test_verbatim_and_patch_table_edge_cases():
+    assert [verbatim(v) for v in (True, False, 2025, 2025.0, 1.5, "3/A", None, "", {"a": 1}, [1])] == ["Yes", "No", "2025", "2025", "1.5", "3/A", None, None, None, None]
+    assert patch_table(None, []) is None
+
+
+def test_no_table_cell_of_any_endpoint_is_a_boolean_nested_value_or_non_finite():
+    payloads = [fx.EXECUTIVES, fx.INSIDER, fx.FILINGS, fx.SEC_PROFILE, fx.PROFILE, [{"a": True, "b": {"c": 1}, "d": [1, 2], "date": "2026-01-01", "x": 1.5}, {"a": False, "b": None, "d": [], "date": "2026-01-02", "x": 2.5}]]
+    for endpoint_id in IDS:
+        for payload in payloads:
+            views, _ = build(endpoint_id, payload)
+            for view in views:
+                if view["kind"] == "table":
+                    assert all(isinstance(cell, (str, int, float, type(None))) and not isinstance(cell, bool) for row in view["rows"] for cell in row), endpoint_id

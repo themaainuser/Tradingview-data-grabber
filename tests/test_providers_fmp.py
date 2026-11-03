@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 import threading
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 import requests
@@ -386,3 +386,133 @@ def test_concurrent_identical_requests_make_one_upstream_call(keyed):
     for t in threads:
         t.join(5)
     assert len(results) == 4 and len(http.calls) == 1 and sorted(r["cached"] for r in results) == [False, True, True, True]
+
+
+# --- what a Basic (free) key may do ---------------------------------------------------------------------------------------
+
+
+from tradingview_data.providers import fmp_catalog as cat  # noqa: E402
+from tradingview_data.providers.fmp import explain  # noqa: E402
+
+
+def public_endpoints():
+    return {e["id"]: e for e in FinancialModelingPrep(http_get=FakeHttp()).catalog()["endpoints"]}
+
+
+def param_of(endpoint, name):
+    return next(p for p in endpoint["params"] if p["name"] == name)
+
+
+def test_every_limited_endpoint_exists_is_usable_on_basic_and_names_its_limit_beside_the_field():
+    endpoints = public_endpoints()
+    groups = {"symbol": (*cat.SYMBOL_LIMITED, *cat.US_SYMBOL_ONLY), "limit": tuple(cat.ROW_CAPS), **{name: tuple(i for i, n in {**cat.RECENT_30, **cat.RECENT_YEAR}.items() if n == name) for name in ("from", "date")}}
+    for field, ids in groups.items():
+        for id_ in ids:
+            assert id_ in endpoints and endpoints[id_]["premium"] is False and endpoints[id_]["plan"] == "Basic", id_
+            assert param_of(endpoints[id_], field)["premium_note"].startswith("A Basic key can"), (id_, field)
+    assert len(cat.SYMBOL_LIMITED) == 39 and len(cat.BASIC_SYMBOLS) == len(set(cat.BASIC_SYMBOLS)) == 87
+
+
+def test_the_symbol_note_lists_examples_and_the_form_suggests_symbols_the_plan_accepts():
+    endpoints = public_endpoints()
+    quote = param_of(endpoints["quote"], "symbol")
+    assert "87 stocks and ETFs" in quote["premium_note"] and "Any other symbol is refused" in quote["premium_note"]
+    assert quote["suggestions"] == list(cat.SYMBOL_SUGGESTIONS) and set(cat.SYMBOL_SUGGESTIONS) <= set(cat.BASIC_SYMBOLS)
+    assert {"AAPL", "MSFT", "SPY", "SHOP", "TSM"} <= set(cat.BASIC_SYMBOLS) and not {"ORCL", "PLUG", "GME", "QQQ", "BRK-B", "SAP.DE"} & set(cat.BASIC_SYMBOLS)
+    assert "US-traded" in param_of(endpoints["profile"], "symbol")["premium_note"] and param_of(endpoints["profile"], "symbol")["suggestions"] == []
+    assert param_of(endpoints["stock_peers"], "symbol")["premium_note"] is None and param_of(endpoints["sec_profile"], "symbol")["premium_note"] is None  # full access: any symbol
+
+
+def test_row_caps_are_written_with_their_number_and_no_example_asks_for_more():
+    endpoints = public_endpoints()
+    assert param_of(endpoints["income_statement"], "limit")["premium_note"] == "A Basic key can ask for at most 5 rows at a time."
+    assert "at most 1 row at a time" in param_of(endpoints["ratings_historical"], "limit")["premium_note"] and "at most 100 rows" in param_of(endpoints["insider_latest"], "limit")["premium_note"]
+    assert {cat.ROW_CAPS[i] for i in ("sec_by_symbol", "analyst_estimates")} == {20, 10}
+    for id_, cap in cat.ROW_CAPS.items():
+        for example in endpoints[id_]["examples"]:
+            assert int(example["params"].get("limit", 1)) <= cap, id_
+        assert param_of(endpoints[id_], "limit")["maximum"] is None  # a paid key may ask for more: the form must not refuse it
+
+
+@pytest.mark.parametrize("today", [date(2026, 11, 2) + timedelta(days=i) for i in range(10)])
+def test_no_example_starts_further_back_than_a_basic_key_may_look_on_any_day_of_the_week(today):
+    for id_, field in {**cat.RECENT_30, **cat.RECENT_YEAR}.items():
+        days = 30 if id_ in cat.RECENT_30 else 365
+        item = next(e for e in cat.ENDPOINTS if e["id"] == id_)
+        for example in cat.fill_dates(item["examples"], today):
+            if field in example["params"]:
+                assert (today - date.fromisoformat(example["params"][field])).days <= days, (id_, example["caption"])
+
+
+def test_calendars_and_the_symbol_list_say_they_return_only_part_of_the_market():
+    endpoints = public_endpoints()
+    for id_ in ("earnings_calendar", "dividends_calendar", "splits_calendar", "shares_float_all"):
+        assert endpoints[id_]["description"].endswith(cat.SUBSET_NOTE), id_
+    assert not endpoints["biggest_gainers"]["description"].endswith(cat.SUBSET_NOTE)
+
+
+def test_sec_form_type_is_limited_not_premium_because_it_works_with_a_recent_start():
+    assert "sec_by_form_type" not in cat.PAID_PLANS and "sec_by_form_type" in cat.RECENT_30
+    endpoint = public_endpoints()["sec_by_form_type"]
+    assert endpoint["premium"] is False and endpoint["examples"][0]["params"]["formType"] == "8-K"
+
+
+def test_the_provider_card_describes_the_three_limits_and_does_not_claim_us_listed_symbols():
+    text = " ".join([INFO.limits_note, *(p.summary for p in INFO.plans)])
+    assert "250 requests per day" in text and "500 MB" in text and "fixed list" in text and "30 days" in text and "5 statement periods" in text
+    assert "US-listed" not in text
+
+
+# --- refusals explained -------------------------------------------------------------------------------------------------------
+
+
+FROM_REFUSED = raw(402, "Premium Query Parameter: 'Special Endpoint : This value set for 'from' is not available under your current subscription please visit our subscription page")
+DATE_REFUSED = raw(402, "Premium Query Parameter: 'Special Endpoint : This value set for 'date' is not available under your current subscription please visit our subscription page")
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "params", "result", "plain"),
+    [
+        ("quote", {"symbol": "ORCL"}, fx.PREMIUM_PARAMETER, "fixed list of symbols on this endpoint"),
+        ("income_statement", {"symbol": "ORCL"}, fx.PREMIUM_PARAMETER, "fixed list of symbols on this endpoint"),
+        ("profile", {"symbol": "SAP.DE"}, fx.PREMIUM_PARAMETER, "only US-traded symbols on this endpoint, and this one is listed on another exchange"),
+        ("income_statement", {"symbol": "AAPL", "limit": "6"}, fx.LIMIT_BEYOND_PLAN, "Your plan allows at most 5 rows for 'limit' on this endpoint."),
+        ("insider_latest", {"limit": "100"}, raw(402, "Premium Query Parameter: 'Special Parameters : The values for 'limit' must be between 0 and 1 based on your current subscription."), "at most 1 row for 'limit'"),
+        ("earnings_calendar", {"from": "2026-01-01"}, FROM_REFUSED, "start date from the last 30 days on this endpoint"),
+        ("sec_by_symbol", {"symbol": "AAPL", "from": "2020-01-01", "to": "2020-02-01"}, FROM_REFUSED, "up to a year (365 days) back on this endpoint"),
+        ("sector_performance", {"date": "2026-01-02"}, DATE_REFUSED, "date from the last 30 days on this endpoint"),
+    ],
+)
+def test_a_refused_value_is_explained_for_the_endpoint_that_refused_it_and_keeps_fmps_own_message(keyed, endpoint, params, result, plain):
+    response = provider(result)[0].query(endpoint, params)
+    assert response["status"] == "premium_required" and plain in response["message"] and "(Original message: Premium Query Parameter" in response["message"]
+    assert len(response["message"]) < 400 and "please visit our subscription page" not in response["message"].lower()
+
+
+def test_a_profile_refusal_never_talks_about_a_fixed_symbol_list(keyed):
+    message = provider(fx.PREMIUM_PARAMETER)[0].query("profile", {"symbol": "RY.TO"})["message"]
+    assert "fixed list" not in message and "short list of well-known" not in message and "US-traded" in message
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "params", "result"),
+    [
+        ("stock_peers", {"symbol": "ORCL"}, fx.PREMIUM_PARAMETER),  # full access: not a documented cause, so no advice
+        ("exchange_quotes", {"exchange": "NASDAQ", "short": "true"}, raw(402, "Premium Query Parameter: 'Special Endpoint : This value set for 'short' is not available under your current subscription")),
+        ("quote", {"symbol": "AAPL"}, FROM_REFUSED),  # quote has no start date: a 'from' refusal here is unexplained
+        ("historical_eod", {"variant": "full", "symbol": "AAPL"}, DATE_REFUSED),
+        ("quote", {"symbol": "AAPL"}, raw(402, "Premium Query Parameter: 'Something else entirely.")),
+    ],
+)
+def test_when_the_cause_is_not_known_for_that_endpoint_the_message_is_fmps_alone(keyed, endpoint, params, result):
+    message = provider(result)[0].query(endpoint, params)["message"]
+    assert message.startswith("Premium Query Parameter") and "Original message" not in message and "Your plan" not in message
+
+
+def test_an_endpoint_refusal_and_other_errors_keep_fmps_message_untouched(keyed):
+    assert provider(fx.RESTRICTED)[0].query(*QUOTE_ARGS)["message"].startswith("Restricted Endpoint: This endpoint is not available")
+    assert explain("Query Error: Invalid or missing query parameter - symbol") == "Query Error: Invalid or missing query parameter - symbol"
+    assert explain("Premium Query Parameter: 'Special Endpoint : This value set for 'exchange' is not available", "quote") == "Premium Query Parameter: 'Special Endpoint : This value set for 'exchange' is not available"
+    assert explain("Invalid API KEY.", "quote") == "Invalid API KEY."
+    symbol = "Premium Query Parameter: 'Special Endpoint : This value set for 'symbol' is not available under your current subscription"
+    assert explain(symbol) == symbol and explain(symbol, "nope") == symbol  # no endpoint, or one we know nothing about
