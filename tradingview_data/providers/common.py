@@ -31,6 +31,7 @@ class HttpResult:
     status: int
     body: bytes
     content_type: str
+    location: str = ""  # the Location header of a redirect, which is never followed here
 
 
 # ``(url, query)``, plus an optional ``headers=`` keyword for providers that authenticate with headers.
@@ -48,7 +49,7 @@ def default_http_get(url: str, params: list[tuple[str, str]], headers: Optional[
             if size > MAX_BODY_BYTES:
                 raise ValueError("response too large")
             chunks.append(chunk)
-        return HttpResult(response.status_code, b"".join(chunks), response.headers.get("content-type", ""))
+        return HttpResult(response.status_code, b"".join(chunks), response.headers.get("content-type", ""), response.headers.get("location", ""))
 
 
 # ``(method, url, query, body, headers)``: one request of any method, for the trading routes. ``body`` is
