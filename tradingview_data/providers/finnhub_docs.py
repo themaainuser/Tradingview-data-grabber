@@ -88,7 +88,9 @@ EXAMPLE_DATES = {
 # Where the spec's ``required`` is wrong, from the parameter descriptions and live calls.
 OPTIONAL = {
     ("/stock/insider-transactions", "symbol"),  # "Leave this param blank to get the latest transactions."
-    ("/institutional/ownership", "cusip"),  # either symbol or CUSIP
+    ("/stock/transcripts/list", "symbol"),  # "Leave empty to list the latest transcripts"
+    ("/institutional/ownership", "symbol"),  # filtered by symbol or by CUSIP, so neither is required on its own
+    ("/institutional/ownership", "cusip"),
 }
 
 _RESOLUTIONS = ("1", "5", "15", "30", "60", "D", "W", "M")

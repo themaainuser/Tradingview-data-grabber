@@ -128,6 +128,19 @@ def test_identifiers_keep_their_leading_zeros():
     assert column(table, "worksitePostalCode")[1] == ["02134"] and column(table, "year")[1] == ["2026"]
 
 
+def test_identifiers_stay_in_the_table_but_are_never_charted():
+    rows = [
+        {"symbol": "LMT", "actionDate": "2026-09-30", "totalValue": 306376860, "performanceZipCode": "801258504", "naicsCode": "336414"},
+        {"symbol": "LMT", "actionDate": "2026-08-31", "totalValue": 1200000, "performanceZipCode": "200011234", "naicsCode": "541715"},
+    ]
+    built, _ = views("stock_usa_spending", {"data": rows, "symbol": "LMT"}, "USA Spending")
+    chart = next(v for v in built.values() if v["kind"] == "series")
+    assert [s["key"] for s in chart["series"]] == ["totalValue"]
+    table = next(v for v in built.values() if v["kind"] == "table")
+    assert column(table, "naicsCode") == ({"key": "naicsCode", "label": "Naics Code", "type": "text"}, ["336414", "541715"])
+    assert column(table, "performanceZipCode")[1] == ["801258504", "200011234"]
+
+
 def test_the_earnings_calendar_spells_out_when_and_warns_at_finnhubs_row_cap():
     built, notes = views("earnings_calendar", fx.EARNINGS_CALENDAR)
     assert column(built["calendar"], "hour")[1] == ["Before market open", "After market close"] and notes == []
