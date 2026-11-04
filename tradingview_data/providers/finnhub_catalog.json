@@ -1,0 +1,7782 @@
+{
+ "provider": "finnhub",
+ "source": "https://finnhub.io/docs/api/",
+ "spec": "https://finnhub.io/static/swagger.json",
+ "plans": [
+  "Free",
+  "All-in-One"
+ ],
+ "categories": [
+  {
+   "id": "stock-fundamentals",
+   "title": "Stock Fundamentals",
+   "summary": "Symbol search and lists, market status, company profiles, news, peers, basic financials, ownership, insider trades, statements and SEC filings."
+  },
+  {
+   "id": "stock-estimates",
+   "title": "Stock Estimates",
+   "summary": "Analyst recommendation trends, price targets, upgrades and downgrades, estimates, EPS surprises and the earnings calendar."
+  },
+  {
+   "id": "stock-price",
+   "title": "Stock Price",
+   "summary": "Real-time quotes, candles, tick data, bid and ask, splits and dividends."
+  },
+  {
+   "id": "etfs-indices",
+   "title": "ETFs & Indices",
+   "summary": "Index constituents and ETF profiles, holdings and exposures."
+  },
+  {
+   "id": "mutual-funds",
+   "title": "Mutual Funds",
+   "summary": "Mutual fund profiles, holdings, exposures and EU ESG templates."
+  },
+  {
+   "id": "bonds",
+   "title": "Bonds",
+   "summary": "Bond profiles, prices, TRACE ticks and yield curves."
+  },
+  {
+   "id": "forex",
+   "title": "Forex",
+   "summary": "Forex exchanges, symbols, candles and rates."
+  },
+  {
+   "id": "crypto",
+   "title": "Crypto",
+   "summary": "Crypto exchanges, symbols, profiles and candles."
+  },
+  {
+   "id": "technical-analysis",
+   "title": "Technical Analysis",
+   "summary": "Pattern recognition, support and resistance levels, aggregate signals and technical indicators."
+  },
+  {
+   "id": "alternative-data",
+   "title": "Alternative Data",
+   "summary": "Transcripts, social sentiment, supply chain, ESG, patents, H-1B visas, lobbying, government spending, congressional trades and more."
+  },
+  {
+   "id": "enterprise-data",
+   "title": "Enterprise data",
+   "summary": "Revenue breakdowns with KPIs and company newsrooms, sold separately from Finnhub's plans."
+  },
+  {
+   "id": "global-filings-search",
+   "title": "Global Filings Search",
+   "summary": "Filings from around the world: international filings, search filters and document downloads."
+  },
+  {
+   "id": "economic",
+   "title": "Economic",
+   "summary": "Country metadata, the economic calendar and economic time series."
+  }
+ ],
+ "endpoints": [
+  {
+   "id": "symbol_search",
+   "path": "/search",
+   "title": "Symbol Lookup",
+   "category": "stock-fundamentals",
+   "description": "Search for best-matching symbols based on your query. You can input anything from symbol, security's name to ISIN and Cusip.",
+   "doc_url": "https://finnhub.io/docs/api/symbol-search",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": true,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "q",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Query text can be symbol, name, isin, or cusip.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "apple",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "exchange",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Exchange limit.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "US",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: q=apple, exchange=US",
+     "params": {
+      "q": "apple",
+      "exchange": "US"
+     }
+    },
+    {
+     "caption": "Finnhub's example: q=US5949181045",
+     "params": {
+      "q": "US5949181045"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_symbols",
+   "path": "/stock/symbol",
+   "title": "Stock Symbol",
+   "category": "stock-fundamentals",
+   "description": "List supported stocks. We use the following symbology to identify stocks on Finnhub Exchange_Ticker.Exchange_Code. A list of supported exchange codes can be found here.",
+   "doc_url": "https://finnhub.io/docs/api/stock-symbols",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": true,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "exchange",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Exchange you want to get the list of symbols from. List of exchange codes can be found here.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [
+      "US"
+     ],
+     "default": null,
+     "example": "US",
+     "multiple": false,
+     "premium_note": "Free plan: US only (other exchanges are refused).",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "mic",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filter by MIC code.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "securityType",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filter by security type used by OpenFigi standard.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "currency",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filter by currency.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: exchange=US",
+     "params": {
+      "exchange": "US"
+     }
+    },
+    {
+     "caption": "Finnhub's example: exchange=US, mic=XNYS",
+     "params": {
+      "exchange": "US",
+      "mic": "XNYS"
+     }
+    }
+   ]
+  },
+  {
+   "id": "market_status",
+   "path": "/stock/market-status",
+   "title": "Market Status",
+   "category": "stock-fundamentals",
+   "description": "Get current market status for global exchanges (whether exchanges are open or close).",
+   "doc_url": "https://finnhub.io/docs/api/market-status",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": true,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "exchange",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Exchange code.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [
+      "US"
+     ],
+     "default": null,
+     "example": "US",
+     "multiple": false,
+     "premium_note": "Free plan: US only.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: exchange=US",
+     "params": {
+      "exchange": "US"
+     }
+    },
+    {
+     "caption": "Finnhub's example: exchange=L",
+     "params": {
+      "exchange": "L"
+     }
+    }
+   ]
+  },
+  {
+   "id": "market_holiday",
+   "path": "/stock/market-holiday",
+   "title": "Market Holiday",
+   "category": "stock-fundamentals",
+   "description": "Get a list of holidays for global exchanges.",
+   "doc_url": "https://finnhub.io/docs/api/market-holiday",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": true,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "exchange",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Exchange code.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [
+      "US"
+     ],
+     "default": null,
+     "example": "US",
+     "multiple": false,
+     "premium_note": "Free plan: US only.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: exchange=US",
+     "params": {
+      "exchange": "US"
+     }
+    },
+    {
+     "caption": "Finnhub's example: exchange=L",
+     "params": {
+      "exchange": "L"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_profile",
+   "path": "/stock/profile",
+   "title": "Company Profile",
+   "category": "stock-fundamentals",
+   "description": "Get general information of a company. You can query by symbol, ISIN or CUSIP",
+   "doc_url": "https://finnhub.io/docs/api/company-profile",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Symbol of the company: AAPL e.g.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "isin",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "ISIN",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "cusip",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "CUSIP",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=IBM",
+     "params": {
+      "symbol": "IBM"
+     }
+    },
+    {
+     "caption": "Finnhub's example: isin=US5949181045",
+     "params": {
+      "isin": "US5949181045"
+     }
+    },
+    {
+     "caption": "Finnhub's example: cusip=023135106",
+     "params": {
+      "cusip": "023135106"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_profile2",
+   "path": "/stock/profile2",
+   "title": "Company Profile 2",
+   "category": "stock-fundamentals",
+   "description": "Get general information of a company. You can query by symbol, ISIN or CUSIP. This is the free version of Company Profile.",
+   "doc_url": "https://finnhub.io/docs/api/company-profile2",
+   "plan": "Free",
+   "premium": false,
+   "trending": true,
+   "utility": false,
+   "premium_notes": [
+    "Free plan: US-listed symbols only; a symbol listed elsewhere (RY.TO, SAP.DE, VOD.L) is refused."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Symbol of the company: AAPL e.g.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "isin",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "ISIN",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "cusip",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "CUSIP",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: isin=US5949181045",
+     "params": {
+      "isin": "US5949181045"
+     }
+    },
+    {
+     "caption": "Finnhub's example: cusip=023135106",
+     "params": {
+      "cusip": "023135106"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_executive",
+   "path": "/stock/executive",
+   "title": "Company Executive",
+   "category": "stock-fundamentals",
+   "description": "Get a list of company's executives and members of the Board.",
+   "doc_url": "https://finnhub.io/docs/api/company-executive",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=AMZN",
+     "params": {
+      "symbol": "AMZN"
+     }
+    }
+   ]
+  },
+  {
+   "id": "market_news",
+   "path": "/news",
+   "title": "Market News",
+   "category": "stock-fundamentals",
+   "description": "Get latest market news.",
+   "doc_url": "https://finnhub.io/docs/api/market-news",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "category",
+     "in": "query",
+     "required": true,
+     "type": "enum",
+     "description": "This parameter can be 1 of the following values general, forex, crypto, merger.",
+     "enum": [
+      "general",
+      "forex",
+      "crypto",
+      "merger"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "general",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "minId",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Use this field to get only news after this ID. Default to 0",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: category=general",
+     "params": {
+      "category": "general"
+     }
+    },
+    {
+     "caption": "Finnhub's example: category=forex, minId=10",
+     "params": {
+      "category": "forex",
+      "minId": "10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_news",
+   "path": "/company-news",
+   "title": "Company News",
+   "category": "stock-fundamentals",
+   "description": "List latest company news by symbol. This endpoint is only available for North American companies.",
+   "doc_url": "https://finnhub.io/docs/api/company-news",
+   "plan": "Free",
+   "premium": false,
+   "trending": true,
+   "utility": false,
+   "premium_notes": [
+    "Free plan: 1 year of historical news and new updates.",
+    "Free plan: US-listed symbols only; a symbol listed elsewhere (RY.TO, SAP.DE, VOD.L) is refused."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Company symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "From date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "@week_ago",
+     "multiple": false,
+     "premium_note": "Free plan: about a year back. Finnhub returns at most about 250 articles per request, newest first, so a long range shows only its last days.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "To date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "@day",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL, from=@week_ago, to=@day",
+     "params": {
+      "symbol": "AAPL",
+      "from": "@week_ago",
+      "to": "@day"
+     }
+    }
+   ]
+  },
+  {
+   "id": "press_releases",
+   "path": "/press-releases",
+   "title": "Major Press Releases",
+   "category": "stock-fundamentals",
+   "description": "Get latest major press releases of a company. This data can be used to highlight the most significant events comprised of mostly press releases sourced from the exchanges, BusinessWire, AccessWire, GlobeNewswire, Newsfile, and PRNewswire. Full-text press releases data is available for Enterprise clients. Contact Us to learn more.",
+   "doc_url": "https://finnhub.io/docs/api/press-releases",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Company symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "From time: 2020-01-01.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "To time: 2020-01-05.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=IBM, from=2019-11-01, to=2020-02-15",
+     "params": {
+      "symbol": "IBM",
+      "from": "2019-11-01",
+      "to": "2020-02-15"
+     }
+    }
+   ]
+  },
+  {
+   "id": "news_sentiment",
+   "path": "/news-sentiment",
+   "title": "News Sentiment",
+   "category": "stock-fundamentals",
+   "description": "Get company's news sentiment and statistics. This endpoint is only available for US companies.",
+   "doc_url": "https://finnhub.io/docs/api/news-sentiment",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Company symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "V",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=V",
+     "params": {
+      "symbol": "V"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_peers",
+   "path": "/stock/peers",
+   "title": "Peers",
+   "category": "stock-fundamentals",
+   "description": "Get company peers. Return a list of peers operating in the same country and sector/industry.",
+   "doc_url": "https://finnhub.io/docs/api/company-peers",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Free plan: US-listed symbols only; a symbol listed elsewhere (RY.TO, SAP.DE, VOD.L) is refused."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "grouping",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Specify the grouping criteria for choosing peers.Supporter values: sector, industry, subIndustry. Default to subIndustry.",
+     "enum": [
+      "sector",
+      "industry",
+      "subIndustry"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=F, grouping=industry",
+     "params": {
+      "symbol": "F",
+      "grouping": "industry"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_basic_financials",
+   "path": "/stock/metric",
+   "title": "Basic Financials",
+   "category": "stock-fundamentals",
+   "description": "Get company basic financials such as margin, P/E ratio, 52-week high/low etc.",
+   "doc_url": "https://finnhub.io/docs/api/company-basic-financials",
+   "plan": "Free",
+   "premium": false,
+   "trending": true,
+   "utility": false,
+   "premium_notes": [
+    "Free plan: US-listed symbols only; a symbol listed elsewhere (RY.TO, SAP.DE, VOD.L) is refused."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "metric",
+     "in": "query",
+     "required": true,
+     "type": "enum",
+     "description": "Metric type. Can be 1 of the following values all",
+     "enum": [
+      "all"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "all",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL, metric=all",
+     "params": {
+      "symbol": "AAPL",
+      "metric": "all"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ownership",
+   "path": "/stock/ownership",
+   "title": "Ownership",
+   "category": "stock-fundamentals",
+   "description": "Get a full list of shareholders of a company in descending order of the number of shares held. Data is sourced from 13F form, Schedule 13D and 13G for US market, UK Share Register for UK market, SEDI for Canadian market and equivalent filings for other international markets.",
+   "doc_url": "https://finnhub.io/docs/api/ownership",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Limit number of results. Leave empty to get the full list.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "20",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL, limit=20",
+     "params": {
+      "symbol": "AAPL",
+      "limit": "20"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=IBM",
+     "params": {
+      "symbol": "IBM"
+     }
+    }
+   ]
+  },
+  {
+   "id": "fund_ownership",
+   "path": "/stock/fund-ownership",
+   "title": "Fund Ownership",
+   "category": "stock-fundamentals",
+   "description": "Get a full list fund and institutional investors of a company in descending order of the number of shares held. Data is sourced from 13F form, Schedule 13D and 13G for US market, UK Share Register for UK market, SEDI for Canadian market and equivalent filings for other international markets.",
+   "doc_url": "https://finnhub.io/docs/api/fund-ownership",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "TSLA",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Limit number of results. Leave empty to get the full list.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "20",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=TSLA, limit=20",
+     "params": {
+      "symbol": "TSLA",
+      "limit": "20"
+     }
+    }
+   ]
+  },
+  {
+   "id": "institutional_profile",
+   "path": "/institutional/profile",
+   "title": "Institutional Profile",
+   "category": "stock-fundamentals",
+   "description": "Get a list of well-known institutional investors. Currently support 60+ profiles.",
+   "doc_url": "https://finnhub.io/docs/api/institutional-profile",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "cik",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filter by CIK. Leave blank to get the full list.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "No parameters",
+     "params": {}
+    }
+   ]
+  },
+  {
+   "id": "institutional_portfolio",
+   "path": "/institutional/portfolio",
+   "title": "Institutional Portfolio",
+   "category": "stock-fundamentals",
+   "description": "Get the holdings/portfolio data of institutional investors from 13-F filings. Limit to 1 year of data at a time. You can get a list of supported CIK here.",
+   "doc_url": "https://finnhub.io/docs/api/institutional-portfolio-13f",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "cik",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Fund's CIK.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "1000097",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "From date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2022-05-01",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "To date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2022-09-01",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: cik=1000097, from=2022-05-01, to=2022-09-01",
+     "params": {
+      "cik": "1000097",
+      "from": "2022-05-01",
+      "to": "2022-09-01"
+     }
+    }
+   ]
+  },
+  {
+   "id": "institutional_ownership",
+   "path": "/institutional/ownership",
+   "title": "Institutional Ownership",
+   "category": "stock-fundamentals",
+   "description": "Get a list institutional investors' positions for a particular stock overtime. Data from 13-F filings. Limit to 1 year of data at a time.",
+   "doc_url": "https://finnhub.io/docs/api/institutional-ownership",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Filter by symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "TSLA",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "cusip",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filter by CUSIP.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "From date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2022-09-01",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "To date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2022-10-30",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=TSLA, from=2022-09-01, to=2022-10-30",
+     "params": {
+      "symbol": "TSLA",
+      "from": "2022-09-01",
+      "to": "2022-10-30"
+     }
+    }
+   ]
+  },
+  {
+   "id": "insider_transactions",
+   "path": "/stock/insider-transactions",
+   "title": "Insider Transactions",
+   "category": "stock-fundamentals",
+   "description": "Company insider transactions data sourced from Form 3,4,5, SEDI and relevant companies' filings. This endpoint covers US, UK, Canada, Australia, India, and all major EU markets. Limit to 100 transactions per API call.",
+   "doc_url": "https://finnhub.io/docs/api/insider-transactions",
+   "plan": "Free",
+   "premium": false,
+   "trending": true,
+   "utility": false,
+   "premium_notes": [
+    "Free plan: US-listed symbols only; a symbol listed elsewhere (RY.TO, SAP.DE, VOD.L) is refused."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Symbol of the company: AAPL. Leave this param blank to get the latest transactions.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "TSLA",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "From date: 2020-03-15.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "To date: 2020-03-16.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=TSLA",
+     "params": {
+      "symbol": "TSLA"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=AC.TO",
+     "params": {
+      "symbol": "AC.TO"
+     }
+    }
+   ]
+  },
+  {
+   "id": "insider_sentiment",
+   "path": "/stock/insider-sentiment",
+   "title": "Insider Sentiment",
+   "category": "stock-fundamentals",
+   "description": "Get insider sentiment data for US companies calculated using method discussed here. The MSPR ranges from -100 for the most negative to 100 for the most positive which can signal price changes in the coming 30-90 days.",
+   "doc_url": "https://finnhub.io/docs/api/insider-sentiment",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Free plan: US-listed symbols only; a symbol listed elsewhere (RY.TO, SAP.DE, VOD.L) is refused."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "TSLA",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "From date: 2020-03-15.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2015-01-01",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "To date: 2020-03-16.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2022-03-01",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=TSLA, from=2015-01-01, to=2022-03-01",
+     "params": {
+      "symbol": "TSLA",
+      "from": "2015-01-01",
+      "to": "2022-03-01"
+     }
+    }
+   ]
+  },
+  {
+   "id": "financials",
+   "path": "/stock/financials",
+   "title": "Financial Statements",
+   "category": "stock-fundamentals",
+   "description": "Get standardized balance sheet, income statement and cash flow for global companies going back 30+ years. Data is sourced from original filings most of which made available through SEC Filings and International Filings endpoints. Set preliminary param to true for faster updates for US companies. Wondering why our standardized data is different from Bloomberg, Reuters, Factset, S&P or Yahoo Finance ? Check out our FAQ page to learn more",
+   "doc_url": "https://finnhub.io/docs/api/financials",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "statement",
+     "in": "query",
+     "required": true,
+     "type": "enum",
+     "description": "Statement can take 1 of these values bs, ic, cf for Balance Sheet, Income Statement, Cash Flow respectively.",
+     "enum": [
+      "bs",
+      "ic",
+      "cf"
+     ],
+     "enum_labels": {
+      "bs": "Balance sheet",
+      "ic": "Income statement",
+      "cf": "Cash flow"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": "bs",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "freq",
+     "in": "query",
+     "required": true,
+     "type": "enum",
+     "description": "Frequency can take 1 of these values annual, quarterly, ttm, ytd. TTM (Trailing Twelve Months) option is available for Income Statement and Cash Flow. YTD (Year To Date) option is only available for Cash Flow.",
+     "enum": [
+      "annual",
+      "quarterly",
+      "ttm",
+      "ytd"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "annual",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "preliminary",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "If set to true, it will return Preliminary financial statements for the latest period which are usually available within an hour of the earnings announcement if finalized data is not available yet. This preliminary data is currently available for US companies. You will see \"preliminary\": true in the data if that period is using preliminary data.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL, statement=bs, freq=annual",
+     "params": {
+      "symbol": "AAPL",
+      "statement": "bs",
+      "freq": "annual"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=AC.TO, statement=ic, freq=quarterly",
+     "params": {
+      "symbol": "AC.TO",
+      "statement": "ic",
+      "freq": "quarterly"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=NVDA, statement=ic, freq=quarterly, preliminary=true",
+     "params": {
+      "symbol": "NVDA",
+      "statement": "ic",
+      "freq": "quarterly",
+      "preliminary": "true"
+     }
+    }
+   ]
+  },
+  {
+   "id": "financials_reported",
+   "path": "/stock/financials-reported",
+   "title": "Financials As Reported",
+   "category": "stock-fundamentals",
+   "description": "Get financials as reported. This data is available for bulk download on Kaggle SEC Financials database.",
+   "doc_url": "https://finnhub.io/docs/api/financials-reported",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Free plan: US-listed symbols only; a symbol listed elsewhere (RY.TO, SAP.DE, VOD.L) is refused."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "cik",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "CIK.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "accessNumber",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Access number of a specific report you want to retrieve financials from.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "freq",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Frequency. Can be either annual or quarterly. Default to annual.",
+     "enum": [
+      "annual",
+      "quarterly"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "From date YYYY-MM-DD. Filter for endDate.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "To date YYYY-MM-DD. Filter for endDate.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: cik=320193, freq=quarterly",
+     "params": {
+      "cik": "320193",
+      "freq": "quarterly"
+     }
+    },
+    {
+     "caption": "Finnhub's example: accessNumber=0000320193-20-000052",
+     "params": {
+      "accessNumber": "0000320193-20-000052"
+     }
+    }
+   ]
+  },
+  {
+   "id": "revenue_breakdown",
+   "path": "/stock/revenue-breakdown",
+   "title": "Revenue Breakdown",
+   "category": "stock-fundamentals",
+   "description": "Get revenue breakdown as-reporetd by product and geography. Users on personal plans can access data for US companies which disclose their revenue breakdown in the annual or quarterly reports. Global standardized revenue breakdown/segments data is available for Enterprise users. Contact us to inquire about the access for Global standardized data.",
+   "doc_url": "https://finnhub.io/docs/api/revenue-breakdown",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "cik",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "CIK.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: cik=320193",
+     "params": {
+      "cik": "320193"
+     }
+    }
+   ]
+  },
+  {
+   "id": "filings",
+   "path": "/stock/filings",
+   "title": "SEC Filings",
+   "category": "stock-fundamentals",
+   "description": "List company's filing. Limit to 250 documents at a time. This data is available for bulk download on Kaggle SEC Filings database.",
+   "doc_url": "https://finnhub.io/docs/api/filings",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Free plan: US-listed symbols only; a symbol listed elsewhere (RY.TO, SAP.DE, VOD.L) is refused."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Symbol. Leave symbol, cik and accessNumber empty to list latest filings.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "cik",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "CIK.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "accessNumber",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Access number of a specific report you want to retrieve data from.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "form",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filter by form. You can use this value NT 10-K to find non-timely filings for a company.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "From date: 2023-03-15.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "To date: 2023-03-16.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: cik=320193",
+     "params": {
+      "cik": "320193"
+     }
+    },
+    {
+     "caption": "Finnhub's example: accessNumber=0000320193-20-000052",
+     "params": {
+      "accessNumber": "0000320193-20-000052"
+     }
+    }
+   ]
+  },
+  {
+   "id": "filings_sentiment",
+   "path": "/stock/filings-sentiment",
+   "title": "SEC Sentiment Analysis",
+   "category": "stock-fundamentals",
+   "description": "Get sentiment analysis of 10-K and 10-Q filings from SEC. An abnormal increase in the number of positive/negative words in filings can signal a significant change in the company's stock price in the upcoming 4 quarters. We make use of Loughran and McDonald Sentiment Word Lists to calculate the sentiment for each filing.",
+   "doc_url": "https://finnhub.io/docs/api/filings-sentiment",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "accessNumber",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Access number of a specific report you want to retrieve data from.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "0000320193-20-000052",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: accessNumber=0000320193-20-000052",
+     "params": {
+      "accessNumber": "0000320193-20-000052"
+     }
+    }
+   ]
+  },
+  {
+   "id": "similarity_index",
+   "path": "/stock/similarity-index",
+   "title": "Similarity Index",
+   "category": "stock-fundamentals",
+   "description": "Calculate the textual difference between a company's 10-K / 10-Q reports and the same type of report in the previous year using Cosine Similarity. For example, this endpoint compares 2019's 10-K with 2018's 10-K. Companies breaking from its routines in disclosure of financial condition and risk analysis section can signal a significant change in the company's stock price in the upcoming 4 quarters.",
+   "doc_url": "https://finnhub.io/docs/api/similarity-index",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Symbol. Required if cik is empty",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "cik",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "CIK. Required if symbol is empty",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "freq",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "annual or quarterly. Default to annual",
+     "enum": [
+      "annual",
+      "quarterly"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "annual",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL, freq=annual",
+     "params": {
+      "symbol": "AAPL",
+      "freq": "annual"
+     }
+    },
+    {
+     "caption": "Finnhub's example: cik=320193, freq=quarterly",
+     "params": {
+      "cik": "320193",
+      "freq": "quarterly"
+     }
+    }
+   ]
+  },
+  {
+   "id": "ipo_calendar",
+   "path": "/calendar/ipo",
+   "title": "IPO Calendar",
+   "category": "stock-fundamentals",
+   "description": "Get recent and upcoming IPO.",
+   "doc_url": "https://finnhub.io/docs/api/ipo-calendar",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "From date: 2020-03-15.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2020-01-01",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "To date: 2020-03-16.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2020-04-30",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: from=2020-01-01, to=2020-04-30",
+     "params": {
+      "from": "2020-01-01",
+      "to": "2020-04-30"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_dividends",
+   "path": "/stock/dividend",
+   "title": "Dividends",
+   "category": "stock-fundamentals",
+   "description": "Get dividends data for common stocks going back 30 years.",
+   "doc_url": "https://finnhub.io/docs/api/stock-dividends",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2022-02-01",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2023-02-01",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL, from=2022-02-01, to=2023-02-01",
+     "params": {
+      "symbol": "AAPL",
+      "from": "2022-02-01",
+      "to": "2023-02-01"
+     }
+    }
+   ]
+  },
+  {
+   "id": "sector_metric",
+   "path": "/sector/metrics",
+   "title": "Sector Metrics",
+   "category": "stock-fundamentals",
+   "description": "Get ratios for different sectors and regions/indices.",
+   "doc_url": "https://finnhub.io/docs/api/sector-metrics",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "region",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Region. A list of supported values for this field can be found here.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "NA",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: region=NA",
+     "params": {
+      "region": "NA"
+     }
+    }
+   ]
+  },
+  {
+   "id": "price_metrics",
+   "path": "/stock/price-metric",
+   "title": "Price Metrics",
+   "category": "stock-fundamentals",
+   "description": "Get company price performance statistics such as 52-week high/low, YTD return and much more.",
+   "doc_url": "https://finnhub.io/docs/api/price-metrics",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "symbol_change",
+   "path": "/ca/symbol-change",
+   "title": "Symbol Change",
+   "category": "stock-fundamentals",
+   "description": "Get a list of symbol changes for US-listed, EU-listed, NSE and ASX securities. Limit to 2000 events at a time.",
+   "doc_url": "https://finnhub.io/docs/api/symbol-change",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "From date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2022-09-01",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "To date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2022-10-30",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: from=2022-09-01, to=2022-10-30",
+     "params": {
+      "from": "2022-09-01",
+      "to": "2022-10-30"
+     }
+    }
+   ]
+  },
+  {
+   "id": "isin_change",
+   "path": "/ca/isin-change",
+   "title": "ISIN Change",
+   "category": "stock-fundamentals",
+   "description": "Get a list of ISIN changes for EU-listed securities. Limit to 2000 events at a time.",
+   "doc_url": "https://finnhub.io/docs/api/isin-change",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "From date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2022-09-01",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "To date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2022-10-30",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: from=2022-09-01, to=2022-10-30",
+     "params": {
+      "from": "2022-09-01",
+      "to": "2022-10-30"
+     }
+    }
+   ]
+  },
+  {
+   "id": "historical_market_cap",
+   "path": "/stock/historical-market-cap",
+   "title": "Historical Market Cap",
+   "category": "stock-fundamentals",
+   "description": "Get historical market cap data for global companies.",
+   "doc_url": "https://finnhub.io/docs/api/historical-market-cap",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Accessible with Fundamental 2 or All in One subscription."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Company symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "From date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2022-01-01",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "To date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2024-05-06",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL, from=2022-01-01, to=2024-05-06",
+     "params": {
+      "symbol": "AAPL",
+      "from": "2022-01-01",
+      "to": "2024-05-06"
+     }
+    }
+   ]
+  },
+  {
+   "id": "historical_employee_count",
+   "path": "/stock/historical-employee-count",
+   "title": "Historical Employee Count",
+   "category": "stock-fundamentals",
+   "description": "Get historical employee count for global companies.",
+   "doc_url": "https://finnhub.io/docs/api/historical-employee-count",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Accessible with Fundamental 2 or All in One subscription."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Company symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "From date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2022-01-01",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "To date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2024-05-06",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL, from=2022-01-01, to=2024-05-06",
+     "params": {
+      "symbol": "AAPL",
+      "from": "2022-01-01",
+      "to": "2024-05-06"
+     }
+    }
+   ]
+  },
+  {
+   "id": "recommendation_trends",
+   "path": "/stock/recommendation",
+   "title": "Recommendation Trends",
+   "category": "stock-estimates",
+   "description": "Get latest analyst recommendation trends for a company.",
+   "doc_url": "https://finnhub.io/docs/api/recommendation-trends",
+   "plan": "Free",
+   "premium": false,
+   "trending": true,
+   "utility": false,
+   "premium_notes": [
+    "Free plan: US-listed symbols only; a symbol listed elsewhere (RY.TO, SAP.DE, VOD.L) is refused."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=TSLA",
+     "params": {
+      "symbol": "TSLA"
+     }
+    }
+   ]
+  },
+  {
+   "id": "price_target",
+   "path": "/stock/price-target",
+   "title": "Price Target",
+   "category": "stock-estimates",
+   "description": "Get latest price target consensus.",
+   "doc_url": "https://finnhub.io/docs/api/price-target",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "NFLX",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=NFLX",
+     "params": {
+      "symbol": "NFLX"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=DIS",
+     "params": {
+      "symbol": "DIS"
+     }
+    }
+   ]
+  },
+  {
+   "id": "upgrade_downgrade",
+   "path": "/stock/upgrade-downgrade",
+   "title": "Stock Upgrade/Downgrade",
+   "category": "stock-estimates",
+   "description": "Get latest stock upgrade and downgrade.",
+   "doc_url": "https://finnhub.io/docs/api/upgrade-downgrade",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Symbol of the company: AAPL. If left blank, the API will return latest stock upgrades/downgrades.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "From date: 2000-03-15.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "To date: 2020-03-16.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=BYND",
+     "params": {
+      "symbol": "BYND"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_revenue_estimates",
+   "path": "/stock/revenue-estimate",
+   "title": "Revenue Estimates",
+   "category": "stock-estimates",
+   "description": "Get company's revenue estimates.",
+   "doc_url": "https://finnhub.io/docs/api/company-revenue-estimates",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "freq",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Can take 1 of the following values: annual, quarterly. Default to quarterly",
+     "enum": [
+      "annual",
+      "quarterly"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=TSLA, freq=annual",
+     "params": {
+      "symbol": "TSLA",
+      "freq": "annual"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_eps_estimates",
+   "path": "/stock/eps-estimate",
+   "title": "Earnings Estimates",
+   "category": "stock-estimates",
+   "description": "Get company's EPS estimates.",
+   "doc_url": "https://finnhub.io/docs/api/company-eps-estimates",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "freq",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Can take 1 of the following values: annual, quarterly. Default to quarterly",
+     "enum": [
+      "annual",
+      "quarterly"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=AMZN, freq=annual",
+     "params": {
+      "symbol": "AMZN",
+      "freq": "annual"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_ebitda_estimates",
+   "path": "/stock/ebitda-estimate",
+   "title": "EBITDA Estimates",
+   "category": "stock-estimates",
+   "description": "Get company's ebitda estimates.",
+   "doc_url": "https://finnhub.io/docs/api/company-ebitda-estimates",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "freq",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Can take 1 of the following values: annual, quarterly. Default to quarterly",
+     "enum": [
+      "annual",
+      "quarterly"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=TSLA, freq=annual",
+     "params": {
+      "symbol": "TSLA",
+      "freq": "annual"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_ebit_estimates",
+   "path": "/stock/ebit-estimate",
+   "title": "EBIT Estimates",
+   "category": "stock-estimates",
+   "description": "Get company's ebit estimates.",
+   "doc_url": "https://finnhub.io/docs/api/company-ebit-estimates",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "freq",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Can take 1 of the following values: annual, quarterly. Default to quarterly",
+     "enum": [
+      "annual",
+      "quarterly"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=TSLA, freq=annual",
+     "params": {
+      "symbol": "TSLA",
+      "freq": "annual"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_net_income_estimates",
+   "path": "/stock/net-income-estimate",
+   "title": "Net Income Estimates",
+   "category": "stock-estimates",
+   "description": "Get company's net income estimates.",
+   "doc_url": "https://finnhub.io/docs/api/company-net-income-estimates",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "freq",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Can take 1 of the following values: annual, quarterly. Default to quarterly",
+     "enum": [
+      "annual",
+      "quarterly"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=TSLA, freq=annual",
+     "params": {
+      "symbol": "TSLA",
+      "freq": "annual"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_pretax_income_estimates",
+   "path": "/stock/pretax-income-estimate",
+   "title": "Pretax Income Estimates",
+   "category": "stock-estimates",
+   "description": "Get company's pretax income estimates.",
+   "doc_url": "https://finnhub.io/docs/api/company-pretax-income-estimates",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "freq",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Can take 1 of the following values: annual, quarterly. Default to quarterly",
+     "enum": [
+      "annual",
+      "quarterly"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=TSLA, freq=annual",
+     "params": {
+      "symbol": "TSLA",
+      "freq": "annual"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_gross_income_estimates",
+   "path": "/stock/gross-income-estimate",
+   "title": "Gross Income Estimates",
+   "category": "stock-estimates",
+   "description": "Get company's gross income estimates.",
+   "doc_url": "https://finnhub.io/docs/api/company-gross-income-estimates",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "freq",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Can take 1 of the following values: annual, quarterly. Default to quarterly",
+     "enum": [
+      "annual",
+      "quarterly"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=TSLA, freq=annual",
+     "params": {
+      "symbol": "TSLA",
+      "freq": "annual"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_dps_estimates",
+   "path": "/stock/dps-estimate",
+   "title": "DPS Estimates",
+   "category": "stock-estimates",
+   "description": "Get company's Dividend per Share estimates.",
+   "doc_url": "https://finnhub.io/docs/api/company-dps-estimates",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "freq",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Can take 1 of the following values: annual, quarterly. Default to quarterly",
+     "enum": [
+      "annual",
+      "quarterly"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=MCD, freq=annual",
+     "params": {
+      "symbol": "MCD",
+      "freq": "annual"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_fcf_estimates",
+   "path": "/stock/fcf-estimate",
+   "title": "FCF Estimates",
+   "category": "stock-estimates",
+   "description": "Get company's free cash flow estimates.",
+   "doc_url": "https://finnhub.io/docs/api/company-fcf-estimates",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "freq",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Can take 1 of the following values: annual, quarterly. Default to quarterly",
+     "enum": [
+      "annual",
+      "quarterly"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=TSLA, freq=annual",
+     "params": {
+      "symbol": "TSLA",
+      "freq": "annual"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_capex_estimates",
+   "path": "/stock/capex-estimate",
+   "title": "Capex Estimates",
+   "category": "stock-estimates",
+   "description": "Get company's capital expenditure estimates.",
+   "doc_url": "https://finnhub.io/docs/api/company-capex-estimates",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "freq",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Can take 1 of the following values: annual, quarterly. Default to quarterly",
+     "enum": [
+      "annual",
+      "quarterly"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=TSLA, freq=annual",
+     "params": {
+      "symbol": "TSLA",
+      "freq": "annual"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_ocf_estimates",
+   "path": "/stock/ocf-estimate",
+   "title": "OCF Estimates",
+   "category": "stock-estimates",
+   "description": "Get company's operating cash flow estimates.",
+   "doc_url": "https://finnhub.io/docs/api/company-ocf-estimates",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "freq",
+     "in": "query",
+     "required": false,
+     "type": "enum",
+     "description": "Can take 1 of the following values: annual, quarterly. Default to quarterly",
+     "enum": [
+      "annual",
+      "quarterly"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=TSLA, freq=annual",
+     "params": {
+      "symbol": "TSLA",
+      "freq": "annual"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_earnings",
+   "path": "/stock/earnings",
+   "title": "Earnings Surprises",
+   "category": "stock-estimates",
+   "description": "Get company historical quarterly earnings surprise going back to 2000.",
+   "doc_url": "https://finnhub.io/docs/api/company-earnings",
+   "plan": "Free",
+   "premium": false,
+   "trending": true,
+   "utility": false,
+   "premium_notes": [
+    "Free plan: Last 4 quarters.",
+    "Free plan: US-listed symbols only; a symbol listed elsewhere (RY.TO, SAP.DE, VOD.L) is refused."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Limit number of period returned. Leave blank to get the full history.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=TSLA",
+     "params": {
+      "symbol": "TSLA"
+     }
+    }
+   ]
+  },
+  {
+   "id": "earnings_calendar",
+   "path": "/calendar/earnings",
+   "title": "Earnings Calendar",
+   "category": "stock-estimates",
+   "description": "Get historical and coming earnings release. EPS and Revenue in this endpoint are non-GAAP, which means they are adjusted to exclude some one-time or unusual items. This is the same data investors usually react to and talked about on the media. Estimates are sourced from both sell-side and buy-side analysts.",
+   "doc_url": "https://finnhub.io/docs/api/earnings-calendar",
+   "plan": "Free",
+   "premium": false,
+   "trending": true,
+   "utility": false,
+   "premium_notes": [
+    "Free plan: 1 month of historical earnings and new updates."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "From date: 2020-03-15.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "@day",
+     "multiple": false,
+     "premium_note": "Free plan: up to 30 days back. Finnhub returns at most 1,500 rows per request, so a long range is cut short.",
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "To date: 2020-03-16.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "@week_ahead",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filter by symbol: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "international",
+     "in": "query",
+     "required": false,
+     "type": "boolean",
+     "description": "Set to true to include international markets. Default value is false",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": "International markets need a paid plan.",
+     "premium_values": [
+      "true"
+     ],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: from=@day, to=@week_ahead",
+     "params": {
+      "from": "@day",
+      "to": "@week_ahead"
+     }
+    },
+    {
+     "caption": "Finnhub's example: from=@day, to=@week_ahead, symbol=AAPL",
+     "params": {
+      "from": "@day",
+      "to": "@week_ahead",
+      "symbol": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "quote",
+   "path": "/quote",
+   "title": "Quote",
+   "category": "stock-price",
+   "description": "Get real-time quote data for US stocks. Constant polling is not recommended. Use websocket if you need real-time updates. Real-time stock prices for international markets are supported for Enterprise clients via our partner's feed. Contact Us to learn more.",
+   "doc_url": "https://finnhub.io/docs/api/quote",
+   "plan": "Free",
+   "premium": false,
+   "trending": true,
+   "utility": false,
+   "premium_notes": [
+    "Free plan: US-listed symbols only; a symbol listed elsewhere (RY.TO, SAP.DE, VOD.L) is refused."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=MSFT",
+     "params": {
+      "symbol": "MSFT"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_candles",
+   "path": "/stock/candle",
+   "title": "Stock Candles",
+   "category": "stock-price",
+   "description": "Get candlestick data (OHLCV) for stocks. Daily data will be adjusted for Splits. Intraday data will remain unadjusted. Only 1 month of intraday will be returned at a time. If you need more historical intraday data, please use the from and to params iteratively to request more data.",
+   "doc_url": "https://finnhub.io/docs/api/stock-candles",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "resolution",
+     "in": "query",
+     "required": true,
+     "type": "enum",
+     "description": "Supported resolution includes 1, 5, 15, 30, 60, D, W, M.Some timeframes might not be available depending on the exchange.",
+     "enum": [
+      "1",
+      "5",
+      "15",
+      "30",
+      "60",
+      "D",
+      "W",
+      "M"
+     ],
+     "enum_labels": {
+      "1": "1 minute",
+      "5": "5 minutes",
+      "15": "15 minutes",
+      "30": "30 minutes",
+      "60": "60 minutes",
+      "D": "Daily",
+      "W": "Weekly",
+      "M": "Monthly"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": "1",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "integer",
+     "description": "UNIX timestamp. Interval initial value.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "1738655051",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "integer",
+     "description": "UNIX timestamp. Interval end value.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "1738741451",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL, resolution=1, from=1738655051, to=1738741451",
+     "params": {
+      "symbol": "AAPL",
+      "resolution": "1",
+      "from": "1738655051",
+      "to": "1738741451"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=IBM, resolution=D, from=1735976651, to=1738741451",
+     "params": {
+      "symbol": "IBM",
+      "resolution": "D",
+      "from": "1735976651",
+      "to": "1738741451"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_tick",
+   "path": "/stock/tick",
+   "title": "Tick Data",
+   "category": "stock-price",
+   "description": "Get historical tick data for global exchanges. For more historical tick data, you can visit our bulk download page in the Dashboard here to speed up the download process.",
+   "doc_url": "https://finnhub.io/docs/api/stock-tick",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "Date: 2020-04-02.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2026-04-22",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": true,
+     "type": "integer",
+     "description": "Limit number of ticks returned. Maximum value: 25000",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "500",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    },
+    {
+     "name": "skip",
+     "in": "query",
+     "required": true,
+     "type": "integer",
+     "description": "Number of ticks to skip. Use this parameter to loop through the entire data.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "0",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL, date=2026-04-22, limit=500, skip=0",
+     "params": {
+      "symbol": "AAPL",
+      "date": "2026-04-22",
+      "limit": "500",
+      "skip": "0"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=AC.TO, date=2026-04-22, limit=500, skip=0",
+     "params": {
+      "symbol": "AC.TO",
+      "date": "2026-04-22",
+      "limit": "500",
+      "skip": "0"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=BARC.L, date=2026-04-22, limit=500, skip=0",
+     "params": {
+      "symbol": "BARC.L",
+      "date": "2026-04-22",
+      "limit": "500",
+      "skip": "0"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_nbbo",
+   "path": "/stock/bbo",
+   "title": "Historical NBBO",
+   "category": "stock-price",
+   "description": "Get historical best bid and offer for US stocks, LSE, TSX, Euronext and Deutsche Borse. For US market, this endpoint only serves historical NBBO from the beginning of 2026. To download more historical data, please visit our bulk download page in the Dashboard here.",
+   "doc_url": "https://finnhub.io/docs/api/stock-nbbo",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "Date: 2020-04-02.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2026-06-25",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": true,
+     "type": "integer",
+     "description": "Limit number of ticks returned. Maximum value: 25000",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "500",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    },
+    {
+     "name": "skip",
+     "in": "query",
+     "required": true,
+     "type": "integer",
+     "description": "Number of ticks to skip. Use this parameter to loop through the entire data.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "0",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL, date=2026-06-25, limit=500, skip=0",
+     "params": {
+      "symbol": "AAPL",
+      "date": "2026-06-25",
+      "limit": "500",
+      "skip": "0"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=AC.TO, date=2026-06-25, limit=500, skip=0",
+     "params": {
+      "symbol": "AC.TO",
+      "date": "2026-06-25",
+      "limit": "500",
+      "skip": "0"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=BARC.L, date=2026-06-25, limit=500, skip=0",
+     "params": {
+      "symbol": "BARC.L",
+      "date": "2026-06-25",
+      "limit": "500",
+      "skip": "0"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_bidask",
+   "path": "/stock/bidask",
+   "title": "Last Bid-Ask",
+   "category": "stock-price",
+   "description": "Get last bid/ask data for US stocks.",
+   "doc_url": "https://finnhub.io/docs/api/stock-bidask",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_splits",
+   "path": "/stock/split",
+   "title": "Splits",
+   "category": "stock-price",
+   "description": "Get splits data for stocks.",
+   "doc_url": "https://finnhub.io/docs/api/stock-splits",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2015-02-01",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2021-03-09",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL, from=2015-02-01, to=2021-03-09",
+     "params": {
+      "symbol": "AAPL",
+      "from": "2015-02-01",
+      "to": "2021-03-09"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_basic_dividends",
+   "path": "/stock/dividend2",
+   "title": "Dividends 2 (Basic)",
+   "category": "stock-price",
+   "description": "Get global dividends data.",
+   "doc_url": "https://finnhub.io/docs/api/stock-basic-dividends",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "indices_constituents",
+   "path": "/index/constituents",
+   "title": "Indices Constituents",
+   "category": "etfs-indices",
+   "description": "Get a list of index's constituents. A list of supported indices for this endpoint can be found here.",
+   "doc_url": "https://finnhub.io/docs/api/indices-constituents",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "symbol",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "^IBEX",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=^IBEX",
+     "params": {
+      "symbol": "^IBEX"
+     }
+    }
+   ]
+  },
+  {
+   "id": "etfs_profile",
+   "path": "/etf/profile",
+   "title": "ETFs Profile",
+   "category": "etfs-indices",
+   "description": "Get ETF profile information. This endpoint has global coverage. A list of supported ETFs can be found here.",
+   "doc_url": "https://finnhub.io/docs/api/etfs-profile",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "ETF symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "SPY",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "isin",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "ETF isin.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=SPY",
+     "params": {
+      "symbol": "SPY"
+     }
+    },
+    {
+     "caption": "Finnhub's example: isin=US78462F1030",
+     "params": {
+      "isin": "US78462F1030"
+     }
+    }
+   ]
+  },
+  {
+   "id": "etfs_holdings",
+   "path": "/etf/holdings",
+   "title": "ETFs Holdings",
+   "category": "etfs-indices",
+   "description": "Get full ETF holdings/constituents. This endpoint has global coverage. Widget only shows top 10 holdings. A list of supported ETFs can be found here.",
+   "doc_url": "https://finnhub.io/docs/api/etfs-holdings",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "ETF symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "SPY",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "isin",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "ETF isin.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "skip",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Skip the first n results. You can use this parameter to query historical constituents data. The latest result is returned if skip=0 or not set.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    },
+    {
+     "name": "date",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Query holdings by date. You can use either this param or skip param, not both.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=SPY",
+     "params": {
+      "symbol": "SPY"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=AVUV, skip=1",
+     "params": {
+      "symbol": "AVUV",
+      "skip": "1"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=IPO, date=2025-02-04",
+     "params": {
+      "symbol": "IPO",
+      "date": "2025-02-04"
+     }
+    }
+   ]
+  },
+  {
+   "id": "etfs_sector_exposure",
+   "path": "/etf/sector",
+   "title": "ETFs Sector Exposure",
+   "category": "etfs-indices",
+   "description": "Get ETF sector exposure data.",
+   "doc_url": "https://finnhub.io/docs/api/etfs-sector-exposure",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "ETF symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "SPY",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "isin",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "ETF isin.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=SPY",
+     "params": {
+      "symbol": "SPY"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=VOO",
+     "params": {
+      "symbol": "VOO"
+     }
+    }
+   ]
+  },
+  {
+   "id": "etfs_country_exposure",
+   "path": "/etf/country",
+   "title": "ETFs Country Exposure",
+   "category": "etfs-indices",
+   "description": "Get ETF country exposure data.",
+   "doc_url": "https://finnhub.io/docs/api/etfs-country-exposure",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "ETF symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "SPY",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "isin",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "ETF isin.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=SPY",
+     "params": {
+      "symbol": "SPY"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=VOO",
+     "params": {
+      "symbol": "VOO"
+     }
+    }
+   ]
+  },
+  {
+   "id": "etfs_allocation",
+   "path": "/etf/allocation",
+   "title": "ETFs Equity Allocation",
+   "category": "etfs-indices",
+   "description": "Get ETF equity allocation based on the characteristics of the holdings.",
+   "doc_url": "https://finnhub.io/docs/api/etfs-allocation",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "ETF symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "SPY",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "isin",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "ETF isin.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=SPY",
+     "params": {
+      "symbol": "SPY"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=VOO",
+     "params": {
+      "symbol": "VOO"
+     }
+    }
+   ]
+  },
+  {
+   "id": "mutual_fund_profile",
+   "path": "/mutual-fund/profile",
+   "title": "Mutual Funds Profile",
+   "category": "mutual-funds",
+   "description": "Get mutual funds profile information. This endpoint covers both US and global mutual funds. For international funds, you must query the data using ISIN. A list of supported funds can be found here.",
+   "doc_url": "https://finnhub.io/docs/api/mutual-fund-profile",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Fund's symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "VTSAX",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "isin",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Fund's isin.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=VTSAX",
+     "params": {
+      "symbol": "VTSAX"
+     }
+    },
+    {
+     "caption": "Finnhub's example: isin=US9229087286",
+     "params": {
+      "isin": "US9229087286"
+     }
+    },
+    {
+     "caption": "Finnhub's example: isin=LU1748855837",
+     "params": {
+      "isin": "LU1748855837"
+     }
+    }
+   ]
+  },
+  {
+   "id": "mutual_fund_holdings",
+   "path": "/mutual-fund/holdings",
+   "title": "Mutual Funds Holdings",
+   "category": "mutual-funds",
+   "description": "Get full Mutual Funds holdings/constituents. This endpoint covers both US and global mutual funds. For international funds, you must query the data using ISIN. A list of supported funds can be found here.",
+   "doc_url": "https://finnhub.io/docs/api/mutual-fund-holdings",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Fund's symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "VTSAX",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "isin",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Fund's isin.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "skip",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Skip the first n results. You can use this parameter to query historical constituents data. The latest result is returned if skip=0 or not set.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=VTSAX",
+     "params": {
+      "symbol": "VTSAX"
+     }
+    },
+    {
+     "caption": "Finnhub's example: isin=US9229087286, skip=1",
+     "params": {
+      "isin": "US9229087286",
+      "skip": "1"
+     }
+    },
+    {
+     "caption": "Finnhub's example: isin=LU0003562807",
+     "params": {
+      "isin": "LU0003562807"
+     }
+    }
+   ]
+  },
+  {
+   "id": "mutual_fund_sector_exposure",
+   "path": "/mutual-fund/sector",
+   "title": "Mutual Funds Sector Exposure",
+   "category": "mutual-funds",
+   "description": "Get Mutual Funds sector exposure data.",
+   "doc_url": "https://finnhub.io/docs/api/mutual-fund-sector-exposure",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Mutual Fund symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "VTSAX",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "isin",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Fund's isin.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=VTSAX",
+     "params": {
+      "symbol": "VTSAX"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=FNILX",
+     "params": {
+      "symbol": "FNILX"
+     }
+    }
+   ]
+  },
+  {
+   "id": "mutual_fund_country_exposure",
+   "path": "/mutual-fund/country",
+   "title": "Mutual Funds Country Exposure",
+   "category": "mutual-funds",
+   "description": "Get Mutual Funds country exposure data.",
+   "doc_url": "https://finnhub.io/docs/api/mutual-fund-country-exposure",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "FNILX",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "isin",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Fund's isin.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=FNILX",
+     "params": {
+      "symbol": "FNILX"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=VFIAX",
+     "params": {
+      "symbol": "VFIAX"
+     }
+    }
+   ]
+  },
+  {
+   "id": "mutual_fund_eet",
+   "path": "/mutual-fund/eet",
+   "title": "Mutual Funds EET",
+   "category": "mutual-funds",
+   "description": "Get EET data for EU funds. For PAIs data, please see the EET PAI endpoint.",
+   "doc_url": "https://finnhub.io/docs/api/mutual-fund-eet",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "isin",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "ISIN.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "LU2036931686",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: isin=LU2036931686",
+     "params": {
+      "isin": "LU2036931686"
+     }
+    }
+   ]
+  },
+  {
+   "id": "mutual_fund_eet_pai",
+   "path": "/mutual-fund/eet-pai",
+   "title": "Mutual Funds EET PAI",
+   "category": "mutual-funds",
+   "description": "Get EET PAI data for EU funds.",
+   "doc_url": "https://finnhub.io/docs/api/mutual-fund-eet-pai",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "isin",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "ISIN.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "LU2036931686",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: isin=LU2036931686",
+     "params": {
+      "isin": "LU2036931686"
+     }
+    }
+   ]
+  },
+  {
+   "id": "bond_profile",
+   "path": "/bond/profile",
+   "title": "Bond Profile",
+   "category": "bonds",
+   "description": "Get general information of a bond. You can query by FIGI, ISIN or CUSIP. A list of supported bonds can be found here.",
+   "doc_url": "https://finnhub.io/docs/api/bond-profile",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "isin",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "ISIN",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "cusip",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "CUSIP",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "figi",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "FIGI",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "BBG0152KFHS6",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: figi=BBG0152KFHS6",
+     "params": {
+      "figi": "BBG0152KFHS6"
+     }
+    },
+    {
+     "caption": "Finnhub's example: isin=US912810TD00",
+     "params": {
+      "isin": "US912810TD00"
+     }
+    },
+    {
+     "caption": "Finnhub's example: cusip=912810TD0",
+     "params": {
+      "cusip": "912810TD0"
+     }
+    }
+   ]
+  },
+  {
+   "id": "bond_price",
+   "path": "/bond/price",
+   "title": "Bond price data",
+   "category": "bonds",
+   "description": "Get bond's price data. The following datasets are supported:",
+   "doc_url": "https://finnhub.io/docs/api/bond-price",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "isin",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "ISIN.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "US912810TD00",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "integer",
+     "description": "UNIX timestamp. Interval initial value.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "1590988249",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "integer",
+     "description": "UNIX timestamp. Interval end value.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "1649099548",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: isin=US912810TD00, from=1590988249, to=1649099548",
+     "params": {
+      "isin": "US912810TD00",
+      "from": "1590988249",
+      "to": "1649099548"
+     }
+    }
+   ]
+  },
+  {
+   "id": "bond_tick",
+   "path": "/bond/tick",
+   "title": "Bond Tick Data",
+   "category": "bonds",
+   "description": "Get trade-level data for bonds. The following datasets are supported:",
+   "doc_url": "https://finnhub.io/docs/api/bond-tick",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "isin",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "ISIN.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "US693475BF18",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "Date: 2020-04-02.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2022-08-19",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "limit",
+     "in": "query",
+     "required": true,
+     "type": "integer",
+     "description": "Limit number of ticks returned. Maximum value: 25000",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "50",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    },
+    {
+     "name": "skip",
+     "in": "query",
+     "required": true,
+     "type": "integer",
+     "description": "Number of ticks to skip. Use this parameter to loop through the entire data.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "6",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    },
+    {
+     "name": "exchange",
+     "in": "query",
+     "required": true,
+     "type": "enum",
+     "description": "Currently support the following values: trace.",
+     "enum": [
+      "trace"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "trace",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: isin=US693475BF18, date=2022-08-19, limit=50, skip=6, exchange=trace",
+     "params": {
+      "isin": "US693475BF18",
+      "date": "2022-08-19",
+      "limit": "50",
+      "skip": "6",
+      "exchange": "trace"
+     }
+    }
+   ]
+  },
+  {
+   "id": "bond_yield_curve",
+   "path": "/bond/yield-curve",
+   "title": "Bond Yield Curve",
+   "category": "bonds",
+   "description": "Get yield curve data for Treasury bonds.",
+   "doc_url": "https://finnhub.io/docs/api/bond-yield-curve",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "code",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Bond's code. You can find the list of supported code here.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "10y",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: code=10y",
+     "params": {
+      "code": "10y"
+     }
+    }
+   ]
+  },
+  {
+   "id": "forex_exchanges",
+   "path": "/forex/exchange",
+   "title": "Forex Exchanges",
+   "category": "forex",
+   "description": "List supported forex exchanges",
+   "doc_url": "https://finnhub.io/docs/api/forex-exchanges",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": true,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [],
+   "examples": [
+    {
+     "caption": "No parameters",
+     "params": {}
+    }
+   ]
+  },
+  {
+   "id": "forex_symbols",
+   "path": "/forex/symbol",
+   "title": "Forex Symbol",
+   "category": "forex",
+   "description": "List supported forex symbols.",
+   "doc_url": "https://finnhub.io/docs/api/forex-symbols",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": true,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "exchange",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Exchange you want to get the list of symbols from.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "oanda",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: exchange=oanda",
+     "params": {
+      "exchange": "oanda"
+     }
+    }
+   ]
+  },
+  {
+   "id": "forex_candles",
+   "path": "/forex/candle",
+   "title": "Forex Candles",
+   "category": "forex",
+   "description": "Get candlestick data for forex symbols.",
+   "doc_url": "https://finnhub.io/docs/api/forex-candles",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Use symbol returned in /forex/symbol endpoint for this field.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "OANDA:EUR_USD",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "resolution",
+     "in": "query",
+     "required": true,
+     "type": "enum",
+     "description": "Supported resolution includes 1, 5, 15, 30, 60, D, W, M.Some timeframes might not be available depending on the exchange.",
+     "enum": [
+      "1",
+      "5",
+      "15",
+      "30",
+      "60",
+      "D",
+      "W",
+      "M"
+     ],
+     "enum_labels": {
+      "1": "1 minute",
+      "5": "5 minutes",
+      "15": "15 minutes",
+      "30": "30 minutes",
+      "60": "60 minutes",
+      "D": "Daily",
+      "W": "Weekly",
+      "M": "Monthly"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": "D",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "integer",
+     "description": "UNIX timestamp. Interval initial value.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "1572651390",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "integer",
+     "description": "UNIX timestamp. Interval end value.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "1575243390",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=OANDA:EUR_USD, resolution=D, from=1572651390, to=1575243390",
+     "params": {
+      "symbol": "OANDA:EUR_USD",
+      "resolution": "D",
+      "from": "1572651390",
+      "to": "1575243390"
+     }
+    }
+   ]
+  },
+  {
+   "id": "forex_rates",
+   "path": "/forex/rates",
+   "title": "Forex rates",
+   "category": "forex",
+   "description": "Get rates for all forex pairs. Ideal for currency conversion",
+   "doc_url": "https://finnhub.io/docs/api/forex-rates",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "base",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Base currency. Default to EUR.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "USD",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "date",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Date. Leave blank to get the latest data.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: base=USD",
+     "params": {
+      "base": "USD"
+     }
+    },
+    {
+     "caption": "Finnhub's example: base=EUR, date=2022-02-10",
+     "params": {
+      "base": "EUR",
+      "date": "2022-02-10"
+     }
+    }
+   ]
+  },
+  {
+   "id": "crypto_exchanges",
+   "path": "/crypto/exchange",
+   "title": "Crypto Exchanges",
+   "category": "crypto",
+   "description": "List supported crypto exchanges",
+   "doc_url": "https://finnhub.io/docs/api/crypto-exchanges",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": true,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [],
+   "examples": [
+    {
+     "caption": "No parameters",
+     "params": {}
+    }
+   ]
+  },
+  {
+   "id": "crypto_symbols",
+   "path": "/crypto/symbol",
+   "title": "Crypto Symbol",
+   "category": "crypto",
+   "description": "List supported crypto symbols by exchange",
+   "doc_url": "https://finnhub.io/docs/api/crypto-symbols",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": true,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "exchange",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Exchange you want to get the list of symbols from.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "binance",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: exchange=binance",
+     "params": {
+      "exchange": "binance"
+     }
+    }
+   ]
+  },
+  {
+   "id": "crypto_profile",
+   "path": "/crypto/profile",
+   "title": "Crypto Profile",
+   "category": "crypto",
+   "description": "Get crypto's profile.",
+   "doc_url": "https://finnhub.io/docs/api/crypto-profile",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Crypto symbol such as BTC or ETH.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "BTC",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=BTC",
+     "params": {
+      "symbol": "BTC"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=ETH",
+     "params": {
+      "symbol": "ETH"
+     }
+    }
+   ]
+  },
+  {
+   "id": "crypto_candles",
+   "path": "/crypto/candle",
+   "title": "Crypto Candles",
+   "category": "crypto",
+   "description": "Get candlestick data for crypto symbols.",
+   "doc_url": "https://finnhub.io/docs/api/crypto-candles",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Use symbol returned in /crypto/symbol endpoint for this field.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "BINANCE:BTCUSDT",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "resolution",
+     "in": "query",
+     "required": true,
+     "type": "enum",
+     "description": "Supported resolution includes 1, 5, 15, 30, 60, D, W, M.Some timeframes might not be available depending on the exchange.",
+     "enum": [
+      "1",
+      "5",
+      "15",
+      "30",
+      "60",
+      "D",
+      "W",
+      "M"
+     ],
+     "enum_labels": {
+      "1": "1 minute",
+      "5": "5 minutes",
+      "15": "15 minutes",
+      "30": "30 minutes",
+      "60": "60 minutes",
+      "D": "Daily",
+      "W": "Weekly",
+      "M": "Monthly"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": "D",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "integer",
+     "description": "UNIX timestamp. Interval initial value.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "1572651390",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "integer",
+     "description": "UNIX timestamp. Interval end value.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "1575243390",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=BINANCE:BTCUSDT, resolution=D, from=1572651390, to=1575243390",
+     "params": {
+      "symbol": "BINANCE:BTCUSDT",
+      "resolution": "D",
+      "from": "1572651390",
+      "to": "1575243390"
+     }
+    }
+   ]
+  },
+  {
+   "id": "pattern_recognition",
+   "path": "/scan/pattern",
+   "title": "Pattern Recognition",
+   "category": "technical-analysis",
+   "description": "Run pattern recognition algorithm on a symbol. Support double top/bottom, triple top/bottom, head and shoulders, triangle, wedge, channel, flag, and candlestick patterns.",
+   "doc_url": "https://finnhub.io/docs/api/pattern-recognition",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "resolution",
+     "in": "query",
+     "required": true,
+     "type": "enum",
+     "description": "Supported resolution includes 1, 5, 15, 30, 60, D, W, M.Some timeframes might not be available depending on the exchange.",
+     "enum": [
+      "1",
+      "5",
+      "15",
+      "30",
+      "60",
+      "D",
+      "W",
+      "M"
+     ],
+     "enum_labels": {
+      "1": "1 minute",
+      "5": "5 minutes",
+      "15": "15 minutes",
+      "30": "30 minutes",
+      "60": "60 minutes",
+      "D": "Daily",
+      "W": "Weekly",
+      "M": "Monthly"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": "D",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL, resolution=D",
+     "params": {
+      "symbol": "AAPL",
+      "resolution": "D"
+     }
+    }
+   ]
+  },
+  {
+   "id": "support_resistance",
+   "path": "/scan/support-resistance",
+   "title": "Support/Resistance",
+   "category": "technical-analysis",
+   "description": "Get support and resistance levels for a symbol.",
+   "doc_url": "https://finnhub.io/docs/api/support-resistance",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "IBM",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "resolution",
+     "in": "query",
+     "required": true,
+     "type": "enum",
+     "description": "Supported resolution includes 1, 5, 15, 30, 60, D, W, M.Some timeframes might not be available depending on the exchange.",
+     "enum": [
+      "1",
+      "5",
+      "15",
+      "30",
+      "60",
+      "D",
+      "W",
+      "M"
+     ],
+     "enum_labels": {
+      "1": "1 minute",
+      "5": "5 minutes",
+      "15": "15 minutes",
+      "30": "30 minutes",
+      "60": "60 minutes",
+      "D": "Daily",
+      "W": "Weekly",
+      "M": "Monthly"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": "D",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=IBM, resolution=D",
+     "params": {
+      "symbol": "IBM",
+      "resolution": "D"
+     }
+    }
+   ]
+  },
+  {
+   "id": "aggregate_indicator",
+   "path": "/scan/technical-indicator",
+   "title": "Aggregate Indicators",
+   "category": "technical-analysis",
+   "description": "Get aggregate signal of multiple technical indicators such as MACD, RSI, Moving Average v.v. A full list of indicators can be found here.",
+   "doc_url": "https://finnhub.io/docs/api/aggregate-indicator",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "symbol",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "resolution",
+     "in": "query",
+     "required": true,
+     "type": "enum",
+     "description": "Supported resolution includes 1, 5, 15, 30, 60, D, W, M.Some timeframes might not be available depending on the exchange.",
+     "enum": [
+      "1",
+      "5",
+      "15",
+      "30",
+      "60",
+      "D",
+      "W",
+      "M"
+     ],
+     "enum_labels": {
+      "1": "1 minute",
+      "5": "5 minutes",
+      "15": "15 minutes",
+      "30": "30 minutes",
+      "60": "60 minutes",
+      "D": "Daily",
+      "W": "Weekly",
+      "M": "Monthly"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": "D",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL, resolution=D",
+     "params": {
+      "symbol": "AAPL",
+      "resolution": "D"
+     }
+    }
+   ]
+  },
+  {
+   "id": "technical_indicator",
+   "path": "/indicator",
+   "title": "Technical Indicators",
+   "category": "technical-analysis",
+   "description": "Return technical indicator with price data. List of supported indicators can be found here.",
+   "doc_url": "https://finnhub.io/docs/api/technical-indicator",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "symbol",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "resolution",
+     "in": "query",
+     "required": true,
+     "type": "enum",
+     "description": "Supported resolution includes 1, 5, 15, 30, 60, D, W, M.Some timeframes might not be available depending on the exchange.",
+     "enum": [
+      "1",
+      "5",
+      "15",
+      "30",
+      "60",
+      "D",
+      "W",
+      "M"
+     ],
+     "enum_labels": {
+      "1": "1 minute",
+      "5": "5 minutes",
+      "15": "15 minutes",
+      "30": "30 minutes",
+      "60": "60 minutes",
+      "D": "Daily",
+      "W": "Weekly",
+      "M": "Monthly"
+     },
+     "suggestions": [],
+     "default": null,
+     "example": "D",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "integer",
+     "description": "UNIX timestamp. Interval initial value.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "1583098857",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "integer",
+     "description": "UNIX timestamp. Interval end value.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "1584308457",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 0,
+     "maximum": null
+    },
+    {
+     "name": "indicator",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Indicator name. Full list can be found here.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "sma",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "indicator_fields",
+     "in": "body",
+     "required": false,
+     "type": "text",
+     "description": "Check out this page to see which indicators and params are supported.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "timeperiod",
+     "in": "query",
+     "required": false,
+     "type": "integer",
+     "description": "Period of the indicator, for example 14 (indicator-specific; see Finnhub's indicator list).",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "3",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": 1,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL, resolution=D, from=1583098857, to=1584308457, indicator=sma, timeperiod=3",
+     "params": {
+      "symbol": "AAPL",
+      "resolution": "D",
+      "from": "1583098857",
+      "to": "1584308457",
+      "indicator": "sma",
+      "timeperiod": "3"
+     }
+    }
+   ]
+  },
+  {
+   "id": "transcripts_list",
+   "path": "/stock/transcripts/list",
+   "title": "Earnings Call Transcripts List",
+   "category": "alternative-data",
+   "description": "List earnings call transcripts' metadata. This endpoint is available for Global companies. You can get a list of supported symbols here",
+   "doc_url": "https://finnhub.io/docs/api/transcripts-list",
+   "plan": null,
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Finnhub's pricing page says the All-in-One plan does not include earnings call transcripts; they are added on request."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Company symbol: AAPL. Leave empty to list the latest transcripts",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=AC.TO",
+     "params": {
+      "symbol": "AC.TO"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=BARC.L",
+     "params": {
+      "symbol": "BARC.L"
+     }
+    }
+   ]
+  },
+  {
+   "id": "transcripts",
+   "path": "/stock/transcripts",
+   "title": "Earnings Call Transcripts",
+   "category": "alternative-data",
+   "description": "Get earnings call transcripts, audio and participants' list. Data is available for US, UK, European, Australian and Canadian companies. 15+ years of data is available with 220,000+ audio which add up to 7TB in size.",
+   "doc_url": "https://finnhub.io/docs/api/earnings-call-transcripts-api",
+   "plan": null,
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Finnhub's pricing page says the All-in-One plan does not include earnings call transcripts; they are added on request."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "id",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Transcript's id obtained with Transcripts List endpoint.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL_162777",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: id=AAPL_162777",
+     "params": {
+      "id": "AAPL_162777"
+     }
+    }
+   ]
+  },
+  {
+   "id": "earnings_call_live",
+   "path": "/stock/earnings-call-live",
+   "title": "Earnings Call Audio Live",
+   "category": "alternative-data",
+   "description": "Stream live earnings calls with data provided in the calendar. The data will be available in m3u8 format. mp3 files will be available once the calls finish in the recording field.",
+   "doc_url": "https://finnhub.io/docs/api/earnings-call-live-api",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "From date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2024-11-01",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "To date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2024-11-07",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filter by symbol: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: from=2024-11-01, to=2024-11-07",
+     "params": {
+      "from": "2024-11-01",
+      "to": "2024-11-07"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_presentation",
+   "path": "/stock/presentation",
+   "title": "Company Presentation",
+   "category": "alternative-data",
+   "description": "Get presentations/slides data in PDF format that are usually used during earnings calls. You can get a list of supported symbols here",
+   "doc_url": "https://finnhub.io/docs/api/stock-presentation-slide-api",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Company symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "IBM",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=IBM",
+     "params": {
+      "symbol": "IBM"
+     }
+    }
+   ]
+  },
+  {
+   "id": "social_sentiment",
+   "path": "/stock/social-sentiment",
+   "title": "Social Sentiment",
+   "category": "alternative-data",
+   "description": "Get social sentiment for stocks on Reddit and Twitter.",
+   "doc_url": "https://finnhub.io/docs/api/social-sentiment",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Company symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "GME",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "From date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "To date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=GME",
+     "params": {
+      "symbol": "GME"
+     }
+    }
+   ]
+  },
+  {
+   "id": "investment_themes",
+   "path": "/stock/investment-theme",
+   "title": "Investment Themes (Thematic Investing)",
+   "category": "alternative-data",
+   "description": "Thematic investing involves creating a portfolio (or portion of a portfolio) by gathering together a collection of companies involved in certain areas that you predict will generate above-market returns over the long term. Themes can be based on a concept such as ageing populations or a sub-sector such as robotics, and drones. Thematic investing focuses on predicted long-term trends rather than specific companies or sectors, enabling investors to access structural, one-off shifts that can change an entire industry. This endpoint will help you get portfolios of different investment themes that are changing our life and are the way of the future. A full list of themes supported can be found here. The theme coverage and portfolios are updated bi-weekly by our analysts. Our approach excludes penny, super-small cap and illiquid stocks.",
+   "doc_url": "https://finnhub.io/docs/api/investment-themes-thematic-investing",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "theme",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Investment theme. A full list of themes supported can be found here.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "financialExchangesData",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: theme=financialExchangesData",
+     "params": {
+      "theme": "financialExchangesData"
+     }
+    },
+    {
+     "caption": "Finnhub's example: theme=futureFood",
+     "params": {
+      "theme": "futureFood"
+     }
+    }
+   ]
+  },
+  {
+   "id": "supply_chain_relationships",
+   "path": "/stock/supply-chain",
+   "title": "Supply Chain Relationships",
+   "category": "alternative-data",
+   "description": "This endpoint provides an overall map of public companies' key customers and suppliers. The data offers a deeper look into a company's supply chain and how products are created. The data will help investors manage risk, limit exposure or generate alpha-generating ideas and trading insights.",
+   "doc_url": "https://finnhub.io/docs/api/supply-chain-relationships",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=WMT",
+     "params": {
+      "symbol": "WMT"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_esg_score",
+   "path": "/stock/esg",
+   "title": "Company ESG Scores",
+   "category": "alternative-data",
+   "description": "This endpoint provides the latest ESG scores and important indicators for 7000+ global companies. The data is collected through company's public ESG disclosure and public sources. Our ESG scoring models takes into account more than 150 different inputs to calculate the level of ESG risks and how well a company is managing them. A higher score means lower ESG risk or better ESG management. ESG scores are in the the range of 0-100. Some key indicators might contain letter-grade score from C- to A+ with C- is the lowest score and A+ is the highest score.",
+   "doc_url": "https://finnhub.io/docs/api/company-esg-score-api",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=WMT",
+     "params": {
+      "symbol": "WMT"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_historical_esg_score",
+   "path": "/stock/historical-esg",
+   "title": "Historical ESG Scores",
+   "category": "alternative-data",
+   "description": "This endpoint provides historical ESG scores and important indicators for 7000+ global companies. The data is collected through company's public ESG disclosure and public sources. Our ESG scoring models takes into account more than 150 different inputs to calculate the level of ESG risks and how well a company is managing them. A higher score means lower ESG risk or better ESG management. ESG scores are in the the range of 0-100. Some key indicators might contain letter-grade score from C- to A+ with C- is the lowest score and A+ is the highest score.",
+   "doc_url": "https://finnhub.io/docs/api/company-historical-esg-score-api",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=WMT",
+     "params": {
+      "symbol": "WMT"
+     }
+    }
+   ]
+  },
+  {
+   "id": "company_earnings_quality_score",
+   "path": "/stock/earnings-quality-score",
+   "title": "Company Earnings Quality Score",
+   "category": "alternative-data",
+   "description": "This endpoint provides Earnings Quality Score for global companies. Earnings quality refers to the extent to which current earnings predict future earnings. \"High-quality\" earnings are expected to persist, while \"low-quality\" earnings do not. A higher score means a higher earnings quality Finnhub uses a proprietary model which takes into consideration 4 criteria: Profitability Growth Cash Generation & Capital Allocation Leverage We then compare the metrics of each company in each category against its peers in the same industry to gauge how quality its earnings is.",
+   "doc_url": "https://finnhub.io/docs/api/company-earnings-quality-score-api",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "freq",
+     "in": "query",
+     "required": true,
+     "type": "enum",
+     "description": "Frequency. Currently support annual and quarterly",
+     "enum": [
+      "annual",
+      "quarterly"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "quarterly",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL, freq=quarterly",
+     "params": {
+      "symbol": "AAPL",
+      "freq": "quarterly"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=WMT, freq=quarterly",
+     "params": {
+      "symbol": "WMT",
+      "freq": "quarterly"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_uspto_patent",
+   "path": "/stock/uspto-patent",
+   "title": "USPTO Patents",
+   "category": "alternative-data",
+   "description": "List USPTO patents for companies. Limit to 250 records per API call.",
+   "doc_url": "https://finnhub.io/docs/api/stock-uspto-patent",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "NVDA",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "From date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2021-01-01",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "To date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2021-12-31",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=NVDA, from=2021-01-01, to=2021-12-31",
+     "params": {
+      "symbol": "NVDA",
+      "from": "2021-01-01",
+      "to": "2021-12-31"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_visa_application",
+   "path": "/stock/visa-application",
+   "title": "H1-B Visa Application",
+   "category": "alternative-data",
+   "description": "Get a list of H1-B and Permanent visa applications for companies from the DOL. The data is updated quarterly.",
+   "doc_url": "https://finnhub.io/docs/api/stock-visa-application",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "From date YYYY-MM-DD. Filter on the beginDate column.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2025-01-01",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "To date YYYY-MM-DD. Filter on the beginDate column.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2025-12-31",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL, from=2025-01-01, to=2025-12-31",
+     "params": {
+      "symbol": "AAPL",
+      "from": "2025-01-01",
+      "to": "2025-12-31"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_lobbying",
+   "path": "/stock/lobbying",
+   "title": "Senate Lobbying",
+   "category": "alternative-data",
+   "description": "Get a list of reported lobbying activities in the Senate and the House.",
+   "doc_url": "https://finnhub.io/docs/api/stock-lobbying",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "From date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2021-01-01",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "To date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2022-12-31",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL, from=2021-01-01, to=2022-12-31",
+     "params": {
+      "symbol": "AAPL",
+      "from": "2021-01-01",
+      "to": "2022-12-31"
+     }
+    }
+   ]
+  },
+  {
+   "id": "stock_usa_spending",
+   "path": "/stock/usa-spending",
+   "title": "USA Spending",
+   "category": "alternative-data",
+   "description": "Get a list of government's spending activities from USASpending dataset for public companies. This dataset can help you identify companies that win big government contracts which is extremely important for industries such as Defense, Aerospace, and Education. Only recent data is available via the API. For historical data, you can download it here: Pre-2021, 2021, 2022, 2023, 2024",
+   "doc_url": "https://finnhub.io/docs/api/stock-usa-spending",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "LMT",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "From date YYYY-MM-DD. Filter for actionDate",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2021-01-01",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "To date YYYY-MM-DD. Filter for actionDate",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2022-12-31",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=LMT, from=2021-01-01, to=2022-12-31",
+     "params": {
+      "symbol": "LMT",
+      "from": "2021-01-01",
+      "to": "2022-12-31"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=BA, from=2021-01-01, to=2022-12-31",
+     "params": {
+      "symbol": "BA",
+      "from": "2021-01-01",
+      "to": "2022-12-31"
+     }
+    }
+   ]
+  },
+  {
+   "id": "congressional_trading",
+   "path": "/stock/congressional-trading",
+   "title": "Congressional Trading",
+   "category": "alternative-data",
+   "description": "Get stock trades data disclosed by members of congress.",
+   "doc_url": "https://finnhub.io/docs/api/congressional-trading",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol of the company: AAPL.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "From date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "To date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": []
+  },
+  {
+   "id": "bank_branch",
+   "path": "/bank-branch",
+   "title": "Bank Branch List",
+   "category": "alternative-data",
+   "description": "Retrieve list of US bank branches information for a given symbol.",
+   "doc_url": "https://finnhub.io/docs/api/bank-branch-api",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Accessible with Fundamental or All in One subscription."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "JPM",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=JPM",
+     "params": {
+      "symbol": "JPM"
+     }
+    }
+   ]
+  },
+  {
+   "id": "fda_committee_meeting_calendar",
+   "path": "/fda-advisory-committee-calendar",
+   "title": "FDA Committee Meeting Calendar",
+   "category": "alternative-data",
+   "description": "FDA's advisory committees are established to provide functions which support the agency's mission of protecting and promoting the public health, while meeting the requirements set forth in the Federal Advisory Committee Act. Committees are either mandated by statute or established at the discretion of the Department of Health and Human Services. Each committee is subject to renewal at two-year intervals unless the committee charter states otherwise.",
+   "doc_url": "https://finnhub.io/docs/api/fda-committee-meeting-calendar",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [],
+   "examples": [
+    {
+     "caption": "No parameters",
+     "params": {}
+    }
+   ]
+  },
+  {
+   "id": "revenue_breakdown2",
+   "path": "/stock/revenue-breakdown2",
+   "title": "Revenue Breakdown & KPI",
+   "category": "enterprise-data",
+   "description": "Get standardized revenue breakdown and KPIs data for 30,000+ global companies.",
+   "doc_url": "https://finnhub.io/docs/api/revenue-breakdown-kpi-api",
+   "plan": null,
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Enterprise data, sold separately from Finnhub's plans."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    }
+   ]
+  },
+  {
+   "id": "newsroom",
+   "path": "/stock/newsroom",
+   "title": "Newsroom",
+   "category": "enterprise-data",
+   "description": "Get latest articles posted directly on the companies' newsroom and investor relations page. Newsroom API along with the Press Releases API provide a comprehensive text-based dataset directly from the company. We currently cover 1,250 US Companies with this dataset.",
+   "doc_url": "https://finnhub.io/docs/api/stock-newsroom",
+   "plan": null,
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Enterprise data, sold separately from Finnhub's plans."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Company symbol.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "AAPL",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "From time: 2025-01-01.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "To time: 2026-01-05.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=AAPL",
+     "params": {
+      "symbol": "AAPL"
+     }
+    },
+    {
+     "caption": "Finnhub's example: symbol=NVDA, from=2025-01-01, to=2025-12-15",
+     "params": {
+      "symbol": "NVDA",
+      "from": "2025-01-01",
+      "to": "2025-12-15"
+     }
+    }
+   ]
+  },
+  {
+   "id": "international_filings",
+   "path": "/stock/international-filings",
+   "title": "International Filings",
+   "category": "global-filings-search",
+   "description": "List filings for international companies. Limit to 500 documents at a time. These are the documents we use to source our fundamental data. Enterprise clients who need access to the full filings for global markets should contact us for the access.",
+   "doc_url": "https://finnhub.io/docs/api/international-filings",
+   "plan": null,
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Access approved on a case by case basis.",
+    "Part of Finnhub's Filings Search API, a separate subscription."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "symbol",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Symbol. Leave empty to list latest filings.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "RY.TO",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "country",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Filter by country using country's 2-letter code.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "From date: 2023-01-15.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "To date: 2023-12-16.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: symbol=RY.TO",
+     "params": {
+      "symbol": "RY.TO"
+     }
+    },
+    {
+     "caption": "Finnhub's example: country=CA",
+     "params": {
+      "country": "CA"
+     }
+    }
+   ]
+  },
+  {
+   "id": "global_filings_search_filter",
+   "path": "/global-filings/filter",
+   "title": "Search Filter",
+   "category": "global-filings-search",
+   "description": "Get available values for each filter in search body.",
+   "doc_url": "https://finnhub.io/docs/api/global-filings-search-filter",
+   "plan": null,
+   "premium": true,
+   "trending": false,
+   "utility": true,
+   "premium_notes": [
+    "Part of Finnhub's Filings Search API, a separate subscription."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "field",
+     "in": "query",
+     "required": true,
+     "type": "enum",
+     "description": "Field to get available filters. Available filters are \"countries\", \"exchanges\", \"exhibits\", \"forms\", \"gics\", \"naics\", \"caps\", \"acts\", and \"sort\".",
+     "enum": [
+      "countries",
+      "exchanges",
+      "exhibits",
+      "forms",
+      "gics",
+      "naics",
+      "caps",
+      "acts",
+      "sort"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "forms",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "source",
+     "in": "query",
+     "required": false,
+     "type": "text",
+     "description": "Get available forms for each source.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "SEC",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: field=forms, source=SEC",
+     "params": {
+      "field": "forms",
+      "source": "SEC"
+     }
+    }
+   ]
+  },
+  {
+   "id": "global_filings_download",
+   "path": "/global-filings/download",
+   "title": "Download Filings",
+   "category": "global-filings-search",
+   "description": "Download filings using document ids.",
+   "doc_url": "https://finnhub.io/docs/api/global-filings-download",
+   "plan": null,
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Part of Finnhub's Filings Search API, a separate subscription."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "documentId",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Document's id. Note that this is different from filingId as 1 filing can contain multiple documents.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "76a87562f08df43a653d00bed73f467be4a6b045ffe72abd20ddc66f2c471f9c",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: documentId=76a87562f08df43a653d00bed73f467be4a6b045ffe72abd20ddc66f2c471f9c",
+     "params": {
+      "documentId": "76a87562f08df43a653d00bed73f467be4a6b045ffe72abd20ddc66f2c471f9c"
+     }
+    },
+    {
+     "caption": "Finnhub's example: documentId=3c020f32c165752dfcbc80bff8bb9aac6ac8bac31c400882bfee4b8ddc135165",
+     "params": {
+      "documentId": "3c020f32c165752dfcbc80bff8bb9aac6ac8bac31c400882bfee4b8ddc135165"
+     }
+    }
+   ]
+  },
+  {
+   "id": "country",
+   "path": "/country",
+   "title": "Country Metadata",
+   "category": "economic",
+   "description": "List all countries and metadata.",
+   "doc_url": "https://finnhub.io/docs/api/country",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": true,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [],
+   "examples": [
+    {
+     "caption": "No parameters",
+     "params": {}
+    }
+   ]
+  },
+  {
+   "id": "economic_calendar",
+   "path": "/calendar/economic",
+   "title": "Economic Calendar",
+   "category": "economic",
+   "description": "Get recent and upcoming economic releases. Historical events and surprises are available for Enterprise clients.",
+   "doc_url": "https://finnhub.io/docs/api/economic-calendar",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "from",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "From date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": false,
+     "type": "date",
+     "description": "To date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": null,
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "No parameters",
+     "params": {}
+    }
+   ]
+  },
+  {
+   "id": "economic_code",
+   "path": "/economic/code",
+   "title": "Economic Code",
+   "category": "economic",
+   "description": "List codes of supported economic data.",
+   "doc_url": "https://finnhub.io/docs/api/economic-code",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": true,
+   "premium_notes": [
+    "Accessible with Fundamental data or All in One subscription."
+   ],
+   "request_cost": 1,
+   "params": [],
+   "examples": [
+    {
+     "caption": "No parameters",
+     "params": {}
+    }
+   ]
+  },
+  {
+   "id": "economic_data",
+   "path": "/economic",
+   "title": "Economic Data",
+   "category": "economic",
+   "description": "Get economic data.",
+   "doc_url": "https://finnhub.io/docs/api/economic-data",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Accessible with Fundamental data or All in One subscription."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "code",
+     "in": "query",
+     "required": true,
+     "type": "text",
+     "description": "Economic code.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "MA-USA-656880",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: code=MA-USA-656880",
+     "params": {
+      "code": "MA-USA-656880"
+     }
+    }
+   ]
+  },
+  {
+   "id": "covid_19",
+   "path": "/covid19/us",
+   "title": "COVID-19",
+   "category": "alternative-data",
+   "description": "Get real-time updates on the number of COVID-19 (Corona virus) cases in the US with a state-by-state breakdown. Data is sourced from CDC and reputable sources. You can also access this API here",
+   "doc_url": "https://finnhub.io/docs/api/covid-19",
+   "plan": "Free",
+   "premium": false,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [],
+   "request_cost": 1,
+   "params": [],
+   "examples": [
+    {
+     "caption": "No parameters",
+     "params": {}
+    }
+   ]
+  },
+  {
+   "id": "airline_price_index",
+   "path": "/airline/price-index",
+   "title": "Airline Price Index",
+   "category": "alternative-data",
+   "description": "The Flight Ticket Price Index API provides comprehensive data on airline ticket prices, including the average daily ticket price and its percentage change (price index). This data, collected weekly and projected two weeks ahead, aggregates daily prices and indexes from the 50 busiest and largest airports across the USA. The dataset includes detailed information on airlines, dates, and average ticket prices, offering valuable insights for market analysis and pricing strategies. The price index is calculated as percentage change of average daily ticket price from the previous weekly reading. Raw ticket prices data is available for Enterprise users. Contact us to inquire about the raw price data.",
+   "doc_url": "https://finnhub.io/docs/api/airline-price-index",
+   "plan": "All-in-One",
+   "premium": true,
+   "trending": false,
+   "utility": false,
+   "premium_notes": [
+    "Accessible with Fundamental data or All in One subscription."
+   ],
+   "request_cost": 1,
+   "params": [
+    {
+     "name": "airline",
+     "in": "query",
+     "required": true,
+     "type": "enum",
+     "description": "Filter data by airline. Accepted values: united, delta, american_airlines, southwest, southern_airways_express, alaska_airlines, frontier_airlines, jetblue_airways, spirit_airlines, sun_country_airlines, breeze_airways, hawaiian_airlines",
+     "enum": [
+      "united",
+      "delta",
+      "american_airlines",
+      "southwest",
+      "southern_airways_express",
+      "alaska_airlines",
+      "frontier_airlines",
+      "jetblue_airways",
+      "spirit_airlines",
+      "sun_country_airlines",
+      "breeze_airways",
+      "hawaiian_airlines"
+     ],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "united",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "from",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "From date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2024-06-01",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    },
+    {
+     "name": "to",
+     "in": "query",
+     "required": true,
+     "type": "date",
+     "description": "To date YYYY-MM-DD.",
+     "enum": [],
+     "enum_labels": {},
+     "suggestions": [],
+     "default": null,
+     "example": "2024-07-15",
+     "multiple": false,
+     "premium_note": null,
+     "premium_values": [],
+     "minimum": null,
+     "maximum": null
+    }
+   ],
+   "examples": [
+    {
+     "caption": "Finnhub's example: airline=united, from=2024-06-01, to=2024-07-15",
+     "params": {
+      "airline": "united",
+      "from": "2024-06-01",
+      "to": "2024-07-15"
+     }
+    }
+   ]
+  }
+ ],
+ "warnings": [
+  "/ai-chat has no GET operation (skipped)",
+  "/global-filings/search has no GET operation (skipped)",
+  "/global-filings/search-in-filing has no GET operation (skipped)"
+ ]
+}
