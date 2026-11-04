@@ -12,11 +12,13 @@ from fastapi.testclient import TestClient
 from tradingview_data.api import create_app
 from tradingview_data.providers.alphavantage import AlphaVantage
 from tradingview_data.providers.alpaca import Alpaca
+from tradingview_data.providers.finnhub import Finnhub
 from tradingview_data.providers.fmp import FinancialModelingPrep
 from tradingview_data.providers.marketstack import Marketstack
 from tradingview_data.providers.base import Provider, ProviderInfo, ProviderRegistry
 
 import alpaca_support as alpaca_fixtures
+import finnhub_support as finnhub_fixtures
 import fmp_support as fmp_fixtures
 from marketstack_support import SAMPLES, error
 from providers_support import DAILY, KEY, PLACEHOLDER, FakeHttp, ok
@@ -80,14 +82,15 @@ def test_the_provider_list_reports_counts_and_whether_a_key_is_set_but_never_the
     assert api.get("/api/providers").json()["providers"][0]["configured"] is False
 
 
-def test_the_default_registry_serves_alpha_vantage_marketstack_alpaca_then_fmp(tmp_path):
+def test_the_default_registry_serves_alpha_vantage_marketstack_alpaca_fmp_then_finnhub(tmp_path):
     listed = TestClient(create_app(tmp_path)).get("/api/providers").json()["providers"]
-    assert [p["id"] for p in listed] == ["alphavantage", "marketstack", "alpaca", "fmp"]
-    assert [p["key_env"] for p in listed] == ["ALPHAVANTAGE_API_KEY", "MARKETSTACK_API_KEY", "ALPACA_API_KEY_ID", "FMP_API_KEY"]
-    assert [p["secret_env"] for p in listed] == [None, None, "ALPACA_API_SECRET_KEY", None]
+    assert [p["id"] for p in listed] == ["alphavantage", "marketstack", "alpaca", "fmp", "finnhub"]
+    assert [p["key_env"] for p in listed] == ["ALPHAVANTAGE_API_KEY", "MARKETSTACK_API_KEY", "ALPACA_API_KEY_ID", "FMP_API_KEY", "FINNHUB_API_KEY"]
+    assert [p["secret_env"] for p in listed] == [None, None, "ALPACA_API_SECRET_KEY", None, None]
     assert [p["plans"] for p in listed][0] == [] and [x["name"] for x in listed[1]["plans"]] == ["Free", "Basic", "Professional", "Business"]
     assert [x["name"] for x in listed[2]["plans"]] == ["Basic", "Algo Trader Plus"]
     assert [x["name"] for x in listed[3]["plans"]] == ["Basic", "Starter", "Premium", "Ultimate"]
+    assert [x["name"] for x in listed[4]["plans"]] == ["Free", "All-in-One"]
 
 
 def test_two_providers_are_listed_in_order_each_with_its_own_catalog_and_key(tmp_path, monkeypatch):
@@ -279,6 +282,51 @@ def test_fmp_provider_side_problems_are_http_200_with_a_status(tmp_path, fmp_key
 def test_fmp_errors(tmp_path, body, status):
     api = client(tmp_path, FinancialModelingPrep(http_get=fmp_fixtures.FakeHttp()))
     assert api.post("/api/providers/fmp/query", json=body).status_code == status
+
+
+# --- Finnhub ---------------------------------------------------------------------------------------------
+
+
+@pytest.fixture
+def finnhub_keyed(monkeypatch):
+    monkeypatch.setenv("FINNHUB_API_KEY", KEY)
+
+
+def test_finnhub_serves_its_catalog_with_both_plans_and_premium_endpoints(tmp_path, finnhub_keyed):
+    body = client(tmp_path, Finnhub(http_get=finnhub_fixtures.FakeHttp())).get("/api/providers/finnhub/catalog").json()
+    assert set(body) == {"provider", "categories", "endpoints"}
+    assert (body["provider"]["endpoint_count"], body["provider"]["premium_count"], body["provider"]["configured"]) == (113, 84, True)
+    endpoints = {e["id"]: e for e in body["endpoints"]}
+    assert (endpoints["quote"]["plan"], endpoints["quote"]["premium"]) == ("Free", False)
+    assert (endpoints["stock_candles"]["plan"], endpoints["stock_candles"]["premium"]) == ("All-in-One", True)
+    assert KEY not in json.dumps(body)
+
+
+def test_a_finnhub_query_returns_the_contract_response_and_sends_the_key_only_as_a_header(tmp_path, finnhub_keyed):
+    http = finnhub_fixtures.FakeHttp(ok(finnhub_fixtures.QUOTE))
+    body = client(tmp_path, Finnhub(http_get=http)).post("/api/providers/finnhub/query", json={"endpoint": "quote", "params": {"symbol": "AAPL"}}).json()
+    assert set(body) == {"provider", "endpoint", "title", "status", "message", "cached", "fetched_at", "elapsed_ms", "bytes", "params", "views", "raw", "raw_omitted", "notes"}
+    assert body["status"] == "ok" and [v["kind"] for v in body["views"]] == ["facts"] and KEY not in json.dumps(body)
+    assert http.calls[0] == ("https://finnhub.io/api/v1/quote", [("symbol", "AAPL")]) and http.headers[0] == {"X-Finnhub-Token": KEY}
+
+
+def test_finnhub_provider_side_problems_are_http_200_with_a_status(tmp_path, finnhub_keyed):
+    response = client(tmp_path, Finnhub(http_get=finnhub_fixtures.FakeHttp(finnhub_fixtures.NO_ACCESS))).post("/api/providers/finnhub/query", json={"endpoint": "stock_candles", "params": {"symbol": "AAPL", "resolution": "D", "from": "1", "to": "2"}})
+    assert response.status_code == 200 and response.json()["status"] == "premium_required" and response.json()["views"] == []
+
+
+@pytest.mark.parametrize(
+    ("body", "status"),
+    [
+        ({"endpoint": "nope"}, 404),
+        ({"endpoint": "quote", "params": {}}, 422),
+        ({"endpoint": "quote", "params": {"symbol": "AAPL", "token": "x"}}, 422),
+        ({"endpoint": "stock_candles", "params": {"symbol": "AAPL", "resolution": "2", "from": "1", "to": "2"}}, 422),
+    ],
+)
+def test_finnhub_errors(tmp_path, body, status):
+    api = client(tmp_path, Finnhub(http_get=finnhub_fixtures.FakeHttp()))
+    assert api.post("/api/providers/finnhub/query", json=body).status_code == status
 
 
 # --- Alpaca ----------------------------------------------------------------------------------------------
