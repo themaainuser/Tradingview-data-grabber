@@ -325,7 +325,7 @@ funding, liquidation and regime analysis.
 
 ### Data providers
 
-The Providers page fetches from external data providers through the backend. There are four:
+The Providers page fetches from external data providers through the backend. There are five:
 
 - [Alpha Vantage](https://www.alphavantage.co/documentation/): 128 endpoints (stocks, indices, options,
   FX, crypto, commodities, economic indicators, fundamentals, news sentiment, 50+ technical
@@ -420,11 +420,74 @@ The Providers page fetches from external data providers through the backend. The
   `151.91% of shareholders' equity (1.5191)`, `+6.43% vs prior period (0.0643)`. Multiples (price to
   earnings, turnover, coverage, days, per-share amounts) are not shares of anything and stay numbers.
   The bases are listed in `fmp_ratios.py`; a ratio that is not listed is shown as FMP sent it.
+- [Finnhub](https://finnhub.io/docs/api/): the 113 GET endpoints of its OpenAPI document (symbol search
+  and lists, market status and holidays, quotes, company profiles, market and company news, peers, basic
+  financials, ownership, insider transactions and sentiment, standardised and as-reported statements, SEC
+  filings, IPO and earnings calendars, recommendation trends, price targets, upgrades and downgrades,
+  estimates, EPS surprises, candles and ticks, ETFs, indices, mutual funds, bonds, forex, crypto, technical
+  analysis, alternative data and economic data), 84 of which are **premium**. Unlike the other specs,
+  Finnhub's marks each endpoint's access itself, and calling every endpoint with a free key matched it
+  exactly: the 29 free endpoints answered and every other one was refused (`You don't have access to this
+  resource.`, reported as `premium_required`). Its pricing table has two columns, **Free** (60 requests a
+  minute) and **All-in-One** ($3,500 a month), so premium endpoints are labelled All-in-One, except the ones
+  no plan in that table includes: earnings call transcripts (the pricing page says All-in-One leaves them
+  out), Enterprise data and Global Filings Search (sold separately) and International Filings (approved case
+  by case). Where the spec names a narrower package (`Accessible with Fundamental 2 or All in One
+  subscription.`) the endpoint says so. The three POST endpoints (AI Copilot, Global Filings Search, Search In
+  Filing) and the websocket are not included. The key is sent in the `X-Finnhub-Token` header, so it appears
+  in no URL. Quotes are real time, so results are cached for 30 seconds.
+
+  **What a free key can and cannot do** (measured with a free key in November 2026; Finnhub states only
+  some of it):
+
+  - **US only.** Quotes, profiles, news, basic financials, EPS surprises, filings and the other per-symbol
+    endpoints refuse a symbol listed elsewhere (`RY.TO`, `SAP.DE`, `VOD.L`); the symbol list, market status
+    and holidays refuse a non-US exchange. Finnhub answers with HTTP 401 or 403 and a generic message, so the
+    page explains it in plain words with Finnhub's message in brackets. Quotes also work for US ETFs and
+    some crypto pairs (`BINANCE:BTCUSDT`), not for forex (`OANDA:EUR_USD`) or CFD indices (`^GSPC`).
+  - **How far back, how many rows.** Company news reaches about a year back and returns at most about 250
+    articles per request, newest first, so a long range shows only its last days (the answer says so). The
+    earnings calendar reaches 30 days back and returns at most 1,500 rows. EPS surprises are the last 4
+    quarters.
+  - **No price history.** Candles (stocks, forex, crypto), tick data and technical indicators need a paid
+    plan.
+  - **Unknown symbols.** Finnhub answers a symbol it does not know (symbols are case sensitive) with an
+    all-zero quote rather than an error. That is reported as `empty`, never drawn as a price of 0.
+
+  Examples come from Finnhub's documentation; the ones that would age out (company news, the earnings
+  calendar, and USA Spending, which answers its own 2021-2022 example with no rows) use recent dates
+  instead. Finnhub serves the full US symbol list (about 31,000 rows, 7 MB) as a file on its static host:
+  the backend follows that one redirect, only to an `https://*.finnhub.io` address and without the key.
+
+  **Units.** Company profiles give market capitalisation and shares outstanding in millions, and the labels
+  say so. Basic financials are shown as Finnhub sends them: among the figures, volumes are in millions of
+  shares, market capitalisation and enterprise value in millions, and margins, returns, growth and yields
+  are already percentages (`48.79` means 48.79%); in the annual and quarterly tables, margins and returns
+  are fractions (`0.4879`), which the margin chart shows as percentages.
+
+#### Which provider for what
+
+The providers overlap less than it seems; on free keys each is the better source for different things:
+
+| Need | Free source to use | Why |
+| --- | --- | --- |
+| Real-time US quotes, many times a day | Finnhub (60 a minute) or Alpaca (200 a minute) | Alpha Vantage allows 25 requests a day; FMP 250 a day, for a fixed list of symbols |
+| Daily price history | Alpaca, FMP, Alpha Vantage or Marketstack | Finnhub's candles are premium |
+| Company news | Finnhub (any US symbol, a year back), Alpaca, Alpha Vantage (with sentiment scores) | FMP's news is premium |
+| Analyst recommendations, EPS surprises, earnings calendar | Finnhub | FMP's analyst data covers only its fixed list on a free key |
+| Insider trades and insider sentiment | Finnhub (MSPR is its own measure) | FMP caps insider trades at 100 rows |
+| Financial statements | FMP (standardised, 5 periods, fixed list) or Finnhub (as filed with the SEC, any US company, back to 2010) | |
+| Ratios and key metrics | Finnhub basic financials (130+ figures with annual and quarterly history, any US symbol) or FMP | |
+| SEC filings | Finnhub (any US company, back to 2014) or FMP (up to a year back) | |
+| Alternative data | Finnhub: lobbying, government spending, H-1B visas, patents, FDA meetings | None of the others has these |
+| Stocks listed outside the US | Marketstack (end of day, 100 requests a month) | Finnhub and FMP free keys refuse them |
+| Options, crypto order books | Alpaca | |
+
 
 All of them share these rules:
 
 - **The key stays on the server.** Put `ALPHAVANTAGE_API_KEY=your_key`, `MARKETSTACK_API_KEY=your_key`,
-  `FMP_API_KEY=your_key` and/or `ALPACA_API_KEY_ID=your_key_id` with `ALPACA_API_SECRET_KEY=your_secret` in the backend's environment
+  `FMP_API_KEY=your_key`, `FINNHUB_API_KEY=your_key` and/or `ALPACA_API_KEY_ID=your_key_id` with `ALPACA_API_SECRET_KEY=your_secret` in the backend's environment
   or in a `.env` file where you run `tvdata serve` (or pass `--env-file PATH`), then restart it.
   `.env.example` shows the format; `.env` is git-ignored. The key (for Alpaca, the key ID and the secret, sent as headers) is only ever placed in the upstream
   request: it is never returned, logged, cached or shown in a message, and any text echoing it is
@@ -439,19 +502,23 @@ All of them share these rules:
   *parameters* (for example `outputsize=full`); these carry a `premium_note`.
 - **The catalogs are generated from the documentation** and committed
   (`tradingview_data/providers/alphavantage_catalog.json`, `marketstack_catalog.json`,
-  `alpaca_catalog.json`). Regenerate them when a provider adds endpoints:
+  `alpaca_catalog.json`, `finnhub_catalog.json`). Regenerate them when a provider adds endpoints:
   `python -m tradingview_data.providers.alphavantage_docs`,
   `python -m tradingview_data.providers.marketstack_docs` (it reads Marketstack's published OpenAPI
   document and the commodity list it links to; the plan each endpoint needs is kept in `OPERATIONS`
   in that module, because the OpenAPI document does not state it) or
   `python -m tradingview_data.providers.alpaca_docs` (it reads the OpenAPI definition embedded in each
   Market Data reference page listed in Alpaca's `llms.txt`; the tier rules are in `alpaca_docs.py`,
-  taken from Alpaca's "Subscription Plans" section). FMP's catalog is not generated: FMP publishes no
+  taken from Alpaca's "Subscription Plans" section) or `python -m tradingview_data.providers.finnhub_docs`
+  (it reads Finnhub's Swagger document, https://finnhub.io/static/swagger.json, whose `premium` and
+  `freeTier` fields give each endpoint's plan; the pricing-table exceptions, the measured free-plan limits
+  and the example dates are kept in `finnhub_docs.py`). FMP's catalog is not generated: FMP publishes no
   machine-readable spec, so `tradingview_data/providers/fmp_catalog.py` is a hand-written table whose
   paths and plans were checked against the live API (`PAID_PLANS` lists what a free key is refused).
 - **Times are UTC.** Intraday timestamps are converted from the provider's time zone (US/Eastern) and
   the response says so. The exception is FMP, whose intraday timestamps carry no time zone: they are
-  shown as returned and the chart says so.
+  shown as returned and the chart says so. Finnhub sends UNIX timestamps, shown in UTC; its FDA meeting
+  calendar is in US Eastern time, as sent, and the answer says so.
 
 To add a provider: (1) write a module with a `Provider` subclass (`tradingview_data/providers/base.py`):
 `info`, `configured()`, `catalog()` and `query()`; (2) have `query` return the response shape above,
