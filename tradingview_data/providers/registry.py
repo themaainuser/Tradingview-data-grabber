@@ -5,6 +5,7 @@ from __future__ import annotations
 from .alpaca import Alpaca
 from .alphavantage import AlphaVantage
 from .base import ProviderRegistry
+from .finnhub import Finnhub
 from .fmp import FinancialModelingPrep
 from .marketstack import Marketstack
 
@@ -15,4 +16,5 @@ def default_registry() -> ProviderRegistry:
     registry.register(Marketstack())
     registry.register(Alpaca())
     registry.register(FinancialModelingPrep())
+    registry.register(Finnhub())
     return registry
