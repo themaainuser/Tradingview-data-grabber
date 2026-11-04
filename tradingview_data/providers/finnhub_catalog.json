@@ -1238,7 +1238,7 @@
     {
      "name": "symbol",
      "in": "query",
-     "required": true,
+     "required": false,
      "type": "text",
      "description": "Filter by symbol.",
      "enum": [],
@@ -6173,7 +6173,7 @@
     {
      "name": "symbol",
      "in": "query",
-     "required": true,
+     "required": false,
      "type": "text",
      "description": "Company symbol: AAPL. Leave empty to list the latest transcripts",
      "enum": [],

@@ -154,10 +154,12 @@ def table_of(view_id: str, title: str, records: list[dict[str, Any]], keys: Opti
 
 
 def rows_views(prefix: str, title: str, records: list[dict[str, Any]], subtitle: Optional[str] = None) -> list[Optional[dict[str, Any]]]:
-    """A table of the records, plus a chart when they have one date column and numbers."""
+    """A table of the records, plus a chart when they have one date column and numbers. Identifiers stay in the table
+    but never become a chart line (a ZIP code or NAICS code is digits, not a quantity)."""
 
     rows = [readable(r) for r in records]
-    return [V.series_from_records(f"{prefix}-chart", title, rows, subtitle), patch_table(V.table_view(f"{prefix}-table", title, rows, subtitle=subtitle), rows)]
+    charted = [{k: v for k, v in r.items() if k not in _IDENTIFIERS} for r in rows]
+    return [V.series_from_records(f"{prefix}-chart", title, charted, subtitle), patch_table(V.table_view(f"{prefix}-table", title, rows, subtitle=subtitle), rows)]
 
 
 def fact_of(key: str, value: Any) -> Optional[dict[str, Any]]:

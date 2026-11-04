@@ -128,6 +128,9 @@ def test_choices_are_offered_where_finnhub_documents_them():
     assert next(p for p in listed["market_news"]["params"] if p["name"] == "category")["enum"] == ["general", "forex", "crypto", "merger"]
     assert [p["name"] for p in listed["technical_indicator"]["params"]][-1] == "timeperiod"
     assert next(p for p in listed["insider_transactions"]["params"] if p["name"] == "symbol")["required"] is False
+    assert next(p for p in listed["transcripts_list"]["params"] if p["name"] == "symbol")["required"] is False
+    ownership = {p["name"]: p["required"] for p in listed["institutional_ownership"]["params"]}
+    assert ownership == {"symbol": False, "cusip": False, "from": True, "to": True}  # by symbol or by CUSIP
 
 
 def test_the_summary_names_the_key_but_never_holds_it(keyed):
