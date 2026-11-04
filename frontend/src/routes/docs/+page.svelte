@@ -600,7 +600,7 @@ tvdata serve --data-dir data --static-dir frontend/build`;
 			<DocSection
 				id="providers"
 				title="Providers"
-				lead="Data from outside services, fetched by your backend. Alpha Vantage, Marketstack, Alpaca and Financial Modeling Prep, with room for more."
+				lead="Data from outside services, fetched by your backend. Alpha Vantage, Marketstack, Alpaca, Financial Modeling Prep and Finnhub, with room for more."
 			>
 				<p>
 					The <a
@@ -616,7 +616,9 @@ tvdata serve --data-dir data --static-dir frontend/build`;
 				<ul>
 					<li>
 						Set <code>ALPHAVANTAGE_API_KEY</code>, <code>MARKETSTACK_API_KEY</code>,
-						<code>FMP_API_KEY</code> and/or <code>ALPACA_API_KEY_ID</code> with
+						<code>FMP_API_KEY</code>, <code>FINNHUB_API_KEY</code> and/or
+						<code>ALPACA_API_KEY_ID</code>
+						with
 						<code>ALPACA_API_SECRET_KEY</code> (Alpaca needs both) in the backend's environment, or
 						in a
 						<code>.env</code> file in the folder you run <code>tvdata serve</code> from (or pass
@@ -668,6 +670,15 @@ tvdata serve --data-dir data --static-dir frontend/build`;
 						list, so they show part of the market.
 					</li>
 					<li>
+						Finnhub has two plans in its pricing table, <strong>Free</strong> and
+						<strong>All-in-One</strong>, and its documentation marks which endpoints are free, so
+						its premium badge says <strong>Premium · All-in-One</strong>. Earnings call transcripts,
+						the Enterprise data and the global filings search are not part of All-in-One and name no
+						plan. A free Finnhub key covers US-listed symbols and US exchanges only, company news a
+						year back and the earnings calendar 30 days back; candles need a paid plan. A refused
+						symbol or exchange is explained in plain words, with Finnhub's own message in brackets.
+					</li>
+					<li>
 						Ratios and growth figures are shown as a percentage that says what it is a share of or a
 						change against, with the provider's own figure in brackets, for example
 						<strong>46.91% of revenue (0.4691)</strong>. Multiples such as price to earnings stay
@@ -684,8 +695,8 @@ tvdata serve --data-dir data --static-dir frontend/build`;
 					</li>
 					<li>
 						When a key is not entitled, Alpha Vantage answers with made-up sample data and
-						Marketstack, Alpaca and Financial Modeling Prep with an error. This page detects both,
-						shows the provider's own message and draws nothing.
+						Marketstack, Alpaca, Financial Modeling Prep and Finnhub with an error. This page
+						detects both, shows the provider's own message and draws nothing.
 					</li>
 				</ul>
 				<h3>Limits and honesty</h3>
@@ -695,8 +706,9 @@ tvdata serve --data-dir data --static-dir frontend/build`;
 						free. Free Alpha Vantage keys allow 25 requests a day, free Financial Modeling Prep keys
 						250 a day and free Marketstack keys 100 a month (ETF endpoints cost 20 each, which the
 						form tells you), so identical requests are served from a five minute cache and only
-						Fetch again spends a request. Alpaca limits calls per minute (200 on Basic) and its data
-						is real time, so its answers are kept for 30 seconds.
+						Fetch again spends a request. Alpaca (200 calls a minute on Basic) and Finnhub (60 a
+						minute on Free) limit calls per minute and their quotes are real time, so their answers
+						are kept for 30 seconds.
 					</li>
 					<li>
 						Rate limits, a rejected key, an unreachable provider and an empty answer each get their
